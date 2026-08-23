@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Beállítások</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .settings-form{max-width:640px;}
+  .inline-test{display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;}
+  .inline-test .field{flex:1;margin-bottom:0;}
+  .test-result{font-size:13px;font-weight:600;margin-top:10px;}
+  .test-result.ok{color:var(--green);}
+  .test-result.error{color:var(--coral);}
+  .save-note{font-size:12.5px;color:var(--green);font-weight:600;margin-left:12px;display:none;}
+  .save-note.show{display:inline;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Beállítások</h1>
+        <p>Mailgun, Google Drive és a számlázás rendszer-szintű beállításai.</p>
+      </div>
+    </div>
+
+    <form id="settings-form" class="settings-form">
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h3>Mailgun</h3>
+            <p>A rendszer ezen keresztül küldi a számlákat és értesítéseket.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="mg-key">API kulcs</label><input type="password" id="mg-key" autocomplete="off"></div>
+          <div class="field"><label for="mg-domain">Domain</label><input type="text" id="mg-domain" placeholder="mg.pelda.hu"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="mg-from-address">Feladó e-mail cím</label><input type="email" id="mg-from-address" placeholder="szamla@pelda.hu"></div>
+          <div class="field"><label for="mg-from-name">Feladó neve</label><input type="text" id="mg-from-name" placeholder="Lakáskezelő"></div>
+        </div>
+        <div class="field">
+          <label for="mg-base-url">API régió (opcionális)</label>
+          <input type="text" id="mg-base-url" placeholder="https://api.eu.mailgun.net">
+          <span class="hint">Üresen hagyva az amerikai régiót használja. EU domainhez add meg: https://api.eu.mailgun.net</span>
+        </div>
+        <div class="inline-test">
+          <div class="field"><label for="mg-test-to">Teszt e-mail címzett</label><input type="email" id="mg-test-to" placeholder="te@pelda.hu"></div>
+          <button class="btn btn-secondary" type="button" id="mg-test-btn">Kapcsolat tesztelése</button>
+        </div>
+        <div class="test-result" id="mg-test-result"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h3>Google Drive</h3>
+            <p>Service account JSON kulcs — ezt kell megosztani az ingatlanokhoz beállított Drive mappákkal.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="drive-json">Service account JSON</label>
+          <textarea id="drive-json" rows="6" placeholder='{"type": "service_account", ...}'></textarea>
+        </div>
+        <button class="btn btn-secondary" type="button" id="drive-test-btn">Kapcsolat tesztelése</button>
+        <div class="test-result" id="drive-test-result"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h3>Rezsi emlékeztető</h3>
+            <p>Ha egy ingatlanhoz a határidőig nem kerül rezsi tétel rögzítésre, ide megy az értesítés.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="utility-email">Rezsi kontakt e-mail</label><input type="email" id="utility-email"></div>
+          <div class="field"><label for="utility-deadline">Rögzítési határidő (a hónap napja)</label><input type="number" id="utility-deadline" min="1" max="28"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h3>Számla-kibocsátó adatai</h3>
+            <p>Ezek az adatok jelennek meg a generált számlák fejlécében.</p>
+          </div>
+        </div>
+        <div class="field"><label for="issuer-name">Név</label><input type="text" id="issuer-name"></div>
+        <div class="field"><label for="issuer-address">Cím</label><input type="text" id="issuer-address"></div>
+        <div class="field-row">
+          <div class="field"><label for="issuer-taxid">Adószám</label><input type="text" id="issuer-taxid"></div>
+          <div class="field"><label for="issuer-bank">Bankszámlaszám</label><input type="text" id="issuer-bank"></div>
+        </div>
+        <div class="field"><label>Következő számlaszám</label><input type="text" id="issuer-next-number" disabled></div>
+      </section>
+
+      <div>
+        <button class="btn btn-primary" type="submit">Mentés</button>
+        <span class="save-note" id="save-note">Mentve.</span>
+      </div>
+    </form>
+  </main>
+</div>
+
+<script>
+requireAuth();
+
+async function loadSettings() {
+  const res = await apiFetch('/api/settings');
+  const s = await res.json();
+
+  document.getElementById('mg-key').value = s.mailgunApiKey || '';
+  document.getElementById('mg-domain').value = s.mailgunDomain || '';
+  document.getElementById('mg-from-address').value = s.mailgunFromAddress || '';
+  document.getElementById('mg-from-name').value = s.mailgunFromName || '';
+  document.getElementById('mg-base-url').value = s.mailgunApiBaseUrl || '';
+  document.getElementById('drive-json').value = s.googleServiceAccountJson || '';
+  document.getElementById('utility-email').value = s.utilityContactEmail || '';
+  document.getElementById('utility-deadline').value = s.utilityDeadlineDay || 5;
+  document.getElementById('issuer-name').value = s.issuerName || '';
+  document.getElementById('issuer-address').value = s.issuerAddress || '';
+  document.getElementById('issuer-taxid').value = s.issuerTaxId || '';
+  document.getElementById('issuer-bank').value = s.issuerBankAccount || '';
+  document.getElementById('issuer-next-number').value = s.nextInvoiceNumber;
+}
+
+async function saveSettings() {
+  const payload = {
+    mailgunApiKey: document.getElementById('mg-key').value.trim() || null,
+    mailgunDomain: document.getElementById('mg-domain').value.trim() || null,
+    mailgunFromAddress: document.getElementById('mg-from-address').value.trim() || null,
+    mailgunFromName: document.getElementById('mg-from-name').value.trim() || null,
+    mailgunApiBaseUrl: document.getElementById('mg-base-url').value.trim() || null,
+    googleServiceAccountJson: document.getElementById('drive-json').value.trim() || null,
+    utilityContactEmail: document.getElementById('utility-email').value.trim() || null,
+    utilityDeadlineDay: Number(document.getElementById('utility-deadline').value) || 5,
+    issuerName: document.getElementById('issuer-name').value.trim() || null,
+    issuerAddress: document.getElementById('issuer-address').value.trim() || null,
+    issuerTaxId: document.getElementById('issuer-taxid').value.trim() || null,
+    issuerBankAccount: document.getElementById('issuer-bank').value.trim() || null,
+    nextInvoiceNumber: Number(document.getElementById('issuer-next-number').value) || 1,
+  };
+
+  const res = await apiFetch('/api/settings', { method: 'PUT', body: JSON.stringify(payload) });
+  return res.ok;
+}
+
+document.getElementById('settings-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const ok = await saveSettings();
+  if (ok) {
+    const note = document.getElementById('save-note');
+    note.classList.add('show');
+    setTimeout(() => note.classList.remove('show'), 2500);
+  }
+});
+
+document.getElementById('mg-test-btn').addEventListener('click', async () => {
+  const resultEl = document.getElementById('mg-test-result');
+  const to = document.getElementById('mg-test-to').value.trim();
+  if (!to) { resultEl.textContent = 'Adj meg egy címzett e-mail címet.'; resultEl.className = 'test-result error'; return; }
+
+  resultEl.textContent = 'Küldés...';
+  resultEl.className = 'test-result';
+
+  // A mentetlen mezőket is figyelembe véve teszteljük — előbb elmentjük az aktuális form-tartalmat.
+  await saveSettings();
+  const res = await apiFetch('/api/settings/test-mailgun', { method: 'POST', body: JSON.stringify({ to }) });
+  const data = await res.json();
+  resultEl.textContent = data.success ? 'Sikeres — nézd meg a postaládát.' : (data.error || 'Sikertelen.');
+  resultEl.className = 'test-result ' + (data.success ? 'ok' : 'error');
+});
+
+document.getElementById('drive-test-btn').addEventListener('click', async () => {
+  const resultEl = document.getElementById('drive-test-result');
+  resultEl.textContent = 'Ellenőrzés...';
+  resultEl.className = 'test-result';
+
+  await document.getElementById('settings-form').requestSubmit();
+  const res = await apiFetch('/api/settings/test-drive', { method: 'POST' });
+  const data = await res.json();
+  resultEl.textContent = data.success
+    ? `Sikeres — service account: ${data.serviceAccountEmail}. Ezzel a címmel oszd meg az ingatlanok Drive mappáit.`
+    : (data.error || 'Sikertelen.');
+  resultEl.className = 'test-result ' + (data.success ? 'ok' : 'error');
+});
+
+loadSettings();
+</script>
+</body>
+</html>

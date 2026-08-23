@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Felhasználók</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Felhasználók</h1>
+        <p>Minden felhasználó ugyanazokat a funkciókat éri el — nincs jogosultsági szintezés.</p>
+      </div>
+      <button class="btn btn-primary" id="add-btn">+ Új felhasználó</button>
+    </div>
+
+    <div class="card-table">
+      <table>
+        <thead>
+          <tr><th>Név</th><th>E-mail</th><th>Státusz</th><th>Regisztrálva</th><th></th></tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr class="empty-row"><td colspan="5">Betöltés...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h2 id="modal-title">Új felhasználó</h2></div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-error" id="modal-error"></div>
+      <form id="user-form">
+        <div class="field"><label for="f-name">Név *</label><input type="text" id="f-name" required></div>
+        <div class="field"><label for="f-email">E-mail *</label><input type="email" id="f-email" required></div>
+        <div class="field">
+          <label for="f-password" id="f-password-label">Jelszó *</label>
+          <input type="password" id="f-password" autocomplete="new-password">
+          <span class="hint" id="f-password-hint">Legalább 8 karakter.</span>
+        </div>
+        <label class="checkbox-row"><input type="checkbox" id="f-active" checked> Aktív</label>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-btn" type="button">Mégse</button>
+      <button class="btn btn-primary" id="save-btn" type="submit" form="user-form">Mentés</button>
+    </div>
+  </div>
+</div>
+
+<script>
+requireAuth();
+
+let users = [];
+let editingId = null;
+
+async function loadUsers() {
+  const res = await apiFetch('/api/users');
+  users = await res.json();
+  renderUsers();
+}
+
+function renderUsers() {
+  const tbody = document.getElementById('users-tbody');
+  if (users.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Nincs találat.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = users.map((u) => `
+    <tr>
+      <td class="cell-main">${escapeHtml(u.fullName)}</td>
+      <td>${escapeHtml(u.email)}</td>
+      <td><span class="status-tag ${u.isActive ? 'ok' : 'missing'}">${u.isActive ? 'Aktív' : 'Inaktív'}</span></td>
+      <td>${formatDate(u.createdAt)}</td>
+      <td class="row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}')">Szerkesztés</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">Törlés</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s ?? '';
+  return d.innerHTML;
+}
+
+function openModal(title) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-error').classList.remove('show');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('user-form').reset();
+  editingId = null;
+}
+
+document.getElementById('add-btn').addEventListener('click', () => {
+  editingId = null;
+  document.getElementById('f-password').required = true;
+  document.getElementById('f-password-label').textContent = 'Jelszó *';
+  document.getElementById('f-password-hint').textContent = 'Legalább 8 karakter.';
+  openModal('Új felhasználó');
+});
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('cancel-btn').addEventListener('click', closeModal);
+
+window.editUser = (id) => {
+  const u = users.find((x) => x.id === id);
+  if (!u) return;
+  editingId = id;
+  document.getElementById('f-name').value = u.fullName;
+  document.getElementById('f-email').value = u.email;
+  document.getElementById('f-active').checked = u.isActive;
+  document.getElementById('f-password').value = '';
+  document.getElementById('f-password').required = false;
+  document.getElementById('f-password-label').textContent = 'Új jelszó';
+  document.getElementById('f-password-hint').textContent = 'Csak akkor töltsd ki, ha módosítani szeretnéd.';
+  openModal('Felhasználó szerkesztése');
+};
+
+window.deleteUser = async (id) => {
+  if (!confirm('Biztosan törlöd ezt a felhasználót?')) return;
+  const res = await apiFetch(`/api/users/${id}`, { method: 'DELETE' });
+  if (res.ok || res.status === 204) {
+    loadUsers();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    alert(data.message || 'Nem sikerült törölni.');
+  }
+};
+
+document.getElementById('user-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('modal-error');
+  errorEl.classList.remove('show');
+
+  const payload = {
+    fullName: document.getElementById('f-name').value.trim(),
+    email: document.getElementById('f-email').value.trim(),
+    isActive: document.getElementById('f-active').checked,
+    password: document.getElementById('f-password').value || null,
+  };
+
+  const url = editingId ? `/api/users/${editingId}` : '/api/users';
+  const method = editingId ? 'PUT' : 'POST';
+  const res = await apiFetch(url, { method, body: JSON.stringify(payload) });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    errorEl.textContent = data.message || 'Hiba történt a mentés során.';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  closeModal();
+  loadUsers();
+});
+
+loadUsers();
+</script>
+</body>
+</html>

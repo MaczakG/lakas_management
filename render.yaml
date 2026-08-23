@@ -1,0 +1,49 @@
+databases:
+  - name: lakaskezelo-db
+    databaseName: lakaskezelo
+    user: lakaskezelo
+    plan: free
+
+services:
+  - type: web
+    name: lakaskezelo-api
+    runtime: docker
+    branch: main
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__LakaskezeloDb
+        fromDatabase:
+          name: lakaskezelo-db
+          property: connectionString
+      - key: Jwt__Issuer
+        value: lakaskezelo-api
+      - key: Jwt__Audience
+        value: lakaskezelo-frontend
+      - key: Jwt__SigningKey
+        generateValue: true
+      - key: Jwt__AccessTokenMinutes
+        value: "120"
+      - key: Cors__AllowedOrigins__0
+        sync: false # töltsd ki a Render dashboardon a lakaskezelo-frontend szolgáltatás TÉNYLEGES URL-jével
+      - key: Frontend__BaseUrl
+        sync: false # a lakaskezelo-frontend szolgáltatás TÉNYLEGES URL-je (a jelszó-visszaállító linkekhez)
+      - key: InitialUser__Email
+        sync: false # az első bejelentkezhető felhasználó e-mail címe
+      - key: InitialUser__Password
+        sync: false # az első bejelentkezhető felhasználó jelszava — állítsd át bejelentkezés után
+
+  - type: web
+    name: lakaskezelo-frontend
+    runtime: static
+    branch: main
+    staticPublishPath: ./frontend
+    buildCommand: ""
+    routes:
+      - type: rewrite
+        source: /
+        destination: /index.html

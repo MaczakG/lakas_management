@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Tulajdonosok</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Tulajdonosok</h1>
+        <p>Az ingatlanokhoz rendelhető tulajdonosok nyilvántartása.</p>
+      </div>
+      <button class="btn btn-primary" id="add-btn">+ Új tulajdonos</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="search-input" placeholder="Keresés név alapján...">
+      </div>
+    </div>
+
+    <div class="card-table">
+      <table>
+        <thead>
+          <tr><th>Név</th><th>Elérhetőség</th><th>Adószám</th><th>Ingatlanok</th><th></th></tr>
+        </thead>
+        <tbody id="owners-tbody">
+          <tr class="empty-row"><td colspan="5">Betöltés...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="modal-title">Új tulajdonos</h2>
+      </div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-error" id="modal-error"></div>
+      <form id="owner-form">
+        <div class="field"><label for="f-name">Név *</label><input type="text" id="f-name" required></div>
+        <div class="field-row">
+          <div class="field"><label for="f-email">E-mail</label><input type="email" id="f-email"></div>
+          <div class="field"><label for="f-phone">Telefon</label><input type="text" id="f-phone"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="f-taxid">Adószám</label><input type="text" id="f-taxid"></div>
+          <div class="field"><label for="f-bank">Bankszámlaszám</label><input type="text" id="f-bank"></div>
+        </div>
+        <div class="field"><label for="f-address">Cím</label><input type="text" id="f-address"></div>
+        <div class="field"><label for="f-notes">Megjegyzés</label><textarea id="f-notes" rows="3"></textarea></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-btn" type="button">Mégse</button>
+      <button class="btn btn-primary" id="save-btn" type="submit" form="owner-form">Mentés</button>
+    </div>
+  </div>
+</div>
+
+<script>
+requireAuth();
+
+let owners = [];
+let editingId = null;
+
+async function loadOwners() {
+  const res = await apiFetch('/api/owners');
+  owners = await res.json();
+  renderOwners();
+}
+
+function renderOwners() {
+  const term = document.getElementById('search-input').value.trim().toLowerCase();
+  const filtered = owners.filter((o) => o.name.toLowerCase().includes(term));
+  const tbody = document.getElementById('owners-tbody');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Nincs találat.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((o) => `
+    <tr>
+      <td class="cell-main">${escapeHtml(o.name)}</td>
+      <td>${escapeHtml(o.email || '—')}${o.phone ? `<div class="cell-sub">${escapeHtml(o.phone)}</div>` : ''}</td>
+      <td>${escapeHtml(o.taxId || '—')}</td>
+      <td>${o.propertyNames.length ? escapeHtml(o.propertyNames.join(', ')) : '—'}</td>
+      <td class="row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editOwner('${o.id}')">Szerkesztés</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteOwner('${o.id}')">Törlés</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s ?? '';
+  return d.innerHTML;
+}
+
+function openModal(title) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-error').classList.remove('show');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('owner-form').reset();
+  editingId = null;
+}
+
+document.getElementById('add-btn').addEventListener('click', () => { editingId = null; openModal('Új tulajdonos'); });
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('cancel-btn').addEventListener('click', closeModal);
+document.getElementById('search-input').addEventListener('input', renderOwners);
+
+window.editOwner = (id) => {
+  const o = owners.find((x) => x.id === id);
+  if (!o) return;
+  editingId = id;
+  document.getElementById('f-name').value = o.name;
+  document.getElementById('f-email').value = o.email || '';
+  document.getElementById('f-phone').value = o.phone || '';
+  document.getElementById('f-taxid').value = o.taxId || '';
+  document.getElementById('f-bank').value = o.bankAccount || '';
+  document.getElementById('f-address').value = o.address || '';
+  document.getElementById('f-notes').value = o.notes || '';
+  openModal('Tulajdonos szerkesztése');
+};
+
+window.deleteOwner = async (id) => {
+  if (!confirm('Biztosan törlöd ezt a tulajdonost?')) return;
+  const res = await apiFetch(`/api/owners/${id}`, { method: 'DELETE' });
+  if (res.ok || res.status === 204) loadOwners();
+};
+
+document.getElementById('owner-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('modal-error');
+  errorEl.classList.remove('show');
+
+  const payload = {
+    name: document.getElementById('f-name').value.trim(),
+    email: document.getElementById('f-email').value.trim() || null,
+    phone: document.getElementById('f-phone').value.trim() || null,
+    taxId: document.getElementById('f-taxid').value.trim() || null,
+    bankAccount: document.getElementById('f-bank').value.trim() || null,
+    address: document.getElementById('f-address').value.trim() || null,
+    notes: document.getElementById('f-notes').value.trim() || null,
+  };
+
+  const url = editingId ? `/api/owners/${editingId}` : '/api/owners';
+  const method = editingId ? 'PUT' : 'POST';
+  const res = await apiFetch(url, { method, body: JSON.stringify(payload) });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    errorEl.textContent = data.message || 'Hiba történt a mentés során.';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  closeModal();
+  loadOwners();
+});
+
+loadOwners();
+</script>
+</body>
+</html>

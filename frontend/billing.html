@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Számlázás</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .status-tag.Sent{background:var(--green-bg);color:var(--green);border-color:var(--green-border);}
+  .status-tag.Generated{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border);}
+  .status-tag.Failed{background:var(--coral-bg);color:var(--coral);border-color:var(--coral-border);}
+  .error-note{font-size:12px;color:var(--coral);margin-top:2px;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Számlázás</h1>
+        <p>A rendszer automatikusan generálja és küldi a számlákat az ingatlanoknál beállított időpontban.</p>
+      </div>
+      <button class="btn btn-primary" id="generate-btn">+ Számla generálása most</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="search-input" placeholder="Keresés ingatlan/bérlő/számlaszám alapján...">
+      </div>
+      <select class="filter-select" id="status-filter">
+        <option value="">Minden státusz</option>
+        <option value="Sent">Elküldve</option>
+        <option value="Generated">Legenerálva (nincs e-mail)</option>
+        <option value="Failed">Sikertelen</option>
+      </select>
+    </div>
+
+    <div class="card-table">
+      <table>
+        <thead>
+          <tr><th>Számlaszám</th><th>Ingatlan</th><th>Bérlő</th><th>Időszak</th><th>Összeg</th><th>Státusz</th><th></th></tr>
+        </thead>
+        <tbody id="invoices-tbody">
+          <tr class="empty-row"><td colspan="7">Betöltés...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="generate-modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h2>Számla generálása</h2><p>Válaszd ki az ingatlant és az időszakot.</p></div>
+      <button class="modal-close" id="generate-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-error" id="generate-error"></div>
+      <form id="generate-form">
+        <div class="field"><label for="g-property">Ingatlan *</label><select id="g-property" required></select></div>
+        <div class="field-row">
+          <div class="field"><label for="g-year">Év</label><input type="number" id="g-year" required></div>
+          <div class="field"><label for="g-month">Hónap</label>
+            <select id="g-month" required></select>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="generate-cancel" type="button">Mégse</button>
+      <button class="btn btn-primary" id="generate-submit" type="submit" form="generate-form">Generálás</button>
+    </div>
+  </div>
+</div>
+
+<script>
+requireAuth();
+
+let invoices = [];
+const statusLabels = { Sent: 'Elküldve', Generated: 'Legenerálva', Failed: 'Sikertelen' };
+
+async function loadInvoices() {
+  const res = await apiFetch('/api/invoices');
+  invoices = await res.json();
+  renderInvoices();
+}
+
+function renderInvoices() {
+  const term = document.getElementById('search-input').value.trim().toLowerCase();
+  const status = document.getElementById('status-filter').value;
+  const filtered = invoices.filter((i) =>
+    (!status || i.status === status) &&
+    (`${i.propertyName} ${i.tenantName || ''} ${i.number}`.toLowerCase().includes(term)));
+
+  const tbody = document.getElementById('invoices-tbody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">Nincs találat.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((i) => `
+    <tr>
+      <td class="cell-main mono">${escapeHtml(i.number)}</td>
+      <td>${escapeHtml(i.propertyName)}</td>
+      <td>${escapeHtml(i.tenantName || '—')}</td>
+      <td>${i.periodYear}.${String(i.periodMonth).padStart(2, '0')}</td>
+      <td>${formatCurrency(i.amountTotal)}</td>
+      <td>
+        <span class="status-tag ${i.status}">${statusLabels[i.status] || i.status}</span>
+        ${i.status === 'Failed' && i.errorMessage ? `<div class="error-note">${escapeHtml(i.errorMessage)}</div>` : ''}
+      </td>
+      <td class="row-actions">
+        ${i.pdfDriveLink ? `<a class="btn btn-ghost btn-sm" href="${i.pdfDriveLink}" target="_blank" rel="noopener">PDF</a>` : ''}
+        ${i.status === 'Failed' ? `<button class="btn btn-secondary btn-sm" onclick="retryInvoice('${i.propertyId}', ${i.periodYear}, ${i.periodMonth})">Újrapróbálás</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s ?? '';
+  return d.innerHTML;
+}
+
+document.getElementById('search-input').addEventListener('input', renderInvoices);
+document.getElementById('status-filter').addEventListener('change', renderInvoices);
+
+window.retryInvoice = async (propertyId, year, month) => {
+  const res = await apiFetch('/api/invoices/generate', { method: 'POST', body: JSON.stringify({ propertyId, year, month }) });
+  if (res.ok) loadInvoices();
+  else alert('Nem sikerült újrapróbálni a számla generálását.');
+};
+
+// ---------- Manuális generálás modal ----------
+const monthSelect = document.getElementById('g-month');
+monthSelect.innerHTML = MONTH_NAMES.map((name, idx) => `<option value="${idx + 1}">${name}</option>`).join('');
+
+document.getElementById('generate-btn').addEventListener('click', async () => {
+  const propRes = await apiFetch('/api/properties');
+  const props = await propRes.json();
+  document.getElementById('g-property').innerHTML = props.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+
+  const now = new Date();
+  document.getElementById('g-year').value = now.getFullYear();
+  monthSelect.value = now.getMonth() + 1;
+
+  document.getElementById('generate-error').classList.remove('show');
+  document.getElementById('generate-modal-overlay').classList.add('open');
+});
+document.getElementById('generate-modal-close').addEventListener('click', () => document.getElementById('generate-modal-overlay').classList.remove('open'));
+document.getElementById('generate-cancel').addEventListener('click', () => document.getElementById('generate-modal-overlay').classList.remove('open'));
+
+document.getElementById('generate-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('generate-error');
+  errorEl.classList.remove('show');
+
+  const payload = {
+    propertyId: document.getElementById('g-property').value,
+    year: Number(document.getElementById('g-year').value),
+    month: Number(monthSelect.value),
+  };
+
+  const res = await apiFetch('/api/invoices/generate', { method: 'POST', body: JSON.stringify(payload) });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    errorEl.textContent = data.message || 'Hiba történt a generálás során.';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  document.getElementById('generate-modal-overlay').classList.remove('open');
+  loadInvoices();
+});
+
+loadInvoices();
+</script>
+</body>
+</html>

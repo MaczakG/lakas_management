@@ -1,0 +1,6 @@
+@Lakaskezelo.Api_HostAddress = http://localhost:5159
+
+GET {{Lakaskezelo.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

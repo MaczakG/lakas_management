@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Árfolyamok</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Árfolyamok</h1>
+        <p>Az MNB EUR/USD árfolyamainak napi, automatikus lekérdezése — óránként fut, de csak akkor ment el új sort, ha aznapra még nincs rögzítve.</p>
+      </div>
+      <button class="btn btn-primary" id="refresh-btn">Frissítés most</button>
+    </div>
+
+    <div class="form-error" id="fetch-error"></div>
+    <div class="form-success" id="fetch-success"></div>
+
+    <div class="card-table">
+      <table>
+        <thead>
+          <tr><th>Dátum</th><th>Deviza</th><th>Árfolyam (Ft)</th><th>Lekérve</th></tr>
+        </thead>
+        <tbody id="rates-tbody">
+          <tr class="empty-row"><td colspan="4">Betöltés...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script>
+requireAuth();
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s ?? '';
+  return d.innerHTML;
+}
+
+async function loadRates() {
+  const res = await apiFetch('/api/exchange-rates');
+  const rates = await res.json();
+  const tbody = document.getElementById('rates-tbody');
+
+  if (rates.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Még nincs lekért árfolyam — kattints a "Frissítés most" gombra.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rates.map((r) => `
+    <tr>
+      <td>${r.rateDate}</td>
+      <td class="cell-main">${escapeHtml(r.currencyCode)}</td>
+      <td>${Number(r.rateToHuf).toLocaleString('hu-HU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ft</td>
+      <td class="cell-sub">${new Date(r.fetchedAt).toLocaleString('hu-HU')}</td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('refresh-btn').addEventListener('click', async () => {
+  const errorEl = document.getElementById('fetch-error');
+  const successEl = document.getElementById('fetch-success');
+  errorEl.classList.remove('show');
+  successEl.classList.remove('show');
+
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.textContent = 'Lekérdezés...';
+
+  try {
+    const res = await apiFetch('/api/exchange-rates/fetch-now', { method: 'POST' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      errorEl.textContent = data.message || 'Hiba történt a lekérdezés során.';
+      errorEl.classList.add('show');
+      return;
+    }
+    successEl.textContent = 'Sikeres lekérdezés.';
+    successEl.classList.add('show');
+    loadRates();
+  } catch (err) {
+    errorEl.textContent = 'Nem sikerült elérni a szervert.';
+    errorEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Frissítés most';
+  }
+});
+
+loadRates();
+</script>
+</body>
+</html>

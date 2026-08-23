@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Bérlők</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Bérlők</h1>
+        <p>Az ingatlanokhoz rendelt bérlők nyilvántartása.</p>
+      </div>
+      <button class="btn btn-primary" id="add-btn">+ Új bérlő</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="search-input" placeholder="Keresés név alapján...">
+      </div>
+    </div>
+
+    <div class="card-table">
+      <table>
+        <thead>
+          <tr><th>Név</th><th>Elérhetőség</th><th>Ingatlan</th><th>Díj alapja</th><th>Beköltözés</th><th>Kiköltözés</th><th></th></tr>
+        </thead>
+        <tbody id="tenants-tbody">
+          <tr class="empty-row"><td colspan="7">Betöltés...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h2 id="modal-title">Új bérlő</h2></div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-error" id="modal-error"></div>
+      <form id="tenant-form">
+        <div class="field"><label for="f-name">Név *</label><input type="text" id="f-name" required></div>
+        <div class="field-row">
+          <div class="field"><label for="f-email">E-mail</label><input type="email" id="f-email"></div>
+          <div class="field"><label for="f-phone">Telefon</label><input type="text" id="f-phone"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="f-property">Ingatlan</label>
+            <select id="f-property"><option value="">— nincs hozzárendelve —</option></select>
+          </div>
+          <div class="field"><label for="f-currency">Bérleti díj alapja</label>
+            <select id="f-currency">
+              <option value="HUF">Forint (Ft)</option>
+              <option value="EUR">EUR — MNB árfolyamon átszámítva</option>
+              <option value="USD">USD — MNB árfolyamon átszámítva</option>
+            </select>
+            <span class="hint">A számlán mindig HUF összeg jelenik meg; ez csak azt dönti el, milyen devizában van megadva az ingatlan bérleti díja.</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="f-move-in">Beköltözés dátuma</label><input type="date" id="f-move-in"></div>
+          <div class="field"><label for="f-move-out">Kiköltözés dátuma</label><input type="date" id="f-move-out"></div>
+        </div>
+        <div class="field"><label for="f-notes">Megjegyzés</label><textarea id="f-notes" rows="3"></textarea></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-btn" type="button">Mégse</button>
+      <button class="btn btn-primary" id="save-btn" type="submit" form="tenant-form">Mentés</button>
+    </div>
+  </div>
+</div>
+
+<script>
+requireAuth();
+
+let tenants = [];
+let properties = [];
+let editingId = null;
+
+async function loadData() {
+  const [tenantsRes, propertiesRes] = await Promise.all([apiFetch('/api/tenants'), apiFetch('/api/properties')]);
+  tenants = await tenantsRes.json();
+  properties = await propertiesRes.json();
+
+  const select = document.getElementById('f-property');
+  select.innerHTML = '<option value="">— nincs hozzárendelve —</option>' +
+    properties.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+
+  renderTenants();
+}
+
+function renderTenants() {
+  const term = document.getElementById('search-input').value.trim().toLowerCase();
+  const filtered = tenants.filter((t) => t.name.toLowerCase().includes(term));
+  const tbody = document.getElementById('tenants-tbody');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">Nincs találat.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((t) => `
+    <tr>
+      <td class="cell-main">${escapeHtml(t.name)}</td>
+      <td>${escapeHtml(t.email || '—')}${t.phone ? `<div class="cell-sub">${escapeHtml(t.phone)}</div>` : ''}</td>
+      <td>${escapeHtml(t.propertyName || '—')}</td>
+      <td>${t.rentCurrency === 'HUF' ? 'Ft' : t.rentCurrency}</td>
+      <td>${formatDate(t.moveInDate)}</td>
+      <td>${formatDate(t.moveOutDate)}</td>
+      <td class="row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editTenant('${t.id}')">Szerkesztés</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTenant('${t.id}')">Törlés</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s ?? '';
+  return d.innerHTML;
+}
+
+function openModal(title) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-error').classList.remove('show');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('tenant-form').reset();
+  editingId = null;
+}
+
+document.getElementById('add-btn').addEventListener('click', () => { editingId = null; openModal('Új bérlő'); });
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('cancel-btn').addEventListener('click', closeModal);
+document.getElementById('search-input').addEventListener('input', renderTenants);
+
+window.editTenant = (id) => {
+  const t = tenants.find((x) => x.id === id);
+  if (!t) return;
+  editingId = id;
+  document.getElementById('f-name').value = t.name;
+  document.getElementById('f-email').value = t.email || '';
+  document.getElementById('f-phone').value = t.phone || '';
+  document.getElementById('f-property').value = t.propertyId || '';
+  document.getElementById('f-currency').value = t.rentCurrency || 'HUF';
+  document.getElementById('f-move-in').value = t.moveInDate || '';
+  document.getElementById('f-move-out').value = t.moveOutDate || '';
+  document.getElementById('f-notes').value = t.notes || '';
+  openModal('Bérlő szerkesztése');
+};
+
+window.deleteTenant = async (id) => {
+  if (!confirm('Biztosan törlöd ezt a bérlőt?')) return;
+  const res = await apiFetch(`/api/tenants/${id}`, { method: 'DELETE' });
+  if (res.ok || res.status === 204) loadData();
+};
+
+document.getElementById('tenant-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('modal-error');
+  errorEl.classList.remove('show');
+
+  const payload = {
+    name: document.getElementById('f-name').value.trim(),
+    email: document.getElementById('f-email').value.trim() || null,
+    phone: document.getElementById('f-phone').value.trim() || null,
+    propertyId: document.getElementById('f-property').value || null,
+    rentCurrency: document.getElementById('f-currency').value,
+    moveInDate: document.getElementById('f-move-in').value || null,
+    moveOutDate: document.getElementById('f-move-out').value || null,
+    notes: document.getElementById('f-notes').value.trim() || null,
+  };
+
+  const url = editingId ? `/api/tenants/${editingId}` : '/api/tenants';
+  const method = editingId ? 'PUT' : 'POST';
+  const res = await apiFetch(url, { method, body: JSON.stringify(payload) });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    errorEl.textContent = data.message || 'Hiba történt a mentés során.';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  closeModal();
+  loadData();
+});
+
+loadData();
+</script>
+</body>
+</html>
