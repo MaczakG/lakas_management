@@ -15,6 +15,10 @@
   .form-row-between{display:flex;justify-content:flex-end;margin:2px 0 22px;font-size:13px;}
   .link-muted{color:var(--accent-deep);font-weight:600;}
   .link-muted:hover{text-decoration:underline;}
+  #code-step{display:none;}
+  #code-step .hint{margin-bottom:18px;}
+  .code-input{letter-spacing:8px;font-size:22px;text-align:center;font-weight:700;}
+  .back-link{display:block;text-align:center;margin-top:14px;font-size:13px;}
 </style>
 </head>
 <body>
@@ -23,6 +27,7 @@
   <h1>Lakáskezelő</h1>
 
   <div class="form-error" id="login-error"></div>
+
   <form id="login-form">
     <div class="field">
       <label for="login-email">E-mail cím</label>
@@ -39,43 +44,103 @@
 
     <button class="btn btn-primary btn-block" type="submit" id="login-submit">Bejelentkezés</button>
   </form>
+
+  <form id="code-step">
+    <span class="hint">A megadott e-mail címre kiküldtünk egy 6 jegyű belépési kódot. Add meg a folytatáshoz.</span>
+    <div class="field">
+      <label for="login-code">Belépési kód</label>
+      <input type="text" id="login-code" class="code-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" required>
+    </div>
+    <button class="btn btn-primary btn-block" type="submit" id="code-submit">Megerősítés</button>
+    <a class="back-link link-muted" href="#" id="back-to-login">Vissza</a>
+  </form>
 </div>
 
 <script src="app.js"></script>
 <script>
-  document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const errorEl = document.getElementById('login-error');
-    errorEl.classList.remove('show');
-    const btn = document.getElementById('login-submit');
-    btn.disabled = true;
-    btn.textContent = 'Bejelentkezés...';
+let challengeId = null;
 
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: document.getElementById('login-email').value,
-          password: document.getElementById('login-pass').value,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        errorEl.textContent = data.message || 'Hiba történt a bejelentkezés során.';
-        errorEl.classList.add('show');
-        return;
-      }
-      storeAuth(data);
-      location.href = 'properties.html';
-    } catch (err) {
-      errorEl.textContent = 'Nem sikerült elérni a szervert.';
+function showStep(step) {
+  document.getElementById('login-form').style.display = step === 'login' ? 'block' : 'none';
+  document.getElementById('code-step').style.display = step === 'code' ? 'block' : 'none';
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('login-error');
+  errorEl.classList.remove('show');
+  const btn = document.getElementById('login-submit');
+  btn.disabled = true;
+  btn.textContent = 'Bejelentkezés...';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: document.getElementById('login-email').value,
+        password: document.getElementById('login-pass').value,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errorEl.textContent = data.message || 'Hiba történt a bejelentkezés során.';
       errorEl.classList.add('show');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Bejelentkezés';
+      return;
     }
-  });
+    challengeId = data.challengeId;
+    document.getElementById('login-code').value = '';
+    showStep('code');
+    document.getElementById('login-code').focus();
+  } catch (err) {
+    errorEl.textContent = 'Nem sikerült elérni a szervert.';
+    errorEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Bejelentkezés';
+  }
+});
+
+document.getElementById('code-step').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('login-error');
+  errorEl.classList.remove('show');
+  const btn = document.getElementById('code-submit');
+  btn.disabled = true;
+  btn.textContent = 'Ellenőrzés...';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/verify-2fa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        challengeId,
+        code: document.getElementById('login-code').value.trim(),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errorEl.textContent = data.message || 'Hiba történt az ellenőrzés során.';
+      errorEl.classList.add('show');
+      return;
+    }
+    storeAuth(data);
+    location.href = 'properties.html';
+  } catch (err) {
+    errorEl.textContent = 'Nem sikerült elérni a szervert.';
+    errorEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Megerősítés';
+  }
+});
+
+document.getElementById('back-to-login').addEventListener('click', (e) => {
+  e.preventDefault();
+  challengeId = null;
+  document.getElementById('login-error').classList.remove('show');
+  showStep('login');
+});
 </script>
 </body>
 </html>

@@ -3,6 +3,7 @@ using System;
 using Lakaskezelo.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lakaskezelo.Data.Migrations
 {
     [DbContext(typeof(LakaskezeloDbContext))]
-    partial class LakaskezeloDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260823203429_AddTwoFactorAuth")]
+    partial class AddTwoFactorAuth
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,7 +90,7 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AppSettings", (string)null);
+                    b.ToTable("AppSettings");
 
                     b.HasData(
                         new
@@ -124,7 +127,7 @@ namespace Lakaskezelo.Data.Migrations
                     b.HasIndex("CurrencyCode", "RateDate")
                         .IsUnique();
 
-                    b.ToTable("ExchangeRates", (string)null);
+                    b.ToTable("ExchangeRates");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Invoice", b =>
@@ -184,7 +187,7 @@ namespace Lakaskezelo.Data.Migrations
                     b.HasIndex("PropertyId", "PeriodYear", "PeriodMonth")
                         .IsUnique();
 
-                    b.ToTable("Invoices", (string)null);
+                    b.ToTable("Invoices");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.InvoiceLine", b =>
@@ -208,7 +211,7 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasIndex("InvoiceId");
 
-                    b.ToTable("InvoiceLines", (string)null);
+                    b.ToTable("InvoiceLines");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Owner", b =>
@@ -245,7 +248,7 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Owners", (string)null);
+                    b.ToTable("Owners");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.PasswordResetToken", b =>
@@ -278,7 +281,7 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PasswordResetTokens", (string)null);
+                    b.ToTable("PasswordResetTokens");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Property", b =>
@@ -318,7 +321,7 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Properties", (string)null);
+                    b.ToTable("Properties");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.PropertyOwner", b =>
@@ -340,7 +343,7 @@ namespace Lakaskezelo.Data.Migrations
                     b.HasIndex("PropertyId", "OwnerId")
                         .IsUnique();
 
-                    b.ToTable("PropertyOwners", (string)null);
+                    b.ToTable("PropertyOwners");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Tenant", b =>
@@ -388,7 +391,7 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasIndex("PropertyId");
 
-                    b.ToTable("Tenants", (string)null);
+                    b.ToTable("Tenants");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.TwoFactorChallenge", b =>
@@ -421,7 +424,7 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("TwoFactorChallenges", (string)null);
+                    b.ToTable("TwoFactorChallenges");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.User", b =>
@@ -455,7 +458,7 @@ namespace Lakaskezelo.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.UtilityCostEntry", b =>
@@ -491,7 +494,7 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasIndex("PropertyId", "Year", "Month");
 
-                    b.ToTable("UtilityCostEntries", (string)null);
+                    b.ToTable("UtilityCostEntries");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.UtilityReminderLog", b =>
@@ -517,7 +520,7 @@ namespace Lakaskezelo.Data.Migrations
                     b.HasIndex("PropertyId", "Year", "Month")
                         .IsUnique();
 
-                    b.ToTable("UtilityReminderLogs", (string)null);
+                    b.ToTable("UtilityReminderLogs");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Invoice", b =>

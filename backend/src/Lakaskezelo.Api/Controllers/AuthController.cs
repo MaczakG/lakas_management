@@ -22,9 +22,11 @@ public class AuthController(
     IConfiguration configuration) : ControllerBase
 {
     private static readonly TimeSpan ResetTokenLifetime = TimeSpan.FromHours(1);
+    private static readonly TimeSpan TwoFactorCodeLifetime = TimeSpan.FromMinutes(10);
+    private const int MaxTwoFactorAttempts = 5;
 
     [HttpPost("login")]
-    public async Task<ActionResult<AuthResponse>> Login(LoginRequest request, CancellationToken ct)
+    public async Task<ActionResult<LoginChallengeResponse>> Login(LoginRequest request, CancellationToken ct)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var user = await db.Users.SingleOrDefaultAsync(u => u.Email == normalizedEmail, ct);
@@ -40,6 +42,65 @@ public class AuthController(
             return Unauthorized(new { message = "Hibás e-mail cím vagy jelszó." });
         }
 
+        // A jelszó rendben — de a bejelentkezés csak egy e-mailben kiküldött 6 jegyű kóddal
+        // fejeződik be (ld. VerifyTwoFactor). A korábbi, még fel nem használt kódokat eldobjuk,
+        // hogy egy elveszett/be nem gépelt kód ne maradjon örökre érvényes.
+        var staleChallenges = await db.TwoFactorChallenges.Where(t => t.UserId == user.Id && t.UsedAt == null).ToListAsync(ct);
+        db.TwoFactorChallenges.RemoveRange(staleChallenges);
+
+        var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+        var challenge = new TwoFactorChallenge
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            CodeHash = HashToken(code),
+            ExpiresAt = DateTime.UtcNow.Add(TwoFactorCodeLifetime),
+            CreatedAt = DateTime.UtcNow,
+        };
+        db.TwoFactorChallenges.Add(challenge);
+        await db.SaveChangesAsync(ct);
+
+        var htmlBody = EmailTemplate.Render(
+            preheader: "Belépési kód",
+            heading: "Belépési kód",
+            bodyHtml: $"""
+                <p style="margin:0 0 14px;">A belépéshez add meg az alábbi kódot:</p>
+                <p style="margin:0 0 14px;font-size:30px;font-weight:700;letter-spacing:6px;">{code}</p>
+                <p style="margin:0;font-size:13px;color:#64748b;">A kód 10 percig érvényes. Ha nem te próbáltál bejelentkezni, hagyd figyelmen kívül ezt az e-mailt.</p>
+                """);
+        var textBody = $"Belépési kódod: {code} (10 percig érvényes)";
+
+        var sent = await emailSender.SendAsync(user.Email, EmailTemplate.UniqueSubject("Belépési kód"), htmlBody, textBody, null, ct);
+        if (!sent)
+        {
+            return StatusCode(502, new { message = $"Nem sikerült elküldeni a belépési kódot. {emailSender.LastError}" });
+        }
+
+        return Ok(new LoginChallengeResponse(challenge.Id));
+    }
+
+    [HttpPost("verify-2fa")]
+    public async Task<ActionResult<AuthResponse>> VerifyTwoFactor(VerifyTwoFactorRequest request, CancellationToken ct)
+    {
+        var challenge = await db.TwoFactorChallenges.Include(t => t.User)
+            .SingleOrDefaultAsync(t => t.Id == request.ChallengeId, ct);
+
+        if (challenge is null || challenge.UsedAt is not null || challenge.ExpiresAt < DateTime.UtcNow || challenge.AttemptCount >= MaxTwoFactorAttempts)
+        {
+            return BadRequest(new { message = "A kód érvénytelen vagy lejárt. Jelentkezz be újra a jelszavaddal." });
+        }
+
+        if (challenge.CodeHash != HashToken(request.Code.Trim()))
+        {
+            challenge.AttemptCount += 1;
+            await db.SaveChangesAsync(ct);
+            return BadRequest(new { message = "Hibás kód." });
+        }
+
+        challenge.UsedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        var user = challenge.User!;
         var (token, expiresAt) = tokenService.CreateAccessToken(user);
         return Ok(new AuthResponse(token, expiresAt, ToDto(user)));
     }

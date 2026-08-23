@@ -88,6 +88,7 @@ function renderUsers() {
       <td><span class="status-tag ${u.isActive ? 'ok' : 'missing'}">${u.isActive ? 'Aktív' : 'Inaktív'}</span></td>
       <td>${formatDate(u.createdAt)}</td>
       <td class="row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="sendPasswordReset('${u.id}', this)">Jelszó visszaállítás küldése</button>
         <button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}')">Szerkesztés</button>
         <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">Törlés</button>
       </td>
@@ -134,6 +135,24 @@ window.editUser = (id) => {
   document.getElementById('f-password-label').textContent = 'Új jelszó';
   document.getElementById('f-password-hint').textContent = 'Csak akkor töltsd ki, ha módosítani szeretnéd.';
   openModal('Felhasználó szerkesztése');
+};
+
+window.sendPasswordReset = async (id, btn) => {
+  const u = users.find((x) => x.id === id);
+  if (!u) return;
+  if (!confirm(`Elküldjük a jelszó-visszaállító e-mailt a(z) ${u.email} címre?`)) return;
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Küldés...';
+  try {
+    const res = await apiFetch('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: u.email }) });
+    const data = await res.json().catch(() => ({}));
+    alert(res.ok ? 'Elküldve.' : (data.message || 'Nem sikerült elküldeni.'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
 };
 
 window.deleteUser = async (id) => {

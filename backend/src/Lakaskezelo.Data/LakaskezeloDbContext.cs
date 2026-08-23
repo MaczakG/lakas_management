@@ -7,6 +7,7 @@ public class LakaskezeloDbContext(DbContextOptions<LakaskezeloDbContext> options
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<TwoFactorChallenge> TwoFactorChallenges => Set<TwoFactorChallenge>();
     public DbSet<Owner> Owners => Set<Owner>();
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Property> Properties => Set<Property>();
