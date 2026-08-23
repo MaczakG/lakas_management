@@ -115,11 +115,10 @@ public class InvoiceGenerationService(
                 var bodyParagraphsHtml = string.Concat(bodyText
                     .Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
                     .Select(p => $"""<p style="margin:0 0 12px;">{System.Net.WebUtility.HtmlEncode(p).Replace("\n", "<br>")}</p>"""));
-                var driveLinkHtml = invoice.PdfDriveLink is not null
-                    ? $"""<p style="margin:0;">A számla PDF: <a href="{invoice.PdfDriveLink}">megnyitás</a></p>"""
-                    : "";
-
-                var htmlBody = EmailTemplate.Render(preheader: $"{subject} — {periodLabel}", heading: subject, bodyHtml: bodyParagraphsHtml + driveLinkHtml);
+                // Nincs Drive-link a szövegben: a PDF már közvetlenül csatolva van, egy hivatkozás a
+                // saját Drive-fájlra csak feleslegesen duplikálná (pl. Gmail a linket automatikusan
+                // egy második, "csatolmány-szerű" kártyaként is megjeleníti a valódi melléklet mellett).
+                var htmlBody = EmailTemplate.Render(preheader: $"{subject} — {periodLabel}", heading: subject, bodyHtml: bodyParagraphsHtml);
                 var attachment = new EmailAttachment($"{invoice.Number}.pdf", pdfBytes, "application/pdf");
                 emailed = await emailSender.SendAsync(tenant.Email!, EmailTemplate.UniqueSubject(subject), htmlBody, bodyText, attachment, ct);
             }
