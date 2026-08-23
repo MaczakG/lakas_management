@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Lakaskezelo.Domain.Entities;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -5,15 +6,21 @@ using QuestPDF.Infrastructure;
 
 namespace Lakaskezelo.Api.Billing;
 
-// Ideiglenes, ésszerű elrendezésű magyar bérleti számla — a felhasználó által később megküldött
-// tényleges sablon alapján ez az egyetlen fájl fog cserélődni. A hívó oldal (BillingSchedulerService,
-// InvoicesController) csak a visszaadott byte[]-tel dolgozik, a tartalmától függetlenül.
+// A felhasználó által megküldött "Számviteli bizonylat" sablon egy-az-egyben leképezve. Ha a
+// sablon később finomodik, ez az egyetlen fájl, amit módosítani kell — a hívó oldal
+// (InvoiceGenerationService) csak a visszaadott byte[]-tel dolgozik.
 public static class InvoicePdfGenerator
 {
-    public static byte[] Generate(Invoice invoice, Property property, Tenant? tenant, AppSettings settings)
+    private static readonly string[] MonthNames =
+        ["január", "február", "március", "április", "május", "június",
+         "július", "augusztus", "szeptember", "október", "november", "december"];
+
+    // A tételeket külön paraméterként kapja, nem az invoice.Lines navigációból olvassa — az
+    // InvoiceGenerationService szándékosan nem tölti fel azt a listát (ld. ottani megjegyzés).
+    public static byte[] Generate(Invoice invoice, Property property, Tenant? tenant, AppSettings settings, List<InvoiceLine> lines)
     {
-        var hu = new System.Globalization.CultureInfo("hu-HU");
-        var periodLabel = new DateOnly(invoice.PeriodYear, invoice.PeriodMonth, 1).ToString("yyyy. MMMM", hu);
+        var periodLabel = $"{invoice.PeriodYear}.{MonthNames[invoice.PeriodMonth - 1]}";
+        var issuerCity = ExtractCity(settings.IssuerAddress);
 
         var document = QuestPDF.Fluent.Document.Create(container =>
         {
@@ -23,84 +30,115 @@ public static class InvoicePdfGenerator
                 page.Margin(40);
                 page.DefaultTextStyle(x => x.FontSize(10.5f).FontFamily("Arial"));
 
-                page.Header().Column(col =>
+                page.Content().Column(col =>
                 {
-                    col.Item().Text("SZÁMLA").FontSize(22).Bold();
-                    col.Item().PaddingTop(2).Text(periodLabel).FontSize(12).FontColor(Colors.Grey.Darken1);
-                });
-
-                page.Content().PaddingTop(20).Column(col =>
-                {
-                    col.Spacing(4);
+                    col.Spacing(14);
 
                     col.Item().Row(row =>
                     {
-                        row.RelativeItem().Column(c =>
-                        {
-                            c.Item().Text("Kibocsátó").Bold();
-                            c.Item().Text(settings.IssuerName ?? "—");
-                            if (!string.IsNullOrWhiteSpace(settings.IssuerAddress)) c.Item().Text(settings.IssuerAddress);
-                            if (!string.IsNullOrWhiteSpace(settings.IssuerTaxId)) c.Item().Text($"Adószám: {settings.IssuerTaxId}");
-                            if (!string.IsNullOrWhiteSpace(settings.IssuerBankAccount)) c.Item().Text($"Bankszámla: {settings.IssuerBankAccount}");
-                        });
-                        row.RelativeItem().Column(c =>
-                        {
-                            c.Item().Text("Vevő").Bold();
-                            c.Item().Text(tenant?.Name ?? "—");
-                            if (!string.IsNullOrWhiteSpace(tenant?.Address)) c.Item().Text(tenant.Address);
-                            if (!string.IsNullOrWhiteSpace(tenant?.TaxId)) c.Item().Text($"Adószám: {tenant.TaxId}");
-                            if (!string.IsNullOrWhiteSpace(tenant?.Email)) c.Item().Text(tenant.Email);
-                            c.Item().PaddingTop(4).Text(property.Name);
-                        });
+                        row.RelativeItem().Text("SZÁMVITELI BIZONYLAT").FontSize(16).Bold();
                         row.RelativeItem().AlignRight().Column(c =>
                         {
-                            c.Item().Text($"Számlaszám: {invoice.Number}");
-                            c.Item().Text($"Kiállítás dátuma: {invoice.IssuedAt:yyyy.MM.dd.}");
-                            c.Item().Text($"Fizetési határidő: {invoice.DueDate:yyyy.MM.dd.}");
-                            c.Item().Text($"Teljesítés dátuma: {invoice.DueDate:yyyy.MM.dd.}");
+                            c.Item().Text($"Bizonylat száma: {invoice.Number}");
+                            c.Item().Text($"Időszak: {periodLabel}");
                         });
                     });
 
-                    col.Item().PaddingTop(20).Table(table =>
+                    col.Item().Table(table =>
                     {
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.RelativeColumn(4);
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                        });
+
+                        void Cell(string text) => table.Cell().Border(0.75f).BorderColor(Colors.Grey.Lighten1).Padding(8).Text(text);
+
+                        Cell($"Bizonylat kiállító neve: {settings.IssuerName}");
+                        Cell($"Bérbe vevő neve: {tenant?.Name ?? "—"}");
+                        Cell($"Bizonylat kiállító címe: {settings.IssuerAddress}");
+                        Cell($"Bérbe vevő címe: {tenant?.Address ?? "—"}");
+                        Cell($"Bizonylat kiállító bankszámlaszáma: {settings.IssuerBankAccount}");
+                        Cell($"Bérbe vevő adószáma: {tenant?.TaxId ?? "—"}");
+                    });
+
+                    col.Item().Text($"Gazdasági esemény megnevezése: {property.Name} bérleti díja");
+
+                    col.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(3);
                             columns.RelativeColumn(2);
                         });
 
-                        table.Header(header =>
+                        foreach (var line in lines)
                         {
-                            header.Cell().Text("Tétel").Bold();
-                            header.Cell().AlignRight().Text("Összeg").Bold();
-                            header.Cell().ColumnSpan(2).PaddingTop(4).BorderBottom(1).BorderColor(Colors.Grey.Lighten1);
-                        });
-
-                        foreach (var line in invoice.Lines)
-                        {
-                            table.Cell().PaddingVertical(3).Text(line.Label);
-                            table.Cell().PaddingVertical(3).AlignRight().Text($"{line.Amount:N0} Ft");
+                            table.Cell().Border(0.75f).BorderColor(Colors.Grey.Lighten1).Padding(8).Text(line.Label);
+                            table.Cell().Border(0.75f).BorderColor(Colors.Grey.Lighten1).Padding(8).Text($"{line.Amount:N0} Ft");
                         }
                     });
 
-                    col.Item().PaddingTop(16).AlignRight().Text($"Fizetendő összesen: {invoice.AmountTotal:N0} Ft").Bold().FontSize(13);
-
-                    if (!string.IsNullOrWhiteSpace(settings.IssuerBankAccount))
+                    if (!string.IsNullOrWhiteSpace(invoice.RentConversionNote))
                     {
-                        col.Item().PaddingTop(24).Text($"Kérjük az összeget a fizetési határidőig a következő bankszámlára utalni: {settings.IssuerBankAccount}. Közlemény: {invoice.Number}.")
-                            .FontSize(9.5f).FontColor(Colors.Grey.Darken1);
+                        col.Item().Text(invoice.RentConversionNote).FontSize(8.5f).FontColor(Colors.Grey.Darken1);
                     }
-                });
 
-                page.Footer().PaddingTop(16).Column(col =>
-                {
-                    col.Item().BorderTop(1).BorderColor(Colors.Grey.Lighten1).PaddingTop(8)
-                        .Text("Ez egy ideiglenes számlasablon — a végleges elrendezés a megadott minta alapján fog elkészülni.")
-                        .FontSize(8.5f).FontColor(Colors.Grey.Darken1);
+                    if (property.PropertyOwners.Count > 0)
+                    {
+                        var owners = property.PropertyOwners;
+                        var shareLabel = string.Join("-", Enumerable.Repeat($"1/{owners.Count}", owners.Count));
+
+                        col.Item().Text($"Bérleti díj jogosultjai {shareLabel} arányban:");
+
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn(3);
+                                columns.RelativeColumn(4);
+                                columns.RelativeColumn(2);
+                            });
+
+                            table.Header(header =>
+                            {
+                                header.Cell().Text("Név").Bold();
+                                header.Cell().Text("Lakcím").Bold();
+                                header.Cell().Text("Adóazonosító jele").Bold();
+                                header.Cell().ColumnSpan(3).PaddingTop(4).BorderBottom(1).BorderColor(Colors.Grey.Lighten1);
+                            });
+
+                            foreach (var po in owners)
+                            {
+                                table.Cell().PaddingVertical(3).Text(po.Owner!.Name);
+                                table.Cell().PaddingVertical(3).Text(po.Owner!.Address ?? "—");
+                                table.Cell().PaddingVertical(3).Text(po.Owner!.TaxId ?? "—");
+                            }
+                        });
+                    }
+
+                    col.Item().PaddingTop(10).Text($"Kelt: {(issuerCity is not null ? issuerCity + ", " : "")}{invoice.IssuedAt:yyyy.MM.dd.}");
+
+                    col.Item().PaddingTop(40).Column(c =>
+                    {
+                        c.Item().Width(160).BorderBottom(1).BorderColor(Colors.Black);
+                        c.Item().PaddingTop(4).Text(settings.IssuerName ?? "");
+                    });
                 });
             });
         });
 
         return document.GeneratePdf();
+    }
+
+    // Egy szabadszöveges cím első ("irányítószám Város") tagjából próbálja kiolvasni a várost —
+    // pl. "2083 Solymár, Budai Nagy Antal u. 14/b 2a" -> "Solymár". Ha nem illeszkedik a mintára,
+    // a teljes első tagot adja vissza inkább, mint hogy semmit ne írjon ki.
+    private static string? ExtractCity(string? address)
+    {
+        if (string.IsNullOrWhiteSpace(address)) return null;
+        var firstSegment = address.Split(',')[0].Trim();
+        var match = Regex.Match(firstSegment, @"^\d+\s+(.+)$");
+        return match.Success ? match.Groups[1].Value.Trim() : firstSegment;
     }
 }

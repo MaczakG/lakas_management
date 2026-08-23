@@ -103,7 +103,7 @@
           <div class="field"><label for="issuer-taxid">Adószám</label><input type="text" id="issuer-taxid"></div>
           <div class="field"><label for="issuer-bank">Bankszámlaszám</label><input type="text" id="issuer-bank"></div>
         </div>
-        <div class="field"><label>Következő számlaszám</label><input type="text" id="issuer-next-number" disabled></div>
+        <span class="hint">A számla sorszáma az ingatlanon beállított előtagból épül fel (Ingatlanok oldal).</span>
       </section>
 
       <div>
@@ -133,7 +133,6 @@ async function loadSettings() {
   document.getElementById('issuer-address').value = s.issuerAddress || '';
   document.getElementById('issuer-taxid').value = s.issuerTaxId || '';
   document.getElementById('issuer-bank').value = s.issuerBankAccount || '';
-  document.getElementById('issuer-next-number').value = s.nextInvoiceNumber;
 }
 
 async function saveSettings() {
@@ -150,7 +149,6 @@ async function saveSettings() {
     issuerAddress: document.getElementById('issuer-address').value.trim() || null,
     issuerTaxId: document.getElementById('issuer-taxid').value.trim() || null,
     issuerBankAccount: document.getElementById('issuer-bank').value.trim() || null,
-    nextInvoiceNumber: Number(document.getElementById('issuer-next-number').value) || 1,
   };
 
   const res = await apiFetch('/api/settings', { method: 'PUT', body: JSON.stringify(payload) });

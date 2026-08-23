@@ -70,5 +70,5 @@ public class SettingsController(LakaskezeloDbContext db, AppSettingsService sett
         s.MailgunApiKey, s.MailgunDomain, s.MailgunFromAddress, s.MailgunFromName, s.MailgunApiBaseUrl,
         s.GoogleServiceAccountJson,
         s.UtilityContactEmail, s.UtilityDeadlineDay,
-        s.IssuerName, s.IssuerAddress, s.IssuerTaxId, s.IssuerBankAccount, s.NextInvoiceNumber);
+        s.IssuerName, s.IssuerAddress, s.IssuerTaxId, s.IssuerBankAccount);
 }

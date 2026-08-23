@@ -8,6 +8,10 @@ public class Property
     public decimal RentAmount { get; set; }
     public string? DriveFolderId { get; set; }
 
+    // A számla sorszámának előtagja — a végleges szám "{Előtag}-{hónap}-{év}" alakban épül fel
+    // (ld. InvoiceGenerationService), pl. "A22-8-2026".
+    public string? InvoicePrefix { get; set; }
+
     // Havonta ismétlődő számlázási időpont ehhez az ingatlanhoz (helyi idő, Europe/Budapest)
     public int BillingDayOfMonth { get; set; } = 5;
     public int BillingHour { get; set; } = 8;

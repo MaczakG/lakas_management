@@ -18,6 +18,11 @@ public class Invoice
     public DateOnly DueDate { get; set; }
     public decimal AmountTotal { get; set; }
 
+    // Csak akkor van értéke, ha a bérlő nem HUF-alapú bérleti díjat állított be — a PDF-en
+    // lábjegyzetként jelenik meg, hogy az átváltás átlátható legyen (a bizonylat sablonja maga
+    // csak a végleges HUF összeget mutatja, ld. InvoicePdfGenerator).
+    public string? RentConversionNote { get; set; }
+
     public InvoiceStatus Status { get; set; } = InvoiceStatus.Generated;
     public string? PdfDriveFileId { get; set; }
     public string? PdfDriveLink { get; set; }

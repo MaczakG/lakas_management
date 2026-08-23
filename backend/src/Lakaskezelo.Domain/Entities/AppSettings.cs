@@ -30,7 +30,6 @@ public class AppSettings
     public string? IssuerAddress { get; set; }
     public string? IssuerTaxId { get; set; }
     public string? IssuerBankAccount { get; set; }
-    public int NextInvoiceNumber { get; set; } = 1;
 
     public DateTime UpdatedAt { get; set; }
 }
