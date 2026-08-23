@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Rezsi felvétel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .context-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;}
+  .draft-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px;}
+  .draft-row .field{margin-bottom:0;}
+  .draft-row button{width:42px;height:42px;border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;color:var(--coral);flex-shrink:0;}
+  .draft-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:4px 0 20px;}
+  .existing-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin-top:12px;text-align:right;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Rezsi felvétel</h1>
+        <p>Egy ingatlan egy hónapjához egyszerre több rezsi tétel (áram, gáz, közös költség, stb.) rögzíthető.</p>
+      </div>
+    </div>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h3>Ingatlan és időszak</h3>
+          <p>Válaszd ki, melyik ingatlanhoz és melyik hónaphoz szeretnél tételeket felvenni.</p>
+        </div>
+      </div>
+      <div class="context-row">
+        <div class="field"><label for="ue-property">Ingatlan</label><select id="ue-property"></select></div>
+        <div class="field"><label for="ue-year">Év</label><input type="number" id="ue-year"></div>
+        <div class="field"><label for="ue-month">Hónap</label><select id="ue-month"></select></div>
+      </div>
+      <div class="form-error" id="ue-locked-note">Ez az időszak már számlázva lett, a rezsi tételek nem módosíthatók.</div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h3>Új tételek</h3>
+          <p>Adj hozzá annyi sort, amennyi rezsi tételt ehhez a hónaphoz rögzíteni szeretnél, majd mentsd egyszerre.</p>
+        </div>
+      </div>
+      <div id="draft-rows"></div>
+      <div class="draft-total" id="draft-total"></div>
+      <div class="form-error" id="ue-form-error"></div>
+      <div class="form-success" id="ue-form-success">A tételek sikeresen rögzítve.</div>
+      <div class="row-actions" style="justify-content:flex-start;gap:10px;">
+        <button class="btn btn-ghost btn-sm" type="button" id="add-row-btn">+ Sor hozzáadása</button>
+        <button class="btn btn-primary" type="button" id="save-batch-btn">Mentés</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h3>Rögzített tételek erre az időszakra</h3>
+        </div>
+      </div>
+      <div class="card-table">
+        <table>
+          <thead><tr><th>Megnevezés</th><th>Összeg</th><th></th></tr></thead>
+          <tbody id="existing-tbody"><tr class="empty-row"><td colspan="3">Válassz ingatlant.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="existing-total" id="existing-total"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+requireAuth();
+
+const propertySelect = document.getElementById('ue-property');
+const yearInput = document.getElementById('ue-year');
+const monthSelect = document.getElementById('ue-month');
+monthSelect.innerHTML = MONTH_NAMES.map((name, idx) => `<option value="${idx + 1}">${name}</option>`).join('');
+
+let lockedPeriods = new Set();
+let rowSeq = 0;
+
+function escapeHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s ?? '';
+  return div.innerHTML;
+}
+
+function addDraftRow() {
+  rowSeq += 1;
+  const row = document.createElement('div');
+  row.className = 'draft-row';
+  row.dataset.rowId = rowSeq;
+  row.innerHTML = `
+    <div class="field"><label>Megnevezés</label><input type="text" class="draft-label" placeholder="pl. Áram"></div>
+    <div class="field"><label>Összeg (Ft)</label><input type="number" class="draft-amount" min="0"></div>
+    <button type="button" title="Sor eltávolítása" onclick="this.closest('.draft-row').remove(); updateDraftTotal();">✕</button>
+  `;
+  document.getElementById('draft-rows').appendChild(row);
+  row.querySelector('.draft-amount').addEventListener('input', updateDraftTotal);
+}
+
+function updateDraftTotal() {
+  const rows = [...document.querySelectorAll('.draft-row')];
+  const sum = rows.reduce((acc, r) => acc + (Number(r.querySelector('.draft-amount').value) || 0), 0);
+  document.getElementById('draft-total').textContent = rows.length > 0 ? `Új tételek összesen: ${formatCurrency(sum)}` : '';
+}
+
+function resetDraftRows() {
+  document.getElementById('draft-rows').innerHTML = '';
+  for (let i = 0; i < 3; i += 1) addDraftRow();
+  updateDraftTotal();
+}
+
+document.getElementById('add-row-btn').addEventListener('click', () => { addDraftRow(); updateDraftTotal(); });
+
+async function loadProperties() {
+  const now = new Date();
+  yearInput.value = now.getFullYear();
+  monthSelect.value = now.getMonth() + 1;
+
+  const res = await apiFetch('/api/properties');
+  const properties = await res.json();
+  propertySelect.innerHTML = properties.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  if (properties.length > 0) await loadContext();
+}
+
+async function loadContext() {
+  const propertyId = propertySelect.value;
+  if (!propertyId) return;
+
+  const [entriesRes, invoicesRes] = await Promise.all([
+    apiFetch(`/api/properties/${propertyId}/utility-costs`),
+    apiFetch(`/api/properties/${propertyId}/invoices`),
+  ]);
+  const entries = await entriesRes.json();
+  const invoices = await invoicesRes.json();
+  lockedPeriods = new Set(
+    invoices.filter((i) => i.status === 'Sent' || i.status === 'Generated').map((i) => `${i.periodYear}-${i.periodMonth}`)
+  );
+
+  renderExisting(entries);
+  updateLockState();
+  resetDraftRows();
+}
+
+function clearFormMessages() {
+  document.getElementById('ue-form-error').classList.remove('show');
+  document.getElementById('ue-form-success').classList.remove('show');
+}
+
+function renderExisting(allEntries) {
+  const year = Number(yearInput.value);
+  const month = Number(monthSelect.value);
+  const propertyId = propertySelect.value;
+  const entries = allEntries.filter((e) => e.year === year && e.month === month);
+
+  const tbody = document.getElementById('existing-tbody');
+  tbody.innerHTML = entries.length === 0
+    ? `<tr class="empty-row"><td colspan="3">Nincs még rögzített tétel erre az időszakra.</td></tr>`
+    : entries.map((e) => `
+      <tr>
+        <td>${escapeHtml(e.label)}</td>
+        <td>${formatCurrency(e.amount)}</td>
+        <td class="row-actions">${e.isLocked
+          ? '<span class="status-tag ok">Lezárva</span>'
+          : `<button class="btn btn-danger btn-sm" onclick="deleteExisting('${propertyId}', '${e.id}')">Törlés</button>`}</td>
+      </tr>
+    `).join('');
+
+  const sum = entries.reduce((acc, e) => acc + e.amount, 0);
+  document.getElementById('existing-total').textContent = entries.length > 0 ? `Összesen: ${formatCurrency(sum)}` : '';
+}
+
+function updateLockState() {
+  const key = `${yearInput.value}-${monthSelect.value}`;
+  const locked = lockedPeriods.has(key);
+  document.getElementById('add-row-btn').disabled = locked;
+  document.getElementById('save-batch-btn').disabled = locked;
+  document.getElementById('ue-locked-note').classList.toggle('show', locked);
+}
+
+propertySelect.addEventListener('change', () => { clearFormMessages(); loadContext(); });
+yearInput.addEventListener('input', () => { clearFormMessages(); loadContext(); });
+monthSelect.addEventListener('change', () => { clearFormMessages(); loadContext(); });
+
+document.getElementById('save-batch-btn').addEventListener('click', async () => {
+  const propertyId = propertySelect.value;
+  const errorEl = document.getElementById('ue-form-error');
+  const successEl = document.getElementById('ue-form-success');
+  errorEl.classList.remove('show');
+  successEl.classList.remove('show');
+
+  const rows = [...document.querySelectorAll('.draft-row')].map((r) => ({
+    label: r.querySelector('.draft-label').value.trim(),
+    amount: Number(r.querySelector('.draft-amount').value),
+  })).filter((r) => r.label && r.amount);
+
+  if (rows.length === 0) {
+    errorEl.textContent = 'Adj meg legalább egy tételt (megnevezéssel és összeggel).';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  const payloadBase = { year: Number(yearInput.value), month: Number(monthSelect.value) };
+  for (const row of rows) {
+    const res = await apiFetch(`/api/properties/${propertyId}/utility-costs`, {
+      method: 'POST',
+      body: JSON.stringify({ ...payloadBase, ...row }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      errorEl.textContent = data.message || 'Nem sikerült minden tételt rögzíteni.';
+      errorEl.classList.add('show');
+      await loadContext();
+      return;
+    }
+  }
+
+  successEl.classList.add('show');
+  await loadContext();
+});
+
+window.deleteExisting = async (propertyId, entryId) => {
+  if (!confirm('Biztosan törlöd ezt a tételt?')) return;
+  const res = await apiFetch(`/api/properties/${propertyId}/utility-costs/${entryId}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 204) {
+    const data = await res.json().catch(() => ({}));
+    alert(data.message || 'Nem sikerült törölni a tételt.');
+    return;
+  }
+  await loadContext();
+};
+
+loadProperties();
+</script>
+
+</body>
+</html>
