@@ -42,13 +42,14 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
     // Csak a még ki nem küldött (Generated/Failed) számlák törölhetők — pl. téves/teszt generálás
     // után, hogy az adott időszak rezsi tételei újra szerkeszthetők legyenek (ld.
     // PropertiesController.IsPeriodLockedAsync). Egy ténylegesen kiküldött (Sent) számlát a
-    // rendszer nem enged törölni, az már valós, bérlőnek elküldött bizonylat.
+    // rendszer alapból nem enged törölni, az már valós, bérlőnek elküldött bizonylat — a
+    // force=true csak szándékos admin felülbírálásra való (pl. téves teszt-küldés törlése).
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Delete(Guid id, [FromQuery] bool force, CancellationToken ct)
     {
         var invoice = await db.Invoices.FirstOrDefaultAsync(i => i.Id == id, ct);
         if (invoice is null) return NotFound();
-        if (invoice.Status == Domain.Enums.InvoiceStatus.Sent)
+        if (invoice.Status == Domain.Enums.InvoiceStatus.Sent && !force)
         {
             return Conflict(new { message = "Egy már kiküldött számla nem törölhető." });
         }
