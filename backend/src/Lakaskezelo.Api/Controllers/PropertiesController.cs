@@ -171,7 +171,7 @@ public class PropertiesController(LakaskezeloDbContext db, GoogleDriveService dr
         property.Id, property.Name, property.RentAmount, property.DriveFolderId,
         property.BillingDayOfMonth, property.BillingHour, property.BillingMinute, property.IsActive,
         [.. property.PropertyOwners.Select(po => new PropertyOwnerDto(po.OwnerId, po.Owner!.Name))],
-        [.. property.Tenants.Select(t => new TenantDto(t.Id, t.Name, t.Email, t.Phone, t.PropertyId, property.Name, t.MoveInDate, t.MoveOutDate, t.Notes, t.RentCurrency))]);
+        [.. property.Tenants.Select(t => new TenantDto(t.Id, t.Name, t.Email, t.Phone, t.Address, t.TaxId, t.PropertyId, property.Name, t.MoveInDate, t.MoveOutDate, t.Notes, t.RentCurrency))]);
 
     private static UtilityCostEntryDto ToDto(UtilityCostEntry entry) => new(entry.Id, entry.Year, entry.Month, entry.Label, entry.Amount, entry.CreatedAt);
 }

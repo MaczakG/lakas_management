@@ -28,6 +28,8 @@ public class TenantsController(LakaskezeloDbContext db) : ControllerBase
             Name = request.Name.Trim(),
             Email = request.Email,
             Phone = request.Phone,
+            Address = request.Address,
+            TaxId = request.TaxId,
             PropertyId = request.PropertyId,
             MoveInDate = request.MoveInDate,
             MoveOutDate = request.MoveOutDate,
@@ -51,6 +53,8 @@ public class TenantsController(LakaskezeloDbContext db) : ControllerBase
         tenant.Name = request.Name.Trim();
         tenant.Email = request.Email;
         tenant.Phone = request.Phone;
+        tenant.Address = request.Address;
+        tenant.TaxId = request.TaxId;
         tenant.PropertyId = request.PropertyId;
         tenant.MoveInDate = request.MoveInDate;
         tenant.MoveOutDate = request.MoveOutDate;
@@ -73,6 +77,7 @@ public class TenantsController(LakaskezeloDbContext db) : ControllerBase
     }
 
     private static TenantDto ToDto(Tenant tenant) => new(
-        tenant.Id, tenant.Name, tenant.Email, tenant.Phone, tenant.PropertyId, tenant.Property?.Name,
+        tenant.Id, tenant.Name, tenant.Email, tenant.Phone, tenant.Address, tenant.TaxId,
+        tenant.PropertyId, tenant.Property?.Name,
         tenant.MoveInDate, tenant.MoveOutDate, tenant.Notes, tenant.RentCurrency);
 }

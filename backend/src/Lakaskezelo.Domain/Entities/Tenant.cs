@@ -11,6 +11,8 @@ public class Tenant
     public string? Phone { get; set; }
     public Guid? PropertyId { get; set; }
     public Property? Property { get; set; }
+    public string? Address { get; set; }
+    public string? TaxId { get; set; }
     public DateOnly? MoveInDate { get; set; }
     public DateOnly? MoveOutDate { get; set; }
     public string? Notes { get; set; }

@@ -59,6 +59,10 @@
           <div class="field"><label for="f-phone">Telefon</label><input type="text" id="f-phone"></div>
         </div>
         <div class="field-row">
+          <div class="field"><label for="f-address">Cím</label><input type="text" id="f-address"></div>
+          <div class="field"><label for="f-taxid">Adószám</label><input type="text" id="f-taxid"></div>
+        </div>
+        <div class="field-row">
           <div class="field"><label for="f-property">Ingatlan</label>
             <select id="f-property"><option value="">— nincs hozzárendelve —</option></select>
           </div>
@@ -159,6 +163,8 @@ window.editTenant = (id) => {
   document.getElementById('f-name').value = t.name;
   document.getElementById('f-email').value = t.email || '';
   document.getElementById('f-phone').value = t.phone || '';
+  document.getElementById('f-address').value = t.address || '';
+  document.getElementById('f-taxid').value = t.taxId || '';
   document.getElementById('f-property').value = t.propertyId || '';
   document.getElementById('f-currency').value = t.rentCurrency || 'HUF';
   document.getElementById('f-move-in').value = t.moveInDate || '';
@@ -182,6 +188,8 @@ document.getElementById('tenant-form').addEventListener('submit', async (e) => {
     name: document.getElementById('f-name').value.trim(),
     email: document.getElementById('f-email').value.trim() || null,
     phone: document.getElementById('f-phone').value.trim() || null,
+    address: document.getElementById('f-address').value.trim() || null,
+    taxId: document.getElementById('f-taxid').value.trim() || null,
     propertyId: document.getElementById('f-property').value || null,
     rentCurrency: document.getElementById('f-currency').value,
     moveInDate: document.getElementById('f-move-in').value || null,

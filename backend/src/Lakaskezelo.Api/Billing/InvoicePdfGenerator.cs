@@ -47,6 +47,8 @@ public static class InvoicePdfGenerator
                         {
                             c.Item().Text("Vevő").Bold();
                             c.Item().Text(tenant?.Name ?? "—");
+                            if (!string.IsNullOrWhiteSpace(tenant?.Address)) c.Item().Text(tenant.Address);
+                            if (!string.IsNullOrWhiteSpace(tenant?.TaxId)) c.Item().Text($"Adószám: {tenant.TaxId}");
                             if (!string.IsNullOrWhiteSpace(tenant?.Email)) c.Item().Text(tenant.Email);
                             c.Item().PaddingTop(4).Text(property.Name);
                         });
