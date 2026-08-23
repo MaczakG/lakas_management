@@ -139,6 +139,24 @@
         <span class="hint">A számla sorszáma az ingatlanon beállított előtagból épül fel (Ingatlanok oldal).</span>
       </section>
 
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h3>Számla e-mail szövege</h3>
+            <p>Ez a szöveg megy ki a bérlőnek minden hónapban a számla-PDF melléklettel együtt. Üresen hagyva az alapértelmezett szöveget használja a rendszer.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="invoice-email-subject">Tárgy</label>
+          <input type="text" id="invoice-email-subject" placeholder="Számla — {ingatlan}">
+        </div>
+        <div class="field">
+          <label for="invoice-email-body">Szöveg</label>
+          <textarea id="invoice-email-body" rows="5" placeholder="Elkészült a(z) {ingatlan} ingatlanhoz tartozó számlád a(z) {időszak} időszakra.&#10;&#10;Fizetendő összeg: {összeg}"></textarea>
+          <span class="hint">Használható helyőrzők: {ingatlan}, {időszak}, {összeg}, {számlaszám}. A bekezdéseket üres sor választja el. A Drive-hivatkozás (ha van) automatikusan a szöveg végére kerül.</span>
+        </div>
+      </section>
+
       <div>
         <button class="btn btn-primary" type="submit">Mentés</button>
         <span class="save-note" id="save-note">Mentve.</span>
@@ -175,6 +193,8 @@ async function loadSettings() {
   document.getElementById('issuer-address').value = s.issuerAddress || '';
   document.getElementById('issuer-taxid').value = s.issuerTaxId || '';
   document.getElementById('issuer-bank').value = s.issuerBankAccount || '';
+  document.getElementById('invoice-email-subject').value = s.invoiceEmailSubject || '';
+  document.getElementById('invoice-email-body').value = s.invoiceEmailBody || '';
 }
 
 async function saveSettings() {
@@ -193,6 +213,8 @@ async function saveSettings() {
     issuerAddress: document.getElementById('issuer-address').value.trim() || null,
     issuerTaxId: document.getElementById('issuer-taxid').value.trim() || null,
     issuerBankAccount: document.getElementById('issuer-bank').value.trim() || null,
+    invoiceEmailSubject: document.getElementById('invoice-email-subject').value.trim() || null,
+    invoiceEmailBody: document.getElementById('invoice-email-body').value.trim() || null,
   };
 
   const res = await apiFetch('/api/settings', { method: 'PUT', body: JSON.stringify(payload) });

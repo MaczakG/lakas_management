@@ -47,6 +47,8 @@ public class SettingsController(
         settings.IssuerAddress = dto.IssuerAddress;
         settings.IssuerTaxId = dto.IssuerTaxId;
         settings.IssuerBankAccount = dto.IssuerBankAccount;
+        settings.InvoiceEmailSubject = dto.InvoiceEmailSubject;
+        settings.InvoiceEmailBody = dto.InvoiceEmailBody;
         settings.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -59,7 +61,7 @@ public class SettingsController(
     public async Task<ActionResult<TestMailgunResponse>> TestMailgun(TestEmailRequest request, CancellationToken ct)
     {
         var htmlBody = EmailTemplate.Render("Teszt e-mail", "Teszt e-mail", "<p style=\"margin:0;\">Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról (Mailgun).</p>");
-        var sent = await mailgunSender.SendAsync(request.To, "Lakáskezelő — teszt e-mail (Mailgun)", htmlBody, "Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról.", ct);
+        var sent = await mailgunSender.SendAsync(request.To, "Lakáskezelő — teszt e-mail (Mailgun)", htmlBody, "Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról.", null, ct);
         return Ok(new TestMailgunResponse(sent, sent ? null : mailgunSender.LastError));
     }
 
@@ -67,7 +69,7 @@ public class SettingsController(
     public async Task<ActionResult<TestGoogleEmailResponse>> TestGoogleEmail(TestEmailRequest request, CancellationToken ct)
     {
         var htmlBody = EmailTemplate.Render("Teszt e-mail", "Teszt e-mail", "<p style=\"margin:0;\">Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról (Google).</p>");
-        var sent = await gmailSender.SendAsync(request.To, "Lakáskezelő — teszt e-mail (Google)", htmlBody, "Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról.", ct);
+        var sent = await gmailSender.SendAsync(request.To, "Lakáskezelő — teszt e-mail (Google)", htmlBody, "Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról.", null, ct);
         return Ok(new TestGoogleEmailResponse(sent, sent ? null : gmailSender.LastError));
     }
 
@@ -83,5 +85,6 @@ public class SettingsController(
         s.MailgunApiKey, s.MailgunDomain, s.MailgunFromAddress, s.MailgunFromName, s.MailgunApiBaseUrl,
         s.GoogleOAuthClientId, s.GoogleOAuthClientSecret, !string.IsNullOrWhiteSpace(s.GoogleOAuthRefreshToken), s.GoogleConnectedEmail,
         s.UtilityContactEmail, s.UtilityDeadlineDay,
-        s.IssuerName, s.IssuerAddress, s.IssuerTaxId, s.IssuerBankAccount);
+        s.IssuerName, s.IssuerAddress, s.IssuerTaxId, s.IssuerBankAccount,
+        s.InvoiceEmailSubject, s.InvoiceEmailBody);
 }

@@ -21,7 +21,7 @@ public class MailgunEmailSender(HttpClient http, AppSettingsService settingsServ
     private static bool IsConfigured(string? apiKey, string? domain, string? from) =>
         !string.IsNullOrWhiteSpace(apiKey) && !string.IsNullOrWhiteSpace(domain) && !string.IsNullOrWhiteSpace(from);
 
-    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, CancellationToken ct)
+    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
     {
         var settings = await settingsService.GetAsync(ct);
         if (!IsConfigured(settings.MailgunApiKey, settings.MailgunDomain, settings.MailgunFromAddress))
@@ -40,14 +40,22 @@ public class MailgunEmailSender(HttpClient http, AppSettingsService settingsServ
                 ? settings.MailgunFromAddress!
                 : $"{settings.MailgunFromName} <{settings.MailgunFromAddress}>";
 
-            var form = new FormUrlEncodedContent(new Dictionary<string, string>
+            // Mailgun a form mezők mellett a csatolmányt is multipart/form-data-ként várja (az
+            // "attachment" mezőben) — a korábbi FormUrlEncodedContent nem tudna bináris fájlt vinni.
+            using var form = new MultipartFormDataContent
             {
-                ["from"] = fromHeader,
-                ["to"] = to,
-                ["subject"] = subject,
-                ["html"] = htmlBody,
-                ["text"] = textBody,
-            });
+                { new StringContent(fromHeader), "from" },
+                { new StringContent(to), "to" },
+                { new StringContent(subject), "subject" },
+                { new StringContent(htmlBody), "html" },
+                { new StringContent(textBody), "text" },
+            };
+            if (attachment is not null)
+            {
+                var fileContent = new ByteArrayContent(attachment.Content);
+                fileContent.Headers.ContentType = new MediaTypeHeaderValue(attachment.MimeType);
+                form.Add(fileContent, "attachment", attachment.FileName);
+            }
 
             var baseUrl = string.IsNullOrWhiteSpace(settings.MailgunApiBaseUrl) ? "https://api.mailgun.net" : settings.MailgunApiBaseUrl!.TrimEnd('/');
             var response = await http.PostAsync($"{baseUrl}/v3/{settings.MailgunDomain}/messages", form, ct);

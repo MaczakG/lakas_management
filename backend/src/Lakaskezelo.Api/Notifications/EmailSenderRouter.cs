@@ -19,10 +19,10 @@ public class EmailSenderRouter(MailgunEmailSender mailgun, GmailEmailSender gmai
 
     public async Task<bool> IsConfiguredAsync(CancellationToken ct = default) => await (await ResolveAsync(ct)).IsConfiguredAsync(ct);
 
-    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, CancellationToken ct)
+    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
     {
         var sender = await ResolveAsync(ct);
-        var result = await sender.SendAsync(to, subject, htmlBody, textBody, ct);
+        var result = await sender.SendAsync(to, subject, htmlBody, textBody, attachment, ct);
         LastError = sender.LastError;
         return result;
     }

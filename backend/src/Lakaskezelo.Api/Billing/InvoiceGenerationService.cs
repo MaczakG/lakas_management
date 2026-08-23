@@ -18,6 +18,11 @@ public class InvoiceGenerationService(
     GoogleDriveService driveService,
     IEmailSender emailSender)
 {
+    // A Beállítások oldalon szerkeszthető sablon alapértéke — csak akkor kerül elő, ha a mező
+    // üres, hogy a régebbi (még nem testreszabott) telepítéseken ne változzon a kiküldött szöveg.
+    private const string DefaultInvoiceEmailSubject = "Számla — {ingatlan}";
+    private const string DefaultInvoiceEmailBody = "Elkészült a(z) {ingatlan} ingatlanhoz tartozó számlád a(z) {időszak} időszakra.\n\nFizetendő összeg: {összeg}";
+
     public async Task<Invoice> GenerateAndSendAsync(Property property, int year, int month, CancellationToken ct)
     {
         var existing = await db.Invoices
@@ -94,16 +99,29 @@ public class InvoiceGenerationService(
             var emailed = false;
             if (!string.IsNullOrWhiteSpace(tenant?.Email))
             {
-                var htmlBody = EmailTemplate.Render(
-                    preheader: $"Számla — {property.Name} — {year}.{month:D2}",
-                    heading: $"Számla — {invoice.Number}",
-                    bodyHtml: $"""
-                        <p style="margin:0 0 12px;">Elkészült a(z) <b>{System.Net.WebUtility.HtmlEncode(property.Name)}</b> ingatlanhoz tartozó számlád a(z) {year}.{month:D2}. időszakra.</p>
-                        <p style="margin:0 0 12px;">Fizetendő összeg: <b>{invoice.AmountTotal:N0} Ft</b></p>
-                        {(invoice.PdfDriveLink is not null ? $"""<p style="margin:0;">A számla PDF: <a href="{invoice.PdfDriveLink}">megnyitás</a></p>""" : "")}
-                        """);
-                var textBody = $"Számla — {invoice.Number}. Fizetendő: {invoice.AmountTotal:N0} Ft.";
-                emailed = await emailSender.SendAsync(tenant.Email!, EmailTemplate.UniqueSubject($"Számla — {property.Name}"), htmlBody, textBody, ct);
+                var periodLabel = $"{year}.{month:D2}";
+                var placeholders = new Dictionary<string, string>
+                {
+                    ["{ingatlan}"] = property.Name,
+                    ["{időszak}"] = periodLabel,
+                    ["{összeg}"] = $"{invoice.AmountTotal:N0} Ft",
+                    ["{számlaszám}"] = invoice.Number,
+                };
+                string Fill(string template) => placeholders.Aggregate(template, (acc, kv) => acc.Replace(kv.Key, kv.Value));
+
+                var subject = Fill(string.IsNullOrWhiteSpace(settings.InvoiceEmailSubject) ? DefaultInvoiceEmailSubject : settings.InvoiceEmailSubject);
+                var bodyText = Fill(string.IsNullOrWhiteSpace(settings.InvoiceEmailBody) ? DefaultInvoiceEmailBody : settings.InvoiceEmailBody);
+
+                var bodyParagraphsHtml = string.Concat(bodyText
+                    .Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => $"""<p style="margin:0 0 12px;">{System.Net.WebUtility.HtmlEncode(p).Replace("\n", "<br>")}</p>"""));
+                var driveLinkHtml = invoice.PdfDriveLink is not null
+                    ? $"""<p style="margin:0;">A számla PDF: <a href="{invoice.PdfDriveLink}">megnyitás</a></p>"""
+                    : "";
+
+                var htmlBody = EmailTemplate.Render(preheader: $"{subject} — {periodLabel}", heading: subject, bodyHtml: bodyParagraphsHtml + driveLinkHtml);
+                var attachment = new EmailAttachment($"{invoice.Number}.pdf", pdfBytes, "application/pdf");
+                emailed = await emailSender.SendAsync(tenant.Email!, EmailTemplate.UniqueSubject(subject), htmlBody, bodyText, attachment, ct);
             }
 
             invoice.Status = emailed ? InvoiceStatus.Sent : InvoiceStatus.Generated;

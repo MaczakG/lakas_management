@@ -81,7 +81,7 @@ public class AuthController(
             cta: ("Új jelszó beállítása", resetUrl));
         var textBody = $"Jelszó visszaállítása: {resetUrl} (1 órán belül érvényes)";
 
-        var sent = await emailSender.SendAsync(user.Email, EmailTemplate.UniqueSubject("Jelszó visszaállítása"), htmlBody, textBody, ct);
+        var sent = await emailSender.SendAsync(user.Email, EmailTemplate.UniqueSubject("Jelszó visszaállítása"), htmlBody, textBody, null, ct);
         if (!sent)
         {
             return StatusCode(502, new { message = $"Nem sikerült elküldeni a visszaállító e-mailt. {emailSender.LastError}" });

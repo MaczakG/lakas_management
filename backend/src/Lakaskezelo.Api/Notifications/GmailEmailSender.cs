@@ -51,7 +51,7 @@ public class GmailEmailSender(AppSettingsService settingsService) : IEmailSender
         });
     }
 
-    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, CancellationToken ct)
+    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
     {
         var settings = await settingsService.GetAsync(ct);
         if (string.IsNullOrWhiteSpace(settings.GoogleConnectedEmail))
@@ -70,7 +70,7 @@ public class GmailEmailSender(AppSettingsService settingsService) : IEmailSender
         try
         {
             var fromName = string.IsNullOrWhiteSpace(settings.IssuerName) ? "Lakáskezelő" : settings.IssuerName;
-            var message = new Google.Apis.Gmail.v1.Data.Message { Raw = BuildRawMessage(fromName!, settings.GoogleConnectedEmail!, to, subject, htmlBody) };
+            var message = new Google.Apis.Gmail.v1.Data.Message { Raw = BuildRawMessage(fromName!, settings.GoogleConnectedEmail!, to, subject, htmlBody, attachment) };
             await client.Users.Messages.Send(message, "me").ExecuteAsync(ct);
             LastError = null;
             return true;
@@ -88,16 +88,46 @@ public class GmailEmailSender(AppSettingsService settingsService) : IEmailSender
     // félreértelmezi és olvashatatlan (mojibake) szöveget jelenít meg.
     private static string EncodeHeaderWord(string text) => "=?UTF-8?B?" + Convert.ToBase64String(Encoding.UTF8.GetBytes(text)) + "?=";
 
-    private static string BuildRawMessage(string fromName, string fromAddress, string to, string subject, string htmlBody)
+    private static string BuildRawMessage(string fromName, string fromAddress, string to, string subject, string htmlBody, EmailAttachment? attachment)
     {
-        var mime = $"From: {EncodeHeaderWord(fromName)} <{fromAddress}>\r\n"
+        var headers = $"From: {EncodeHeaderWord(fromName)} <{fromAddress}>\r\n"
             + $"To: {to}\r\n"
             + $"Subject: {EncodeHeaderWord(subject)}\r\n"
-            + "MIME-Version: 1.0\r\n"
-            + "Content-Type: text/html; charset=UTF-8\r\n\r\n"
-            + htmlBody;
+            + "MIME-Version: 1.0\r\n";
+
+        var mime = attachment is null
+            ? headers + "Content-Type: text/html; charset=UTF-8\r\n\r\n" + htmlBody
+            : BuildMultipartBody(headers, htmlBody, attachment);
 
         // Gmail a "raw" mezőhöz web-safe (base64url) kódolást vár, kitöltés nélkül.
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(mime)).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    }
+
+    private static string BuildMultipartBody(string headers, string htmlBody, EmailAttachment attachment)
+    {
+        var boundary = $"lakaskezelo-{Guid.NewGuid():N}";
+        var attachmentBase64 = Convert.ToBase64String(attachment.Content);
+        // A Gmail/RFC 2045 ajánlása szerint 76 karakterenként törünk sort a base64 tartalomban.
+        var wrappedAttachment = string.Join("\r\n", Chunk(attachmentBase64, 76));
+
+        return headers
+            + $"Content-Type: multipart/mixed; boundary=\"{boundary}\"\r\n\r\n"
+            + $"--{boundary}\r\n"
+            + "Content-Type: text/html; charset=UTF-8\r\n\r\n"
+            + htmlBody + "\r\n\r\n"
+            + $"--{boundary}\r\n"
+            + $"Content-Type: {attachment.MimeType}; name=\"{attachment.FileName}\"\r\n"
+            + $"Content-Disposition: attachment; filename=\"{attachment.FileName}\"\r\n"
+            + "Content-Transfer-Encoding: base64\r\n\r\n"
+            + wrappedAttachment + "\r\n"
+            + $"--{boundary}--";
+    }
+
+    private static IEnumerable<string> Chunk(string text, int size)
+    {
+        for (var i = 0; i < text.Length; i += size)
+        {
+            yield return text.Substring(i, Math.Min(size, text.Length - i));
+        }
     }
 }

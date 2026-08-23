@@ -3,6 +3,7 @@ using System;
 using Lakaskezelo.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lakaskezelo.Data.Migrations
 {
     [DbContext(typeof(LakaskezeloDbContext))]
-    partial class LakaskezeloDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260823182133_AddInvoiceEmailTemplate")]
+    partial class AddInvoiceEmailTemplate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

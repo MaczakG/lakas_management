@@ -40,5 +40,9 @@ public class AppSettings
     public string? IssuerTaxId { get; set; }
     public string? IssuerBankAccount { get; set; }
 
+    // ---------- Számla e-mail szövege (üresen az InvoiceGenerationService beépített alapértéke érvényes) ----------
+    public string? InvoiceEmailSubject { get; set; }
+    public string? InvoiceEmailBody { get; set; }
+
     public DateTime UpdatedAt { get; set; }
 }

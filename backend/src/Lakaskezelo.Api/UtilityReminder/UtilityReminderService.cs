@@ -79,7 +79,7 @@ public class UtilityReminderService(IServiceScopeFactory scopeFactory, ILogger<U
                 """);
         var textBody = $"A(z) {periodLabel} időszakra hiányzó rezsi tételek:\n{listText}";
 
-        var sent = await emailSender.SendAsync(settings.UtilityContactEmail, EmailTemplate.UniqueSubject("Hiányzó rezsi tételek"), htmlBody, textBody, ct);
+        var sent = await emailSender.SendAsync(settings.UtilityContactEmail, EmailTemplate.UniqueSubject("Hiányzó rezsi tételek"), htmlBody, textBody, null, ct);
         if (!sent)
         {
             logger.LogWarning("Failed to send utility reminder digest: {Error}", emailSender.LastError);
