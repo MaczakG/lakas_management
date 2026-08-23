@@ -82,12 +82,17 @@ public class GmailEmailSender(AppSettingsService settingsService) : IEmailSender
         }
     }
 
+    // Egy fejléc-mező (pl. From megjelenített neve, Subject) csak ASCII karaktereket
+    // tartalmazhatna RFC 2822 szerint — az ékezetes szöveget RFC 2047 "encoded-word" formában
+    // kell átadni, különben a fogadó kliens (pl. Gmail webes felülete) a nyers UTF-8 bájtokat
+    // félreértelmezi és olvashatatlan (mojibake) szöveget jelenít meg.
+    private static string EncodeHeaderWord(string text) => "=?UTF-8?B?" + Convert.ToBase64String(Encoding.UTF8.GetBytes(text)) + "?=";
+
     private static string BuildRawMessage(string fromName, string fromAddress, string to, string subject, string htmlBody)
     {
-        var encodedSubject = "=?UTF-8?B?" + Convert.ToBase64String(Encoding.UTF8.GetBytes(subject)) + "?=";
-        var mime = $"From: {fromName} <{fromAddress}>\r\n"
+        var mime = $"From: {EncodeHeaderWord(fromName)} <{fromAddress}>\r\n"
             + $"To: {to}\r\n"
-            + $"Subject: {encodedSubject}\r\n"
+            + $"Subject: {EncodeHeaderWord(subject)}\r\n"
             + "MIME-Version: 1.0\r\n"
             + "Content-Type: text/html; charset=UTF-8\r\n\r\n"
             + htmlBody;
