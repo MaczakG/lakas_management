@@ -36,7 +36,8 @@ public class SettingsController(LakaskezeloDbContext db, AppSettingsService sett
         settings.MailgunFromAddress = dto.MailgunFromAddress;
         settings.MailgunFromName = dto.MailgunFromName;
         settings.MailgunApiBaseUrl = dto.MailgunApiBaseUrl;
-        settings.GoogleServiceAccountJson = dto.GoogleServiceAccountJson;
+        settings.GoogleOAuthClientId = dto.GoogleOAuthClientId;
+        settings.GoogleOAuthClientSecret = dto.GoogleOAuthClientSecret;
         settings.UtilityContactEmail = dto.UtilityContactEmail;
         settings.UtilityDeadlineDay = Math.Clamp(dto.UtilityDeadlineDay, 1, 28);
         settings.IssuerName = dto.IssuerName;
@@ -68,7 +69,7 @@ public class SettingsController(LakaskezeloDbContext db, AppSettingsService sett
 
     private static AppSettingsDto ToDto(Domain.Entities.AppSettings s) => new(
         s.MailgunApiKey, s.MailgunDomain, s.MailgunFromAddress, s.MailgunFromName, s.MailgunApiBaseUrl,
-        s.GoogleServiceAccountJson,
+        s.GoogleOAuthClientId, s.GoogleOAuthClientSecret, !string.IsNullOrWhiteSpace(s.GoogleOAuthRefreshToken), s.GoogleConnectedEmail,
         s.UtilityContactEmail, s.UtilityDeadlineDay,
         s.IssuerName, s.IssuerAddress, s.IssuerTaxId, s.IssuerBankAccount);
 }

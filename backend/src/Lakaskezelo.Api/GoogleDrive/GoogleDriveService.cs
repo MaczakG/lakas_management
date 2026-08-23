@@ -1,4 +1,6 @@
 using Google.Apis.Auth.OAuth2;
+using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Auth.OAuth2.Responses;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
 using Lakaskezelo.Api.Settings;
@@ -7,11 +9,14 @@ namespace Lakaskezelo.Api.GoogleDrive;
 
 public record DriveFileInfo(string Id, string Name, string? WebViewLink, DateTime? CreatedAt, long? SizeBytes);
 
-// A Google Drive-hitelesítés service account-tal történik (nem OAuth) — a felhasználó a
-// Beállítások oldalon beilleszti a service account JSON kulcsát, és megosztja vele a cél Drive
-// mappákat. Ez teszi lehetővé, hogy a háttérben, felügyelet nélkül (pl. éjjel a
-// BillingSchedulerService) is tudjunk fájlt feltölteni/listázni — nincs szükség egy élő
-// felhasználói OAuth-munkamenetre.
+// A Google Drive-hitelesítés OAuth-tal történik, a felhasználó saját Google-fiókjával — NEM
+// service accounttal. Kipróbáltuk a service account utat, és élesben kiderült, hogy a Google nem
+// engedi service accountnak fájlt létrehozni egy sima (nem Workspace) személyes Drive-ban: "Service
+// Accounts do not have storage quota. Leverage shared drives, or use OAuth delegation instead." —
+// mivel a felhasználónak nincs fizetős Google Workspace-e (Megosztott meghajtóhoz az kellene), az
+// OAuth az egyetlen működő út ingyenes Gmail-lel. A Beállítások oldalon egyszer kell engedélyezni
+// (GoogleOAuthController), utána a frissítő token (refresh token) teszi lehetővé a felügyelet
+// nélküli, éjszakai hozzáférést is — a UserCredential automatikusan frissíti az access tokent.
 public class GoogleDriveService(AppSettingsService settingsService)
 {
     private static readonly string[] Scopes = [DriveService.Scope.Drive];
@@ -19,10 +24,21 @@ public class GoogleDriveService(AppSettingsService settingsService)
     private async Task<DriveService?> BuildClientAsync(CancellationToken ct)
     {
         var settings = await settingsService.GetAsync(ct);
-        if (string.IsNullOrWhiteSpace(settings.GoogleServiceAccountJson)) return null;
+        if (string.IsNullOrWhiteSpace(settings.GoogleOAuthRefreshToken)
+            || string.IsNullOrWhiteSpace(settings.GoogleOAuthClientId)
+            || string.IsNullOrWhiteSpace(settings.GoogleOAuthClientSecret))
+        {
+            return null;
+        }
 
-        var credential = CredentialFactory.FromJson<ServiceAccountCredential>(settings.GoogleServiceAccountJson)
-            .ToGoogleCredential().CreateScoped(Scopes);
+        var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+        {
+            ClientSecrets = new ClientSecrets { ClientId = settings.GoogleOAuthClientId, ClientSecret = settings.GoogleOAuthClientSecret },
+            Scopes = Scopes,
+        });
+
+        var token = new TokenResponse { RefreshToken = settings.GoogleOAuthRefreshToken };
+        var credential = new UserCredential(flow, "lakaskezelo", token);
 
         return new DriveService(new BaseClientService.Initializer
         {
@@ -34,33 +50,29 @@ public class GoogleDriveService(AppSettingsService settingsService)
     public async Task<bool> IsConfiguredAsync(CancellationToken ct = default)
     {
         var settings = await settingsService.GetAsync(ct);
-        return !string.IsNullOrWhiteSpace(settings.GoogleServiceAccountJson);
+        return !string.IsNullOrWhiteSpace(settings.GoogleOAuthRefreshToken);
     }
 
-    // A service account JSON-ból kiolvasott client_email — ezt kell megosztani a cél Drive
-    // mappákkal, különben a service account nem fér hozzájuk. A Beállítások "Kapcsolat
-    // tesztelése" gombja ezt írja ki a felhasználónak.
-    public async Task<(bool Success, string? ServiceAccountEmail, string? Error)> TestConnectionAsync(CancellationToken ct = default)
+    // A Beállítások "Kapcsolat tesztelése" gombjához — a csatlakoztatott fiók e-mail címét adja
+    // vissza, hogy a felhasználó lássa, melyik fiókkal van összekötve.
+    public async Task<(bool Success, string? Email, string? Error)> TestConnectionAsync(CancellationToken ct = default)
     {
         var settings = await settingsService.GetAsync(ct);
-        if (string.IsNullOrWhiteSpace(settings.GoogleServiceAccountJson))
+        if (string.IsNullOrWhiteSpace(settings.GoogleOAuthRefreshToken))
         {
-            return (false, null, "Nincs megadva Google service account JSON kulcs.");
+            return (false, null, "A Google Drive nincs csatlakoztatva. Kattints a \"Csatlakoztatás Google-fiókkal\" gombra.");
         }
 
         try
         {
-            using var doc = System.Text.Json.JsonDocument.Parse(settings.GoogleServiceAccountJson);
-            var email = doc.RootElement.TryGetProperty("client_email", out var el) ? el.GetString() : null;
-
             var client = await BuildClientAsync(ct);
-            if (client is null) return (false, email, "Nem sikerült kliens létrehozása.");
+            if (client is null) return (false, null, "Nem sikerült kliens létrehozása.");
 
             var about = client.About.Get();
             about.Fields = "user";
-            await about.ExecuteAsync(ct);
+            var result = await about.ExecuteAsync(ct);
 
-            return (true, email, null);
+            return (true, result.User?.EmailAddress ?? settings.GoogleConnectedEmail, null);
         }
         catch (Exception ex)
         {
@@ -70,7 +82,7 @@ public class GoogleDriveService(AppSettingsService settingsService)
 
     public async Task<DriveFileInfo?> UploadFileAsync(string folderId, string fileName, byte[] content, string mimeType, CancellationToken ct = default)
     {
-        var client = await BuildClientAsync(ct) ?? throw new InvalidOperationException("Google Drive nincs beállítva.");
+        var client = await BuildClientAsync(ct) ?? throw new InvalidOperationException("Google Drive nincs csatlakoztatva.");
 
         var fileMetadata = new Google.Apis.Drive.v3.Data.File
         {
@@ -81,11 +93,7 @@ public class GoogleDriveService(AppSettingsService settingsService)
         using var stream = new MemoryStream(content);
         var request = client.Files.Create(fileMetadata, stream, mimeType);
         request.Fields = "id,name,webViewLink,createdTime,size";
-        // Megosztott meghajtón (Shared Drive) lévő mappákhoz enélkül a kérés "Insufficient
-        // permissions for the specified parent"-tel hasal el, még helyes jogosultság mellett is —
-        // a Drive API v3 külön jelzést kér, hogy a hívó számol Megosztott meghajtókkal. "Saját
-        // meghajtó" mappáknál ártalmatlan no-op.
-        request.SupportsAllDrives = true;
+        request.SupportsAllDrives = true; // ártalmatlan no-op sima Drive-on, de Megosztott meghajtón szükséges
         var progress = await request.UploadAsync(ct);
         if (progress.Status != Google.Apis.Upload.UploadStatus.Completed)
         {

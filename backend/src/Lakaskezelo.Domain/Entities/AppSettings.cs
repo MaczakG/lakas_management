@@ -18,8 +18,11 @@ public class AppSettings
     // https://api.eu.mailgun.net.
     public string? MailgunApiBaseUrl { get; set; }
 
-    // ---------- Google Drive (service account) ----------
-    public string? GoogleServiceAccountJson { get; set; }
+    // ---------- Google Drive (OAuth — nem service account, ld. GoogleOAuthController megjegyzése) ----------
+    public string? GoogleOAuthClientId { get; set; }
+    public string? GoogleOAuthClientSecret { get; set; }
+    public string? GoogleOAuthRefreshToken { get; set; }
+    public string? GoogleConnectedEmail { get; set; }
 
     // ---------- Rezsi emlékeztető ----------
     public string? UtilityContactEmail { get; set; }

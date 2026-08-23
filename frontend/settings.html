@@ -66,14 +66,28 @@
         <div class="section-head">
           <div>
             <h3>Google Drive</h3>
-            <p>Service account JSON kulcs — ezt kell megosztani az ingatlanokhoz beállított Drive mappákkal.</p>
+            <p>Saját Google-fiókkal kapcsolódik (OAuth) — a Google Cloud Console-ban létrehozott OAuth Client ID/Secret kell hozzá, "Web application" típussal.</p>
           </div>
         </div>
-        <div class="field">
-          <label for="drive-json">Service account JSON</label>
-          <textarea id="drive-json" rows="6" placeholder='{"type": "service_account", ...}'></textarea>
+        <div class="field-row">
+          <div class="field"><label for="drive-client-id">OAuth Client ID</label><input type="text" id="drive-client-id"></div>
+          <div class="field"><label for="drive-client-secret">OAuth Client Secret</label><input type="password" id="drive-client-secret" autocomplete="off"></div>
         </div>
-        <button class="btn btn-secondary" type="button" id="drive-test-btn">Kapcsolat tesztelése</button>
+        <div class="field">
+          <label>Engedélyezett átirányítási URI (Authorized redirect URI)</label>
+          <input type="text" id="drive-redirect-uri" readonly>
+          <span class="hint">Ezt add hozzá pontosan a Google Cloud Console-ban az OAuth kliens "Authorized redirect URIs" listájához.</span>
+        </div>
+
+        <div id="drive-disconnected-state">
+          <button class="btn btn-secondary" type="button" id="drive-connect-btn">Csatlakoztatás Google-fiókkal</button>
+          <span class="hint" style="display:block;margin-top:8px;">A Mentés gombbal előbb mentsd el a Client ID/Secret-et, utána kattints ide.</span>
+        </div>
+        <div id="drive-connected-state" style="display:none;">
+          <div class="form-success show" id="drive-connected-note"></div>
+          <button class="btn btn-danger btn-sm" type="button" id="drive-disconnect-btn">Leválasztás</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="drive-test-btn">Kapcsolat tesztelése</button>
+        </div>
         <div class="test-result" id="drive-test-result"></div>
       </section>
 
@@ -126,7 +140,14 @@ async function loadSettings() {
   document.getElementById('mg-from-address').value = s.mailgunFromAddress || '';
   document.getElementById('mg-from-name').value = s.mailgunFromName || '';
   document.getElementById('mg-base-url').value = s.mailgunApiBaseUrl || '';
-  document.getElementById('drive-json').value = s.googleServiceAccountJson || '';
+  document.getElementById('drive-client-id').value = s.googleOAuthClientId || '';
+  document.getElementById('drive-client-secret').value = s.googleOAuthClientSecret || '';
+  document.getElementById('drive-redirect-uri').value = `${API_BASE}/api/settings/google-oauth/callback`;
+  document.getElementById('drive-disconnected-state').style.display = s.googleDriveConnected ? 'none' : 'block';
+  document.getElementById('drive-connected-state').style.display = s.googleDriveConnected ? 'block' : 'none';
+  if (s.googleDriveConnected) {
+    document.getElementById('drive-connected-note').textContent = `Csatlakoztatva: ${s.googleConnectedEmail || 'ismeretlen fiók'}`;
+  }
   document.getElementById('utility-email').value = s.utilityContactEmail || '';
   document.getElementById('utility-deadline').value = s.utilityDeadlineDay || 5;
   document.getElementById('issuer-name').value = s.issuerName || '';
@@ -142,7 +163,8 @@ async function saveSettings() {
     mailgunFromAddress: document.getElementById('mg-from-address').value.trim() || null,
     mailgunFromName: document.getElementById('mg-from-name').value.trim() || null,
     mailgunApiBaseUrl: document.getElementById('mg-base-url').value.trim() || null,
-    googleServiceAccountJson: document.getElementById('drive-json').value.trim() || null,
+    googleOAuthClientId: document.getElementById('drive-client-id').value.trim() || null,
+    googleOAuthClientSecret: document.getElementById('drive-client-secret').value.trim() || null,
     utilityContactEmail: document.getElementById('utility-email').value.trim() || null,
     utilityDeadlineDay: Number(document.getElementById('utility-deadline').value) || 5,
     issuerName: document.getElementById('issuer-name').value.trim() || null,
@@ -186,14 +208,53 @@ document.getElementById('drive-test-btn').addEventListener('click', async () => 
   resultEl.textContent = 'Ellenőrzés...';
   resultEl.className = 'test-result';
 
-  await document.getElementById('settings-form').requestSubmit();
   const res = await apiFetch('/api/settings/test-drive', { method: 'POST' });
   const data = await res.json();
   resultEl.textContent = data.success
-    ? `Sikeres — service account: ${data.serviceAccountEmail}. Ezzel a címmel oszd meg az ingatlanok Drive mappáit.`
+    ? `Sikeres — csatlakoztatva: ${data.serviceAccountEmail}.`
     : (data.error || 'Sikertelen.');
   resultEl.className = 'test-result ' + (data.success ? 'ok' : 'error');
 });
+
+document.getElementById('drive-connect-btn').addEventListener('click', async () => {
+  const resultEl = document.getElementById('drive-test-result');
+  resultEl.className = 'test-result';
+
+  // A mentetlen Client ID/Secret-et is figyelembe véve — előbb elmentjük az aktuális form-tartalmat.
+  const saved = await saveSettings();
+  if (!saved) { resultEl.textContent = 'Nem sikerült elmenteni a beállításokat.'; resultEl.className = 'test-result error'; return; }
+
+  const res = await apiFetch('/api/settings/google-oauth/start');
+  const data = await res.json();
+  if (!res.ok) {
+    resultEl.textContent = data.message || 'Nem sikerült elindítani a csatlakoztatást.';
+    resultEl.className = 'test-result error';
+    return;
+  }
+  location.href = data.authUrl;
+});
+
+document.getElementById('drive-disconnect-btn').addEventListener('click', async () => {
+  if (!confirm('Biztosan leválasztod a Google Drive-ot?')) return;
+  await apiFetch('/api/settings/google-oauth/disconnect', { method: 'POST' });
+  loadSettings();
+});
+
+// Google visszairányítás után (?driveConnected=1 / ?driveError=1) jelezzük az eredményt.
+(() => {
+  const params = new URLSearchParams(location.search);
+  const resultEl = document.getElementById('drive-test-result');
+  if (params.get('driveConnected')) {
+    resultEl.textContent = 'Sikeresen csatlakoztatva.';
+    resultEl.className = 'test-result ok';
+  } else if (params.get('driveError')) {
+    resultEl.textContent = 'A csatlakoztatás sikertelen volt — próbáld újra.';
+    resultEl.className = 'test-result error';
+  }
+  if (params.get('driveConnected') || params.get('driveError')) {
+    history.replaceState(null, '', location.pathname);
+  }
+})();
 
 loadSettings();
 </script>
