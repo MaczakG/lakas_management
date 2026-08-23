@@ -81,6 +81,11 @@ public class GoogleDriveService(AppSettingsService settingsService)
         using var stream = new MemoryStream(content);
         var request = client.Files.Create(fileMetadata, stream, mimeType);
         request.Fields = "id,name,webViewLink,createdTime,size";
+        // Megosztott meghajtón (Shared Drive) lévő mappákhoz enélkül a kérés "Insufficient
+        // permissions for the specified parent"-tel hasal el, még helyes jogosultság mellett is —
+        // a Drive API v3 külön jelzést kér, hogy a hívó számol Megosztott meghajtókkal. "Saját
+        // meghajtó" mappáknál ártalmatlan no-op.
+        request.SupportsAllDrives = true;
         var progress = await request.UploadAsync(ct);
         if (progress.Status != Google.Apis.Upload.UploadStatus.Completed)
         {
@@ -101,6 +106,8 @@ public class GoogleDriveService(AppSettingsService settingsService)
         request.Fields = "files(id,name,webViewLink,createdTime,size)";
         request.OrderBy = "createdTime desc";
         request.PageSize = 100;
+        request.SupportsAllDrives = true;
+        request.IncludeItemsFromAllDrives = true;
 
         var result = await request.ExecuteAsync(ct);
         return [.. result.Files.Select(f => new DriveFileInfo(f.Id, f.Name, f.WebViewLink, f.CreatedTimeDateTimeOffset?.UtcDateTime, f.Size))];
