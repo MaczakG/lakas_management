@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Lakaskezelo.Api.GoogleDrive;
 using Lakaskezelo.Api.Settings;
 using Lakaskezelo.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +14,7 @@ namespace Lakaskezelo.Api.Controllers;
 // frissítő tokenre, és mentjük el az AppSettings egyetlen sorába).
 [ApiController]
 [Route("api/settings/google-oauth")]
-public class GoogleOAuthController(LakaskezeloDbContext db, AppSettingsService settingsService, IHttpClientFactory httpClientFactory, IConfiguration configuration) : ControllerBase
+public class GoogleOAuthController(LakaskezeloDbContext db, AppSettingsService settingsService, GoogleDriveService driveService, IHttpClientFactory httpClientFactory, IConfiguration configuration) : ControllerBase
 {
     // Egy közös kapcsolat/refresh token szolgálja ki a Drive feltöltést ÉS a Gmail-küldést is
     // (ld. GoogleDriveService, GmailEmailSender) — a Google OAuth scope-mezője szóközzel
@@ -81,7 +82,6 @@ public class GoogleOAuthController(LakaskezeloDbContext db, AppSettingsService s
             }
 
             using var tokenDoc = JsonDocument.Parse(tokenBody);
-            var accessToken = tokenDoc.RootElement.GetProperty("access_token").GetString();
             var refreshToken = tokenDoc.RootElement.TryGetProperty("refresh_token", out var rt) ? rt.GetString() : null;
 
             // Google csak első engedélyezéskor (vagy prompt=consent mellett mindig) ad vissza
@@ -91,17 +91,21 @@ public class GoogleOAuthController(LakaskezeloDbContext db, AppSettingsService s
             {
                 settingsRow.GoogleOAuthRefreshToken = refreshToken;
             }
-
-            var userInfoResponse = await http.GetAsync($"https://www.googleapis.com/oauth2/v2/userinfo?access_token={Uri.EscapeDataString(accessToken!)}", ct);
-            if (userInfoResponse.IsSuccessStatusCode)
-            {
-                using var userDoc = JsonDocument.Parse(await userInfoResponse.Content.ReadAsStringAsync(ct));
-                settingsRow.GoogleConnectedEmail = userDoc.RootElement.TryGetProperty("email", out var emailEl) ? emailEl.GetString() : null;
-            }
-
             settingsRow.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
             AppSettingsService.Invalidate();
+
+            // A csatlakoztatott fiók e-mail címét a Drive About API-ból kérjük le (ugyanígy teszi a
+            // GoogleDriveService.TestConnectionAsync is), NEM a userinfo végpontból — az külön
+            // email/profile/openid scope-ot igényelne, amit nem kérünk, ezért korábban mindig
+            // némán null-t adott, és a GmailEmailSender ezért azt hitte, a fiók nincs csatlakoztatva.
+            var (_, email, _) = await driveService.TestConnectionAsync(ct);
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                settingsRow.GoogleConnectedEmail = email;
+                await db.SaveChangesAsync(ct);
+                AppSettingsService.Invalidate();
+            }
 
             return Redirect($"{frontendBaseUrl}/settings.html?driveConnected=1");
         }
