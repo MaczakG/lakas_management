@@ -1,9 +1,12 @@
 // Megosztott auth/API segédfüggvények — minden oldal betölti <script src="app.js"> a saját
 // inline szkriptje előtt. localStorage-ban tárolja a munkamenetet (nincs "emlékezz rám" opció,
 // nincs 2FA — csak egyszerű JWT bejelentkezés).
+// A lakaskezelo-api Render URL-je véletlen utótagot kapott (a sima név ütközés miatt foglalt lett
+// egy korábbi, sikertelen duplikált Blueprint-próbálkozás során) — ha a szolgáltatást újra
+// létrehoznák és megint más utótagot kapna, ezt kell frissíteni.
 const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? 'http://localhost:5080'
-  : 'https://lakaskezelo-api.onrender.com';
+  : 'https://lakaskezelo-api-yn90.onrender.com';
 
 function getAuth() {
   const raw = localStorage.getItem('lakaskezelo_auth');
