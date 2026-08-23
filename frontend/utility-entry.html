@@ -10,6 +10,15 @@
 <link rel="stylesheet" href="styles.css">
 <style>
   .context-row{display:grid;grid-template-columns:2fr 1fr;gap:12px;max-width:520px;}
+
+  .chart-legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:18px;}
+  .chart-legend-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-soft);font-weight:600;}
+  .chart-swatch{width:10px;height:10px;display:inline-block;flex-shrink:0;}
+  .chart-wrap{display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--line);padding-top:10px;}
+  .chart-col{flex:1;display:flex;flex-direction:column;align-items:center;min-width:0;}
+  .chart-bar{width:100%;display:flex;flex-direction:column;justify-content:flex-end;}
+  .chart-bar-fill{width:100%;display:flex;flex-direction:column;}
+  .chart-col-label{margin-top:8px;font-size:11px;color:var(--ink-soft);font-weight:600;}
 </style>
 </head>
 <body>
@@ -35,6 +44,17 @@
     </section>
 
     <section class="section">
+      <div class="section-head">
+        <div>
+          <h3>Havi rezsi bontás</h3>
+          <p>Az oszlopok magassága a havi összeget, a színes szakaszok az egyes tételek arányát mutatják.</p>
+        </div>
+      </div>
+      <div class="chart-legend" id="chart-legend"></div>
+      <div class="chart-wrap" id="chart-wrap"></div>
+    </section>
+
+    <section class="section">
       <div class="card-table">
         <table>
           <thead><tr><th>Hónap</th><th>Tételek</th><th>Összeg</th><th>Állapot</th></tr></thead>
@@ -51,6 +71,9 @@ requireAuth();
 const propertySelect = document.getElementById('ue-property');
 const yearInput = document.getElementById('ue-year');
 let properties = [];
+
+const CHART_COLORS = ['var(--accent)', 'var(--green)', 'var(--amber)', 'var(--coral)', '#7C3AED', '#0891B2'];
+const CHART_HEIGHT = 220;
 
 function escapeHtml(s) {
   const div = document.createElement('div');
@@ -100,6 +123,47 @@ async function loadMonths() {
         <td>${monthEntries.length > 0 ? formatCurrency(sum) : '—'}</td>
         <td>${statusTag}</td>
       </tr>
+    `;
+  }).join('');
+
+  renderChart(entries, year);
+}
+
+// Havi oszlopdiagram — soronként a hónap teljes rezsi összegével arányos magasságú oszlop, azon
+// belül a tételek (megnevezés) arányában színezett szakaszokkal. Minden megnevezés a teljes
+// naptári éven belül ugyanazt a színt kapja, hogy a diagram hónapok között is összehasonlítható
+// legyen.
+function renderChart(allEntries, year) {
+  const yearEntries = allEntries.filter((e) => e.year === year);
+  const labels = [...new Set(yearEntries.map((e) => e.label))].sort((a, b) => a.localeCompare(b, 'hu'));
+  const colorByLabel = new Map(labels.map((l, i) => [l, CHART_COLORS[i % CHART_COLORS.length]]));
+
+  const legendEl = document.getElementById('chart-legend');
+  legendEl.innerHTML = labels.length === 0
+    ? '<span class="hint">Nincs még rögzített rezsi tétel ebben az évben.</span>'
+    : labels.map((l) => `<span class="chart-legend-item"><span class="chart-swatch" style="background:${colorByLabel.get(l)}"></span>${escapeHtml(l)}</span>`).join('');
+
+  const monthTotals = MONTH_NAMES.map((_, idx) => {
+    const month = idx + 1;
+    const monthEntries = yearEntries.filter((e) => e.month === month);
+    return { month, total: monthEntries.reduce((acc, e) => acc + e.amount, 0), entries: monthEntries };
+  });
+  const maxTotal = Math.max(1, ...monthTotals.map((m) => m.total));
+
+  document.getElementById('chart-wrap').innerHTML = monthTotals.map(({ month, total, entries: monthEntries }) => {
+    const barHeight = total > 0 ? Math.max(4, (total / maxTotal) * CHART_HEIGHT) : 0;
+    const segs = monthEntries.slice().sort((a, b) => a.label.localeCompare(b.label, 'hu')).map((e) => {
+      const segHeight = total > 0 ? (e.amount / total) * barHeight : 0;
+      return `<div class="chart-seg" style="height:${segHeight}px;background:${colorByLabel.get(e.label)}" title="${escapeHtml(e.label)}: ${formatCurrency(e.amount)}"></div>`;
+    }).join('');
+
+    return `
+      <div class="chart-col">
+        <div class="chart-bar" style="height:${CHART_HEIGHT}px;">
+          <div class="chart-bar-fill" style="height:${barHeight}px;" title="${MONTH_NAMES[month - 1]}: ${formatCurrency(total)}">${segs}</div>
+        </div>
+        <div class="chart-col-label">${MONTH_NAMES[month - 1].slice(0, 3)}</div>
+      </div>
     `;
   }).join('');
 }
