@@ -1,3 +1,5 @@
+using Lakaskezelo.Domain.Enums;
+
 namespace Lakaskezelo.Domain.Entities;
 
 // Egyetlen sorból álló tábla — a rendszer futásidejű beállításai (Beállítások oldal), nem
@@ -8,6 +10,10 @@ public class AppSettings
     public static readonly Guid SingletonId = new("11111111-1111-1111-1111-111111111111");
 
     public Guid Id { get; set; } = SingletonId;
+
+    // Melyik szolgáltató küldi ténylegesen a rendszer e-mailjeit — a másik konfigja megmarad,
+    // csak nincs használatban (ld. Notifications/EmailSenderRouter).
+    public EmailProvider EmailProvider { get; set; } = EmailProvider.Mailgun;
 
     // ---------- Mailgun ----------
     public string? MailgunApiKey { get; set; }

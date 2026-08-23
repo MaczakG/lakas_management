@@ -15,7 +15,11 @@ namespace Lakaskezelo.Api.Controllers;
 [Route("api/settings/google-oauth")]
 public class GoogleOAuthController(LakaskezeloDbContext db, AppSettingsService settingsService, IHttpClientFactory httpClientFactory, IConfiguration configuration) : ControllerBase
 {
-    private const string Scope = "https://www.googleapis.com/auth/drive";
+    // Egy közös kapcsolat/refresh token szolgálja ki a Drive feltöltést ÉS a Gmail-küldést is
+    // (ld. GoogleDriveService, GmailEmailSender) — a Google OAuth scope-mezője szóközzel
+    // elválasztva több scope-ot is elfogad. Egy korábban csak Drive-hoz csatlakoztatott fióknál
+    // a Gmail-küldés újracsatlakoztatást igényel (a prompt=consent lent ezt mindig kikényszeríti).
+    private const string Scope = "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send";
 
     private string BuildRedirectUri() => $"{Request.Scheme}://{Request.Host}/api/settings/google-oauth/callback";
 
