@@ -39,6 +39,25 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         return Ok(ToDto(invoice));
     }
 
+    // Csak a még ki nem küldött (Generated/Failed) számlák törölhetők — pl. téves/teszt generálás
+    // után, hogy az adott időszak rezsi tételei újra szerkeszthetők legyenek (ld.
+    // PropertiesController.IsPeriodLockedAsync). Egy ténylegesen kiküldött (Sent) számlát a
+    // rendszer nem enged törölni, az már valós, bérlőnek elküldött bizonylat.
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var invoice = await db.Invoices.FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (invoice is null) return NotFound();
+        if (invoice.Status == Domain.Enums.InvoiceStatus.Sent)
+        {
+            return Conflict(new { message = "Egy már kiküldött számla nem törölhető." });
+        }
+
+        db.Invoices.Remove(invoice);
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     public static InvoiceDto ToDto(Invoice invoice) => new(
         invoice.Id, invoice.PropertyId, invoice.Property?.Name ?? "", invoice.Tenant?.Name,
         invoice.PeriodYear, invoice.PeriodMonth, invoice.Number, invoice.IssuedAt, invoice.DueDate,

@@ -32,6 +32,7 @@
 <div class="app">
   <script src="app.js"></script>
   <script src="nav.js"></script>
+  <script src="utility-modal.js"></script>
 
   <main class="main">
     <div class="page-header">
@@ -121,18 +122,13 @@
         <div class="utility-add-row">
           <div class="field"><label for="u-year">Év</label><input type="number" id="u-year"></div>
           <div class="field"><label for="u-month">Hónap</label><select id="u-month"></select></div>
-          <div class="field"><label for="u-label">Megnevezés</label><input type="text" id="u-label" placeholder="pl. Áram"></div>
           <div></div>
+          <button class="btn btn-primary" type="button" id="open-utility-month-btn">Megnyitás</button>
         </div>
-        <div class="utility-add-row">
-          <div class="field"><label for="u-amount">Összeg (Ft)</label><input type="number" id="u-amount" min="0"></div>
-          <div></div><div></div>
-          <button class="btn btn-primary" type="button" id="add-utility-btn">+ Hozzáadás</button>
-        </div>
-        <div class="form-error" id="utility-locked-note">Ez az időszak már számlázva lett, a rezsi tételek nem módosíthatók.</div>
+        <p class="hint" style="margin:-6px 0 18px;">Kattints egy már rögzített hónapra is a lenti listában a tételek megtekintéséhez/felviteléhez.</p>
         <div class="card-table">
           <table>
-            <thead><tr><th>Időszak</th><th>Megnevezés</th><th>Összeg</th><th></th></tr></thead>
+            <thead><tr><th>Időszak</th><th>Tételek</th><th>Összeg</th><th>Állapot</th></tr></thead>
             <tbody id="utility-tbody"><tr class="empty-row"><td colspan="4">Betöltés...</td></tr></tbody>
           </table>
         </div>
@@ -166,6 +162,7 @@ requireAuth();
 let properties = [];
 let owners = [];
 let editingId = null;
+let editingPropertyName = null;
 
 async function loadProperties() {
   const [propsRes, ownersRes] = await Promise.all([apiFetch('/api/properties'), apiFetch('/api/owners')]);
@@ -265,6 +262,7 @@ function closeModal() {
   document.getElementById('owner-rows').innerHTML = '';
   document.getElementById('tenants-readonly').style.display = 'none';
   editingId = null;
+  editingPropertyName = null;
   ['utility', 'documents', 'invoices'].forEach((t) => document.getElementById('tab-btn-' + t).disabled = true);
 }
 
@@ -285,6 +283,7 @@ window.openEdit = async (id) => {
   editingId = id;
   const res = await apiFetch(`/api/properties/${id}`);
   const p = await res.json();
+  editingPropertyName = p.name;
 
   document.getElementById('f-name').value = p.name;
   document.getElementById('f-rent').value = p.rentAmount;
@@ -350,14 +349,11 @@ document.getElementById('property-form').addEventListener('submit', async (e) =>
 });
 
 // ---------- Rezsi tab ----------
+// A tételek nem itt, hanem egy megosztott popupban (utility-modal.js, window.openUtilityModal)
+// vehetők fel/nézhetők meg — ez a tab csak az adott ingatlan időszakonkénti összesítőjét listázza,
+// és a sorra/gombra kattintás nyitja meg a popupot a kiválasztott (év, hónap) párra.
 const utilityMonthSelect = document.getElementById('u-month');
 utilityMonthSelect.innerHTML = MONTH_NAMES.map((name, idx) => `<option value="${idx + 1}">${name}</option>`).join('');
-
-// A ténylegesen lezárt (év, hónap) rezsi-időszakok halmaza ehhez a nyitott ingatlanhoz — a
-// hozzáadás-form proaktív letiltásához kell (a sorok maguktól tudják a saját státuszukat az
-// entry.isLocked mezőből, de egy még üres, de már számlázott időszakhoz a form csak ebből tudja,
-// hogy ne engedjen felvitelt).
-let lockedUtilityPeriods = new Set();
 
 async function loadUtilityCosts(propertyId) {
   const now = new Date();
@@ -370,74 +366,43 @@ async function loadUtilityCosts(propertyId) {
   ]);
   const entries = await entriesRes.json();
   const invoices = await invoicesRes.json();
-  lockedUtilityPeriods = new Set(
+  const lockedPeriods = new Set(
     invoices.filter((i) => i.status === 'Sent' || i.status === 'Generated').map((i) => `${i.periodYear}-${i.periodMonth}`)
   );
 
+  const periodKeys = [...new Set(entries.map((e) => `${e.year}-${e.month}`))]
+    .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+
   const tbody = document.getElementById('utility-tbody');
-  tbody.innerHTML = entries.length === 0
-    ? `<tr class="empty-row"><td colspan="4">Nincs rögzített tétel.</td></tr>`
-    : entries.map((e) => `
-      <tr>
-        <td>${e.year}.${String(e.month).padStart(2, '0')}</td>
-        <td>${escapeHtml(e.label)}</td>
-        <td>${formatCurrency(e.amount)}</td>
-        <td class="row-actions">${e.isLocked
-          ? '<span class="status-tag ok">Lezárva</span>'
-          : `<button class="btn btn-danger btn-sm" onclick="deleteUtilityCost('${propertyId}', '${e.id}')">Törlés</button>`}</td>
-      </tr>
-    `).join('');
-
-  updateUtilityAddLockState();
+  tbody.innerHTML = periodKeys.length === 0
+    ? `<tr class="empty-row"><td colspan="4">Nincs még rögzített időszak.</td></tr>`
+    : periodKeys.map((key) => {
+      const [year, month] = key.split('-').map(Number);
+      const periodEntries = entries.filter((e) => e.year === year && e.month === month);
+      const sum = periodEntries.reduce((acc, e) => acc + e.amount, 0);
+      const locked = lockedPeriods.has(key);
+      return `
+        <tr class="clickable" onclick="openUtilityMonth(${year}, ${month})">
+          <td class="cell-main">${year}.${String(month).padStart(2, '0')}</td>
+          <td>${periodEntries.length}</td>
+          <td>${formatCurrency(sum)}</td>
+          <td>${locked ? '<span class="status-tag ok">Lezárva</span>' : '<span class="status-tag ok">Rögzítve</span>'}</td>
+        </tr>
+      `;
+    }).join('');
 }
 
-function updateUtilityAddLockState() {
-  const key = `${document.getElementById('u-year').value}-${utilityMonthSelect.value}`;
-  const locked = lockedUtilityPeriods.has(key);
-  document.getElementById('add-utility-btn').disabled = locked;
-  document.getElementById('u-label').disabled = locked;
-  document.getElementById('u-amount').disabled = locked;
-  document.getElementById('utility-locked-note').classList.toggle('show', locked);
-}
-
-document.getElementById('u-year').addEventListener('input', updateUtilityAddLockState);
-utilityMonthSelect.addEventListener('change', updateUtilityAddLockState);
-
-document.getElementById('add-utility-btn').addEventListener('click', async () => {
+window.openUtilityMonth = (year, month) => {
   if (!editingId) return;
-  const label = document.getElementById('u-label').value.trim();
-  const amount = Number(document.getElementById('u-amount').value);
-  if (!label || !amount) { alert('Add meg a megnevezést és az összeget.'); return; }
-
-  const payload = {
-    year: Number(document.getElementById('u-year').value),
-    month: Number(utilityMonthSelect.value),
-    label,
-    amount,
-  };
-  const res = await apiFetch(`/api/properties/${editingId}/utility-costs`, { method: 'POST', body: JSON.stringify(payload) });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    alert(data.message || 'Nem sikerült rögzíteni a tételt.');
-    return;
-  }
-  document.getElementById('u-label').value = '';
-  document.getElementById('u-amount').value = '';
-  loadUtilityCosts(editingId);
-  loadProperties();
-});
-
-window.deleteUtilityCost = async (propertyId, entryId) => {
-  if (!confirm('Biztosan törlöd ezt a tételt?')) return;
-  const res = await apiFetch(`/api/properties/${propertyId}/utility-costs/${entryId}`, { method: 'DELETE' });
-  if (!res.ok && res.status !== 204) {
-    const data = await res.json().catch(() => ({}));
-    alert(data.message || 'Nem sikerült törölni a tételt.');
-    return;
-  }
-  loadUtilityCosts(propertyId);
-  loadProperties();
+  openUtilityModal(editingId, editingPropertyName, year, month, {
+    onClose: () => { loadUtilityCosts(editingId); loadProperties(); },
+    onSaved: () => loadProperties(),
+  });
 };
+
+document.getElementById('open-utility-month-btn').addEventListener('click', () => {
+  openUtilityMonth(Number(document.getElementById('u-year').value), Number(utilityMonthSelect.value));
+});
 
 // ---------- Dokumentumok tab ----------
 async function loadDocuments(propertyId) {

@@ -120,6 +120,7 @@ function renderInvoices() {
       <td class="row-actions">
         ${i.pdfDriveLink ? `<a class="btn btn-ghost btn-sm" href="${i.pdfDriveLink}" target="_blank" rel="noopener">PDF</a>` : ''}
         ${i.status === 'Failed' ? `<button class="btn btn-secondary btn-sm" onclick="retryInvoice('${i.propertyId}', ${i.periodYear}, ${i.periodMonth})">Újrapróbálás</button>` : ''}
+        ${i.status !== 'Sent' ? `<button class="btn btn-danger btn-sm" onclick="deleteInvoice('${i.id}')">Törlés</button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -138,6 +139,17 @@ window.retryInvoice = async (propertyId, year, month) => {
   const res = await apiFetch('/api/invoices/generate', { method: 'POST', body: JSON.stringify({ propertyId, year, month }) });
   if (res.ok) loadInvoices();
   else alert('Nem sikerült újrapróbálni a számla generálását.');
+};
+
+window.deleteInvoice = async (id) => {
+  if (!confirm('Biztosan törlöd ezt a számlát? Ez a lépés nem vonható vissza.')) return;
+  const res = await apiFetch(`/api/invoices/${id}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 204) {
+    const data = await res.json().catch(() => ({}));
+    alert(data.message || 'Nem sikerült törölni a számlát.');
+    return;
+  }
+  loadInvoices();
 };
 
 // ---------- Manuális generálás modal ----------
