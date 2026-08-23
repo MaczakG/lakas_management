@@ -2,7 +2,7 @@ databases:
   - name: lakaskezelo-db
     databaseName: lakaskezelo
     user: lakaskezelo
-    plan: free
+    plan: basic-256mb # fizetős ($6/hó) — a fiókban már foglalt az 1 db ingyenes Postgres-hely
 
 services:
   - type: web
