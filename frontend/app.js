@@ -4,9 +4,13 @@
 // A lakaskezelo-api Render URL-je véletlen utótagot kapott (a sima név ütközés miatt foglalt lett
 // egy korábbi, sikertelen duplikált Blueprint-próbálkozás során) — ha a szolgáltatást újra
 // létrehoznák és megint más utótagot kapna, ezt kell frissíteni.
+// Minden más hoszton (pl. az AWS EC2-n) a frontend és az API ugyanazon origin alól szolgál ki —
+// ott az nginx reverse-proxyzza az /api/-t a backend felé, ezért üres (relatív) API_BASE kell.
 const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? 'http://localhost:5080'
-  : 'https://lakaskezelo-api-yn90.onrender.com';
+  : (location.hostname === 'lakaskezelo-frontend-2yi8.onrender.com'
+      ? 'https://lakaskezelo-api-yn90.onrender.com'
+      : '');
 
 function getAuth() {
   const raw = localStorage.getItem('lakaskezelo_auth');
