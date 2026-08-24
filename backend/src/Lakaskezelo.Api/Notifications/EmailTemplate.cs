@@ -11,11 +11,22 @@ public static class EmailTemplate
 
     public static string Render(string preheader, string heading, string bodyHtml, (string Text, string Url)? cta = null)
     {
+        // Az Outlook desktop (Word-motorral renderel) figyelmen kívül hagyja a padding/
+        // display:inline-block stílusokat egy sima <a>-n — a gomb csak egy kék "kiemelt szövegnek"
+        // látszik, fehér szöveg helyett saját (fekete/kék) hivatkozás-színnel. Táblázat-alapú
+        // gombbal (a padding a <td>-n, bgcolor attribútum a background style mellett, a szöveg egy
+        // külön <span>-ben explicit fehér színnel) ez minden nagyobb kliensben — Outlookot is
+        // beleértve — helyesen jelenik meg.
         var ctaHtml = cta is { } c ? $"""
             <tr>
               <td align="center" style="padding:26px 0 6px;">
-                <a href="{c.Url}" style="display:inline-block;background:{AccentColor};color:#ffffff;
-                  text-decoration:none;font-weight:700;font-size:14px;padding:13px 30px;">{WebUtility.HtmlEncode(c.Text)}</a>
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" bgcolor="{AccentColor}" style="background:{AccentColor};padding:13px 30px;">
+                      <a href="{c.Url}" style="text-decoration:none;"><span style="font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-weight:700;font-size:14px;color:#ffffff;">{WebUtility.HtmlEncode(c.Text)}</span></a>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             """ : "";
