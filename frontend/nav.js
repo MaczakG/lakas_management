@@ -32,6 +32,7 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
       </a>
     </div>
+    <div id="version-tag" style="padding:6px 20px 14px;font-size:11px;color:var(--muted);"></div>
   </aside>`);
 
   const page = location.pathname.split('/').pop() || 'properties.html';
@@ -53,4 +54,10 @@
     document.getElementById('who-name').textContent = name;
     document.getElementById('avatar').textContent = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   }
+
+  // Melyik verzió fut éppen — nem hitelesített végpont, támogatáshoz/hibakereséshez hasznos
+  // anélkül is, hogy be kellene menni a Beállításokba.
+  fetch(`${API_BASE}/api/version`).then((r) => r.json()).then((v) => {
+    document.getElementById('version-tag').textContent = `v${v.version}`;
+  }).catch(() => {});
 })();

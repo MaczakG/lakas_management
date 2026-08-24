@@ -180,6 +180,11 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 
+// Nem védett — a sidebar lábjegyzete (frontend/nav.js) bejelentkezés előtt is lekérheti, és
+// támogatáshoz/hibakereséshez hasznos anélkül is tudni, melyik verzió fut és mikor indult.
+var appStartedAt = DateTime.UtcNow;
+app.MapGet("/api/version", () => Results.Ok(new { version = Lakaskezelo.Api.AppVersion.Current, startedAt = appStartedAt }));
+
 app.MapControllers();
 
 app.Run();
