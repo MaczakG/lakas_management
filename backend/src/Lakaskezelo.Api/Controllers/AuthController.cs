@@ -25,8 +25,13 @@ public class AuthController(
     private static readonly TimeSpan TwoFactorCodeLifetime = TimeSpan.FromMinutes(10);
     private const int MaxTwoFactorAttempts = 5;
 
+    // Teszt időszakra kikapcsolva — a jelszó ellenőrzése után rögtön tokent adunk, nincs e-mailes
+    // kód. Visszakapcsoláshoz elég true-ra állítani, a challenge/VerifyTwoFactor infrastruktúra
+    // változatlanul megvan.
+    private const bool TwoFactorEnabled = false;
+
     [HttpPost("login")]
-    public async Task<ActionResult<LoginChallengeResponse>> Login(LoginRequest request, CancellationToken ct)
+    public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var user = await db.Users.SingleOrDefaultAsync(u => u.Email == normalizedEmail, ct);
@@ -40,6 +45,12 @@ public class AuthController(
         if (result == PasswordVerificationResult.Failed)
         {
             return Unauthorized(new { message = "Hibás e-mail cím vagy jelszó." });
+        }
+
+        if (!TwoFactorEnabled)
+        {
+            var (token, expiresAt) = tokenService.CreateAccessToken(user);
+            return Ok(new AuthResponse(token, expiresAt, ToDto(user)));
         }
 
         // A jelszó rendben — de a bejelentkezés csak egy e-mailben kiküldött 6 jegyű kóddal

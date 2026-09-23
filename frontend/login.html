@@ -88,6 +88,14 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       errorEl.classList.add('show');
       return;
     }
+    // A backend a kétlépcsős lépéstől függően vagy rögtön a hozzáférési tokent adja vissza
+    // (accessToken — jelenleg ez van, a 2FA teszt időszakra ki van kapcsolva), vagy egy
+    // challengeId-t, ami a kód-lépést indítja el (ld. AuthController.TwoFactorEnabled).
+    if (data.accessToken) {
+      storeAuth(data);
+      location.href = 'properties.html';
+      return;
+    }
     challengeId = data.challengeId;
     document.getElementById('login-code').value = '';
     showStep('code');
