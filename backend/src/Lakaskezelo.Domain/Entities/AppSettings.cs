@@ -24,6 +24,14 @@ public class AppSettings
     // https://api.eu.mailgun.net.
     public string? MailgunApiBaseUrl { get; set; }
 
+    // ---------- SMTP (pl. a workspace/Google Workspace SMTP-szervere) ----------
+    public string? SmtpHost { get; set; }
+    public int? SmtpPort { get; set; }
+    public string? SmtpUsername { get; set; }
+    public string? SmtpPassword { get; set; }
+    public string? SmtpFromAddress { get; set; }
+    public string? SmtpFromName { get; set; }
+
     // ---------- Google Drive (OAuth — nem service account, ld. GoogleOAuthController megjegyzése) ----------
     public string? GoogleOAuthClientId { get; set; }
     public string? GoogleOAuthClientSecret { get; set; }

@@ -5,6 +5,7 @@ namespace Lakaskezelo.Api.Contracts;
 public record AppSettingsDto(
     EmailProvider EmailProvider,
     string? MailgunApiKey, string? MailgunDomain, string? MailgunFromAddress, string? MailgunFromName, string? MailgunApiBaseUrl,
+    string? SmtpHost, int? SmtpPort, string? SmtpUsername, string? SmtpPassword, string? SmtpFromAddress, string? SmtpFromName,
     string? GoogleOAuthClientId, string? GoogleOAuthClientSecret, bool GoogleDriveConnected, string? GoogleConnectedEmail,
     string? UtilityContactEmail, int UtilityDeadlineDay,
     string? IssuerName, string? IssuerAddress, string? IssuerTaxId, string? IssuerBankAccount,
@@ -12,5 +13,5 @@ public record AppSettingsDto(
 
 public record TestMailgunResponse(bool Success, string? Error);
 public record TestDriveResponse(bool Success, string? ServiceAccountEmail, string? Error);
-public record TestGoogleEmailResponse(bool Success, string? Error);
+public record TestSmtpResponse(bool Success, string? Error);
 public record TestEmailRequest(string To);

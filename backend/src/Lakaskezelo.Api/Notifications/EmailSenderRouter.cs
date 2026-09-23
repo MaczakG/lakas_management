@@ -5,16 +5,16 @@ namespace Lakaskezelo.Api.Notifications;
 
 // Az egyetlen IEmailSender, ami ténylegesen DI-be van regisztrálva (ld. Program.cs) — a Beállítások
 // oldalon kiválasztott AppSettings.EmailProvider alapján a MailgunEmailSender vagy a
-// GmailEmailSender felé delegál. Mindkét konfiguráció megmaradhat egyszerre a Beállításokban,
+// SmtpEmailSender felé delegál. Mindkét konfiguráció megmaradhat egyszerre a Beállításokban,
 // csak az egyik van ténylegesen használatban küldéskor.
-public class EmailSenderRouter(MailgunEmailSender mailgun, GmailEmailSender gmail, AppSettingsService settingsService) : IEmailSender
+public class EmailSenderRouter(MailgunEmailSender mailgun, SmtpEmailSender smtp, AppSettingsService settingsService) : IEmailSender
 {
     public string? LastError { get; private set; }
 
     private async Task<IEmailSender> ResolveAsync(CancellationToken ct)
     {
         var settings = await settingsService.GetAsync(ct);
-        return settings.EmailProvider == EmailProvider.Google ? gmail : mailgun;
+        return settings.EmailProvider == EmailProvider.Smtp ? smtp : mailgun;
     }
 
     public async Task<bool> IsConfiguredAsync(CancellationToken ct = default) => await (await ResolveAsync(ct)).IsConfiguredAsync(ct);

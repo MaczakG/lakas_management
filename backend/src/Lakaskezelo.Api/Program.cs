@@ -108,9 +108,9 @@ builder.Services.AddAuthorization();
 // ---------- Beállítások (DB-backed, nem appsettings) ----------
 builder.Services.AddScoped<AppSettingsService>();
 
-// ---------- E-mail (Mailgun és Gmail — a Beállításokban választható, melyik aktív) ----------
+// ---------- E-mail (Mailgun és SMTP — a Beállításokban választható, melyik aktív) ----------
 builder.Services.AddHttpClient<MailgunEmailSender>();
-builder.Services.AddScoped<GmailEmailSender>();
+builder.Services.AddScoped<SmtpEmailSender>();
 builder.Services.AddScoped<IEmailSender, EmailSenderRouter>();
 
 // ---------- Google Drive ----------

@@ -16,11 +16,9 @@ namespace Lakaskezelo.Api.Controllers;
 [Route("api/settings/google-oauth")]
 public class GoogleOAuthController(LakaskezeloDbContext db, AppSettingsService settingsService, GoogleDriveService driveService, IHttpClientFactory httpClientFactory, IConfiguration configuration) : ControllerBase
 {
-    // Egy közös kapcsolat/refresh token szolgálja ki a Drive feltöltést ÉS a Gmail-küldést is
-    // (ld. GoogleDriveService, GmailEmailSender) — a Google OAuth scope-mezője szóközzel
-    // elválasztva több scope-ot is elfogad. Egy korábban csak Drive-hoz csatlakoztatott fióknál
-    // a Gmail-küldés újracsatlakoztatást igényel (a prompt=consent lent ezt mindig kikényszeríti).
-    private const string Scope = "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send";
+    // Csak a Drive-feltöltéshez kell — az e-mail küldés a SmtpEmailSender-en (Beállítások → SMTP)
+    // keresztül, sima SMTP-hitelesítéssel megy, nem ezen az OAuth-kapcsolaton.
+    private const string Scope = "https://www.googleapis.com/auth/drive";
 
     private string BuildRedirectUri() => $"{Request.Scheme}://{Request.Host}/api/settings/google-oauth/callback";
 
@@ -97,8 +95,7 @@ public class GoogleOAuthController(LakaskezeloDbContext db, AppSettingsService s
 
             // A csatlakoztatott fiók e-mail címét a Drive About API-ból kérjük le (ugyanígy teszi a
             // GoogleDriveService.TestConnectionAsync is), NEM a userinfo végpontból — az külön
-            // email/profile/openid scope-ot igényelne, amit nem kérünk, ezért korábban mindig
-            // némán null-t adott, és a GmailEmailSender ezért azt hitte, a fiók nincs csatlakoztatva.
+            // email/profile/openid scope-ot igényelne, amit nem kérünk.
             var (_, email, _) = await driveService.TestConnectionAsync(ct);
             if (!string.IsNullOrWhiteSpace(email))
             {
