@@ -14,7 +14,7 @@ namespace Lakaskezelo.Api.Controllers;
 [Route("api/settings")]
 public class SettingsController(
     LakaskezeloDbContext db, AppSettingsService settingsService, GoogleDriveService driveService,
-    MailgunEmailSender mailgunSender, GmailEmailSender gmailSender) : ControllerBase
+    MailgunEmailSender mailgunSender, SmtpEmailSender smtpSender) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<AppSettingsDto>> Get(CancellationToken ct)
@@ -39,6 +39,12 @@ public class SettingsController(
         settings.MailgunFromAddress = dto.MailgunFromAddress;
         settings.MailgunFromName = dto.MailgunFromName;
         settings.MailgunApiBaseUrl = dto.MailgunApiBaseUrl;
+        settings.SmtpHost = dto.SmtpHost;
+        settings.SmtpPort = dto.SmtpPort;
+        settings.SmtpUsername = dto.SmtpUsername;
+        settings.SmtpPassword = dto.SmtpPassword;
+        settings.SmtpFromAddress = dto.SmtpFromAddress;
+        settings.SmtpFromName = dto.SmtpFromName;
         settings.GoogleOAuthClientId = dto.GoogleOAuthClientId;
         settings.GoogleOAuthClientSecret = dto.GoogleOAuthClientSecret;
         settings.UtilityContactEmail = dto.UtilityContactEmail;
@@ -65,12 +71,12 @@ public class SettingsController(
         return Ok(new TestMailgunResponse(sent, sent ? null : mailgunSender.LastError));
     }
 
-    [HttpPost("test-google-email")]
-    public async Task<ActionResult<TestGoogleEmailResponse>> TestGoogleEmail(TestEmailRequest request, CancellationToken ct)
+    [HttpPost("test-smtp")]
+    public async Task<ActionResult<TestSmtpResponse>> TestSmtp(TestEmailRequest request, CancellationToken ct)
     {
-        var htmlBody = EmailTemplate.Render("Teszt e-mail", "Teszt e-mail", "<p style=\"margin:0;\">Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról (Google).</p>");
-        var sent = await gmailSender.SendAsync(request.To, "Lakáskezelő — teszt e-mail (Google)", htmlBody, "Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról.", null, ct);
-        return Ok(new TestGoogleEmailResponse(sent, sent ? null : gmailSender.LastError));
+        var htmlBody = EmailTemplate.Render("Teszt e-mail", "Teszt e-mail", "<p style=\"margin:0;\">Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról (SMTP).</p>");
+        var sent = await smtpSender.SendAsync(request.To, "Lakáskezelő — teszt e-mail (SMTP)", htmlBody, "Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról.", null, ct);
+        return Ok(new TestSmtpResponse(sent, sent ? null : smtpSender.LastError));
     }
 
     [HttpPost("test-drive")]
@@ -83,6 +89,7 @@ public class SettingsController(
     private static AppSettingsDto ToDto(Domain.Entities.AppSettings s) => new(
         s.EmailProvider,
         s.MailgunApiKey, s.MailgunDomain, s.MailgunFromAddress, s.MailgunFromName, s.MailgunApiBaseUrl,
+        s.SmtpHost, s.SmtpPort, s.SmtpUsername, s.SmtpPassword, s.SmtpFromAddress, s.SmtpFromName,
         s.GoogleOAuthClientId, s.GoogleOAuthClientSecret, !string.IsNullOrWhiteSpace(s.GoogleOAuthRefreshToken), s.GoogleConnectedEmail,
         s.UtilityContactEmail, s.UtilityDeadlineDay,
         s.IssuerName, s.IssuerAddress, s.IssuerTaxId, s.IssuerBankAccount,

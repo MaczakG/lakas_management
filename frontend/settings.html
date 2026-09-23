@@ -29,7 +29,7 @@
     <div class="page-header">
       <div>
         <h1>Beállítások</h1>
-        <p>Mailgun, Google Drive és a számlázás rendszer-szintű beállításai.</p>
+        <p>Mailgun, SMTP, Google Drive és a számlázás rendszer-szintű beállításai.</p>
       </div>
     </div>
 
@@ -43,7 +43,7 @@
           </div>
         </div>
         <label class="checkbox-row" style="margin-bottom:8px;"><input type="radio" name="email-provider" id="ep-mailgun" value="Mailgun"> Mailgun</label>
-        <label class="checkbox-row"><input type="radio" name="email-provider" id="ep-google" value="Google"> Google (a lent csatlakoztatott fiókkal)</label>
+        <label class="checkbox-row"><input type="radio" name="email-provider" id="ep-smtp" value="Smtp"> SMTP (a workspace saját SMTP-szervere)</label>
       </section>
 
       <section class="section">
@@ -76,8 +76,34 @@
       <section class="section">
         <div class="section-head">
           <div>
-            <h3>Google (Drive + e-mail)</h3>
-            <p>Saját Google-fiókkal kapcsolódik (OAuth) — a Google Cloud Console-ban létrehozott OAuth Client ID/Secret kell hozzá, "Web application" típussal. Ugyanez a kapcsolat szolgál a számla-PDF-ek Drive-feltöltésére és — ha fent Google van kiválasztva — az e-mail küldésre is.</p>
+            <h3>SMTP</h3>
+            <p>A rendszer ezen keresztül küldi a számlákat és értesítéseket, ha az E-mail küldés fent SMTP-re van állítva — pl. a Google Workspace SMTP-szerverével (smtp.gmail.com), alkalmazásjelszóval hitelesítve.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="smtp-host">SMTP szerver</label><input type="text" id="smtp-host" placeholder="smtp.gmail.com"></div>
+          <div class="field"><label for="smtp-port">Port</label><input type="number" id="smtp-port" placeholder="587"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="smtp-username">Felhasználónév</label><input type="text" id="smtp-username" placeholder="szamla@pelda.hu"></div>
+          <div class="field"><label for="smtp-password">Jelszó</label><input type="password" id="smtp-password" autocomplete="off"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="smtp-from-address">Feladó e-mail cím</label><input type="email" id="smtp-from-address" placeholder="szamla@pelda.hu"></div>
+          <div class="field"><label for="smtp-from-name">Feladó neve</label><input type="text" id="smtp-from-name" placeholder="Lakáskezelő"></div>
+        </div>
+        <div class="inline-test">
+          <div class="field"><label for="smtp-test-to">Teszt e-mail címzett</label><input type="email" id="smtp-test-to" placeholder="te@pelda.hu"></div>
+          <button class="btn btn-secondary" type="button" id="smtp-test-btn">Kapcsolat tesztelése</button>
+        </div>
+        <div class="test-result" id="smtp-test-result"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h3>Google Drive</h3>
+            <p>Saját Google-fiókkal kapcsolódik (OAuth) — a Google Cloud Console-ban létrehozott OAuth Client ID/Secret kell hozzá, "Web application" típussal. Ez a kapcsolat szolgál a számla-PDF-ek Drive-feltöltésére.</p>
           </div>
         </div>
         <div class="field-row">
@@ -100,14 +126,6 @@
           <button class="btn btn-ghost btn-sm" type="button" id="drive-test-btn">Drive-kapcsolat tesztelése</button>
         </div>
         <div class="test-result" id="drive-test-result"></div>
-
-        <div id="google-email-test" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--line);">
-          <div class="inline-test">
-            <div class="field"><label for="ge-test-to">Teszt e-mail címzett</label><input type="email" id="ge-test-to" placeholder="te@pelda.hu"></div>
-            <button class="btn btn-secondary" type="button" id="ge-test-btn">E-mail küldés tesztelése</button>
-          </div>
-          <div class="test-result" id="ge-test-result"></div>
-        </div>
       </section>
 
       <section class="section">
@@ -172,18 +190,23 @@ async function loadSettings() {
   const res = await apiFetch('/api/settings');
   const s = await res.json();
 
-  document.getElementById(s.emailProvider === 'Google' ? 'ep-google' : 'ep-mailgun').checked = true;
+  document.getElementById(s.emailProvider === 'Smtp' ? 'ep-smtp' : 'ep-mailgun').checked = true;
   document.getElementById('mg-key').value = s.mailgunApiKey || '';
   document.getElementById('mg-domain').value = s.mailgunDomain || '';
   document.getElementById('mg-from-address').value = s.mailgunFromAddress || '';
   document.getElementById('mg-from-name').value = s.mailgunFromName || '';
   document.getElementById('mg-base-url').value = s.mailgunApiBaseUrl || '';
+  document.getElementById('smtp-host').value = s.smtpHost || '';
+  document.getElementById('smtp-port').value = s.smtpPort || '';
+  document.getElementById('smtp-username').value = s.smtpUsername || '';
+  document.getElementById('smtp-password').value = s.smtpPassword || '';
+  document.getElementById('smtp-from-address').value = s.smtpFromAddress || '';
+  document.getElementById('smtp-from-name').value = s.smtpFromName || '';
   document.getElementById('drive-client-id').value = s.googleOAuthClientId || '';
   document.getElementById('drive-client-secret').value = s.googleOAuthClientSecret || '';
   document.getElementById('drive-redirect-uri').value = `${API_BASE}/api/settings/google-oauth/callback`;
   document.getElementById('drive-disconnected-state').style.display = s.googleDriveConnected ? 'none' : 'block';
   document.getElementById('drive-connected-state').style.display = s.googleDriveConnected ? 'block' : 'none';
-  document.getElementById('google-email-test').style.display = s.googleDriveConnected ? 'block' : 'none';
   if (s.googleDriveConnected) {
     document.getElementById('drive-connected-note').textContent = `Csatlakoztatva: ${s.googleConnectedEmail || 'ismeretlen fiók'}`;
   }
@@ -199,12 +222,18 @@ async function loadSettings() {
 
 async function saveSettings() {
   const payload = {
-    emailProvider: document.getElementById('ep-google').checked ? 'Google' : 'Mailgun',
+    emailProvider: document.getElementById('ep-smtp').checked ? 'Smtp' : 'Mailgun',
     mailgunApiKey: document.getElementById('mg-key').value.trim() || null,
     mailgunDomain: document.getElementById('mg-domain').value.trim() || null,
     mailgunFromAddress: document.getElementById('mg-from-address').value.trim() || null,
     mailgunFromName: document.getElementById('mg-from-name').value.trim() || null,
     mailgunApiBaseUrl: document.getElementById('mg-base-url').value.trim() || null,
+    smtpHost: document.getElementById('smtp-host').value.trim() || null,
+    smtpPort: Number(document.getElementById('smtp-port').value) || null,
+    smtpUsername: document.getElementById('smtp-username').value.trim() || null,
+    smtpPassword: document.getElementById('smtp-password').value.trim() || null,
+    smtpFromAddress: document.getElementById('smtp-from-address').value.trim() || null,
+    smtpFromName: document.getElementById('smtp-from-name').value.trim() || null,
     googleOAuthClientId: document.getElementById('drive-client-id').value.trim() || null,
     googleOAuthClientSecret: document.getElementById('drive-client-secret').value.trim() || null,
     utilityContactEmail: document.getElementById('utility-email').value.trim() || null,
@@ -260,15 +289,17 @@ document.getElementById('drive-test-btn').addEventListener('click', async () => 
   resultEl.className = 'test-result ' + (data.success ? 'ok' : 'error');
 });
 
-document.getElementById('ge-test-btn').addEventListener('click', async () => {
-  const resultEl = document.getElementById('ge-test-result');
-  const to = document.getElementById('ge-test-to').value.trim();
+document.getElementById('smtp-test-btn').addEventListener('click', async () => {
+  const resultEl = document.getElementById('smtp-test-result');
+  const to = document.getElementById('smtp-test-to').value.trim();
   if (!to) { resultEl.textContent = 'Adj meg egy címzett e-mail címet.'; resultEl.className = 'test-result error'; return; }
 
   resultEl.textContent = 'Küldés...';
   resultEl.className = 'test-result';
 
-  const res = await apiFetch('/api/settings/test-google-email', { method: 'POST', body: JSON.stringify({ to }) });
+  // A mentetlen mezőket is figyelembe véve teszteljük — előbb elmentjük az aktuális form-tartalmat.
+  await saveSettings();
+  const res = await apiFetch('/api/settings/test-smtp', { method: 'POST', body: JSON.stringify({ to }) });
   const data = await res.json();
   resultEl.textContent = data.success ? 'Sikeres — nézd meg a postaládát.' : (data.error || 'Sikertelen.');
   resultEl.className = 'test-result ' + (data.success ? 'ok' : 'error');

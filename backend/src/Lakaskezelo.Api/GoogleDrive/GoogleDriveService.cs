@@ -14,7 +14,7 @@ public record DriveFileInfo(string Id, string Name, string? WebViewLink, DateTim
 // engedi service accountnak fájlt létrehozni egy sima (nem Workspace) személyes Drive-ban: "Service
 // Accounts do not have storage quota. Leverage shared drives, or use OAuth delegation instead." —
 // mivel a felhasználónak nincs fizetős Google Workspace-e (Megosztott meghajtóhoz az kellene), az
-// OAuth az egyetlen működő út ingyenes Gmail-lel. A Beállítások oldalon egyszer kell engedélyezni
+// OAuth az egyetlen működő út ingyenes Google-fiókkal. A Beállítások oldalon egyszer kell engedélyezni
 // (GoogleOAuthController), utána a frissítő token (refresh token) teszi lehetővé a felügyelet
 // nélküli, éjszakai hozzáférést is — a UserCredential automatikusan frissíti az access tokent.
 public class GoogleDriveService(AppSettingsService settingsService)

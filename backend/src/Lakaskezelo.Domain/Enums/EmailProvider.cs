@@ -6,5 +6,7 @@ namespace Lakaskezelo.Domain.Enums;
 public enum EmailProvider
 {
     Mailgun = 0,
-    Google = 1,
+    // A workspace (pl. Google Workspace) SMTP-szerverén keresztül küld, sima SMTP-hitelesítéssel
+    // (nem OAuth/Gmail API) — ld. Notifications/SmtpEmailSender.
+    Smtp = 1,
 }
