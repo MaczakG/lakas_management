@@ -1,7 +1,7 @@
 using Lakaskezelo.Api.Contracts;
-using Lakaskezelo.Api.GoogleDrive;
 using Lakaskezelo.Api.Notifications;
 using Lakaskezelo.Api.Settings;
+using Lakaskezelo.Api.Storage;
 using Lakaskezelo.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +13,7 @@ namespace Lakaskezelo.Api.Controllers;
 [ApiController]
 [Route("api/settings")]
 public class SettingsController(
-    LakaskezeloDbContext db, AppSettingsService settingsService, GoogleDriveService driveService,
+    LakaskezeloDbContext db, AppSettingsService settingsService, S3InvoiceStorage storage,
     MailgunEmailSender mailgunSender, SmtpEmailSender smtpSender) : ControllerBase
 {
     [HttpGet]
@@ -45,8 +45,8 @@ public class SettingsController(
         settings.SmtpPassword = dto.SmtpPassword;
         settings.SmtpFromAddress = dto.SmtpFromAddress;
         settings.SmtpFromName = dto.SmtpFromName;
-        settings.GoogleOAuthClientId = dto.GoogleOAuthClientId;
-        settings.GoogleOAuthClientSecret = dto.GoogleOAuthClientSecret;
+        settings.S3BucketName = string.IsNullOrWhiteSpace(dto.S3BucketName) ? null : dto.S3BucketName.Trim();
+        settings.S3Region = string.IsNullOrWhiteSpace(dto.S3Region) ? null : dto.S3Region.Trim();
         settings.UtilityContactEmail = dto.UtilityContactEmail;
         settings.UtilityDeadlineDay = Math.Clamp(dto.UtilityDeadlineDay, 1, 28);
         settings.IssuerName = dto.IssuerName;
@@ -79,18 +79,18 @@ public class SettingsController(
         return Ok(new TestSmtpResponse(sent, sent ? null : smtpSender.LastError));
     }
 
-    [HttpPost("test-drive")]
-    public async Task<ActionResult<TestDriveResponse>> TestDrive(CancellationToken ct)
+    [HttpPost("test-storage")]
+    public async Task<ActionResult<TestStorageResponse>> TestStorage(CancellationToken ct)
     {
-        var (success, email, error) = await driveService.TestConnectionAsync(ct);
-        return Ok(new TestDriveResponse(success, email, error));
+        var (success, error) = await storage.TestConnectionAsync(ct);
+        return Ok(new TestStorageResponse(success, error));
     }
 
     private static AppSettingsDto ToDto(Domain.Entities.AppSettings s) => new(
         s.EmailProvider,
         s.MailgunApiKey, s.MailgunDomain, s.MailgunFromAddress, s.MailgunFromName, s.MailgunApiBaseUrl,
         s.SmtpHost, s.SmtpPort, s.SmtpUsername, s.SmtpPassword, s.SmtpFromAddress, s.SmtpFromName,
-        s.GoogleOAuthClientId, s.GoogleOAuthClientSecret, !string.IsNullOrWhiteSpace(s.GoogleOAuthRefreshToken), s.GoogleConnectedEmail,
+        s.S3BucketName, s.S3Region,
         s.UtilityContactEmail, s.UtilityDeadlineDay,
         s.IssuerName, s.IssuerAddress, s.IssuerTaxId, s.IssuerBankAccount,
         s.InvoiceEmailSubject, s.InvoiceEmailBody);

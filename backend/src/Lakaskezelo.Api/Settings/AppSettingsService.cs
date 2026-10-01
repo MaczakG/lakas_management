@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.Settings;
 
-// A Beállítások oldal (Mailgun, Google Drive, rezsi kontakt, számla-kibocsátó) egyetlen DB-sorban
+// A Beállítások oldal (e-mail, S3 tárhely, rezsi kontakt, számla-kibocsátó) egyetlen DB-sorban
 // tárolt, futásidőben szerkeszthető konfigurációja — az IOptions<T> minta (Flotta) helyett, mert
 // ezeket az értékeket a felhasználó a felületen módosítja, nem appsettings/env-ben.
 //

@@ -69,6 +69,35 @@ async function apiFetch(path, options = {}) {
   return res;
 }
 
+// Fájl letöltése az API-ról (PDF, ZIP) — sima <a href> nem küldené el a Bearer tokent, ezért
+// fetch-csel töltjük le, és egy ideiglenes blob-linkkel mentetjük el a böngészővel.
+async function downloadFile(path, fallbackName) {
+  const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() });
+  if (res.status === 401) {
+    clearAuth();
+    location.href = 'login.html';
+    return;
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    alert(data.message || 'Nem sikerült letölteni a fájlt.');
+    return;
+  }
+
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename\*=UTF-8''([^;]+)/i) || disposition.match(/filename="?([^";]+)"?/i);
+  const name = match ? decodeURIComponent(match[1]) : fallbackName;
+
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function formatCurrency(amount) {
   return `${Number(amount).toLocaleString('hu-HU')} Ft`;
 }

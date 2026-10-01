@@ -6,12 +6,12 @@ public record AppSettingsDto(
     EmailProvider EmailProvider,
     string? MailgunApiKey, string? MailgunDomain, string? MailgunFromAddress, string? MailgunFromName, string? MailgunApiBaseUrl,
     string? SmtpHost, int? SmtpPort, string? SmtpUsername, string? SmtpPassword, string? SmtpFromAddress, string? SmtpFromName,
-    string? GoogleOAuthClientId, string? GoogleOAuthClientSecret, bool GoogleDriveConnected, string? GoogleConnectedEmail,
+    string? S3BucketName, string? S3Region,
     string? UtilityContactEmail, int UtilityDeadlineDay,
     string? IssuerName, string? IssuerAddress, string? IssuerTaxId, string? IssuerBankAccount,
     string? InvoiceEmailSubject, string? InvoiceEmailBody);
 
 public record TestMailgunResponse(bool Success, string? Error);
-public record TestDriveResponse(bool Success, string? ServiceAccountEmail, string? Error);
+public record TestStorageResponse(bool Success, string? Error);
 public record TestSmtpResponse(bool Success, string? Error);
 public record TestEmailRequest(string To);

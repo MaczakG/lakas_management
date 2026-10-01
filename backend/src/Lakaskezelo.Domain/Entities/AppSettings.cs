@@ -32,11 +32,11 @@ public class AppSettings
     public string? SmtpFromAddress { get; set; }
     public string? SmtpFromName { get; set; }
 
-    // ---------- Google Drive (OAuth — nem service account, ld. GoogleOAuthController megjegyzése) ----------
-    public string? GoogleOAuthClientId { get; set; }
-    public string? GoogleOAuthClientSecret { get; set; }
-    public string? GoogleOAuthRefreshToken { get; set; }
-    public string? GoogleConnectedEmail { get; set; }
+    // ---------- Számla-PDF tárhely (Amazon S3) ----------
+    // Hozzáférési kulcsot szándékosan nem tárolunk: élesben az EC2-höz rendelt IAM-szerep, helyben
+    // a szokásos AWS hitelesítési lánc (~/.aws, környezeti változók) adja a jogot.
+    public string? S3BucketName { get; set; }
+    public string? S3Region { get; set; }
 
     // ---------- Rezsi emlékeztető ----------
     public string? UtilityContactEmail { get; set; }

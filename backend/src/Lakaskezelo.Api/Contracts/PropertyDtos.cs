@@ -8,18 +8,18 @@ public record PropertyListItemDto(
     bool UtilityComplete, int BillingDayOfMonth, int BillingHour, int BillingMinute);
 
 public record PropertyDetailDto(
-    Guid Id, string Name, decimal RentAmount, string? DriveFolderId, string? InvoicePrefix,
+    Guid Id, string Name, decimal RentAmount, string? InvoicePrefix,
     int BillingDayOfMonth, int BillingHour, int BillingMinute, bool IsActive,
     List<PropertyOwnerDto> Owners, List<TenantDto> Tenants);
 
-public record PropertyOwnerDto(Guid OwnerId, string OwnerName);
+public record PropertyOwnerDto(Guid OwnerId, string OwnerName, string? Share);
+
+public record PropertyOwnerInput(Guid OwnerId, string? Share);
 
 public record UpsertPropertyRequest(
-    string Name, decimal RentAmount, string? DriveFolderId, string? InvoicePrefix,
+    string Name, decimal RentAmount, string? InvoicePrefix,
     int BillingDayOfMonth, int BillingHour, int BillingMinute, bool IsActive,
-    List<Guid> OwnerIds);
+    List<PropertyOwnerInput> Owners);
 
 public record UtilityCostEntryDto(Guid Id, int Year, int Month, string Label, decimal Amount, DateTime CreatedAt, bool IsLocked);
 public record UpsertUtilityCostEntryRequest(int Year, int Month, string Label, decimal Amount);
-
-public record DriveDocumentDto(string Id, string Name, string? WebViewLink, DateTime? CreatedAt, long? SizeBytes);

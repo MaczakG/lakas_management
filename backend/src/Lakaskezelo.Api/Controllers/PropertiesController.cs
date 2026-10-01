@@ -1,6 +1,5 @@
 using Lakaskezelo.Api.Auth;
 using Lakaskezelo.Api.Contracts;
-using Lakaskezelo.Api.GoogleDrive;
 using Lakaskezelo.Data;
 using Lakaskezelo.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +11,7 @@ namespace Lakaskezelo.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/properties")]
-public class PropertiesController(LakaskezeloDbContext db, GoogleDriveService driveService) : ControllerBase
+public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<PropertyListItemDto>>> List(CancellationToken ct)
@@ -54,9 +53,11 @@ public class PropertiesController(LakaskezeloDbContext db, GoogleDriveService dr
     [HttpPost]
     public async Task<ActionResult<PropertyDetailDto>> Create(UpsertPropertyRequest request, CancellationToken ct)
     {
+        if (ValidateShares(request.Owners) is { } shareError) return BadRequest(new { message = shareError });
+
         var property = new Property { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow };
         Apply(property, request);
-        SyncOwners(property, request.OwnerIds);
+        SyncOwners(property, request.Owners);
         db.Properties.Add(property);
         await db.SaveChangesAsync(ct);
         return await Get(property.Id, ct);
@@ -65,11 +66,13 @@ public class PropertiesController(LakaskezeloDbContext db, GoogleDriveService dr
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<PropertyDetailDto>> Update(Guid id, UpsertPropertyRequest request, CancellationToken ct)
     {
+        if (ValidateShares(request.Owners) is { } shareError) return BadRequest(new { message = shareError });
+
         var property = await db.Properties.Include(p => p.PropertyOwners).FirstOrDefaultAsync(p => p.Id == id, ct);
         if (property is null) return NotFound();
 
         Apply(property, request);
-        SyncOwners(property, request.OwnerIds);
+        SyncOwners(property, request.Owners);
         await db.SaveChangesAsync(ct);
         return await Get(id, ct);
     }
@@ -150,19 +153,6 @@ public class PropertiesController(LakaskezeloDbContext db, GoogleDriveService dr
             .ToListAsync(ct))
         .Select(p => (p.PeriodYear, p.PeriodMonth)).ToHashSet();
 
-    // ---------- Dokumentumok (élő Drive-listázás) ----------
-
-    [HttpGet("{id:guid}/documents")]
-    public async Task<ActionResult<List<DriveDocumentDto>>> ListDocuments(Guid id, CancellationToken ct)
-    {
-        var property = await db.Properties.FindAsync([id], ct);
-        if (property is null) return NotFound();
-        if (string.IsNullOrWhiteSpace(property.DriveFolderId)) return Ok(new List<DriveDocumentDto>());
-
-        var files = await driveService.ListFilesAsync(property.DriveFolderId, ct);
-        return Ok(files.Select(f => new DriveDocumentDto(f.Id, f.Name, f.WebViewLink, f.CreatedAt, f.SizeBytes)));
-    }
-
     // ---------- Számlák ----------
 
     [HttpGet("{id:guid}/invoices")]
@@ -179,7 +169,6 @@ public class PropertiesController(LakaskezeloDbContext db, GoogleDriveService dr
     {
         property.Name = request.Name.Trim();
         property.RentAmount = request.RentAmount;
-        property.DriveFolderId = string.IsNullOrWhiteSpace(request.DriveFolderId) ? null : request.DriveFolderId.Trim();
         property.InvoicePrefix = string.IsNullOrWhiteSpace(request.InvoicePrefix) ? null : request.InvoicePrefix.Trim().ToUpperInvariant();
         property.BillingDayOfMonth = Math.Clamp(request.BillingDayOfMonth, 1, 28);
         property.BillingHour = Math.Clamp(request.BillingHour, 0, 23);
@@ -199,23 +188,59 @@ public class PropertiesController(LakaskezeloDbContext db, GoogleDriveService dr
     // hozzáadása "0 sort érintett" hibával elszállt. A db.PropertyOwners.Add(...) explicit Added
     // állapotba teszi, és az EF a property.PropertyOwners listát is automatikusan frissíti a
     // kapcsolat alapján (kézzel odaadva duplikációt okozna a következő lekérdezésnél).
-    private void SyncOwners(Property property, List<Guid> requestedOwnerIds)
+    private void SyncOwners(Property property, List<PropertyOwnerInput> requestedOwners)
     {
+        var requested = requestedOwners
+            .GroupBy(o => o.OwnerId)
+            .ToDictionary(g => g.Key, g => NormalizeShare(g.First().Share));
         var currentOwnerIds = property.PropertyOwners.Select(po => po.OwnerId).ToHashSet();
-        var toRemove = property.PropertyOwners.Where(po => !requestedOwnerIds.Contains(po.OwnerId)).ToList();
-        var toAdd = requestedOwnerIds.Where(id => !currentOwnerIds.Contains(id)).ToList();
+        var toRemove = property.PropertyOwners.Where(po => !requested.ContainsKey(po.OwnerId)).ToList();
 
         foreach (var po in toRemove) property.PropertyOwners.Remove(po);
-        foreach (var ownerId in toAdd)
+        foreach (var po in property.PropertyOwners) po.Share = requested[po.OwnerId];
+        foreach (var (ownerId, share) in requested.Where(r => !currentOwnerIds.Contains(r.Key)))
         {
-            db.PropertyOwners.Add(new PropertyOwner { Id = Guid.NewGuid(), PropertyId = property.Id, OwnerId = ownerId });
+            db.PropertyOwners.Add(new PropertyOwner { Id = Guid.NewGuid(), PropertyId = property.Id, OwnerId = ownerId, Share = share });
         }
     }
 
+    private static string? NormalizeShare(string? share) =>
+        string.IsNullOrWhiteSpace(share) ? null : share.Replace(" ", "");
+
+    // A hányad "számláló/nevező" alakú tört. Vagy minden tulajdonosnál meg kell adni (és akkor az
+    // összegüknek pontosan 1-nek kell lennie), vagy egyiknél sem (a számla ilyenkor 1/n-t ír) —
+    // vegyesen a hiányzók 1/n-je ellentmondásos arányt adna a számlán.
+    private static string? ValidateShares(List<PropertyOwnerInput> owners)
+    {
+        var withShare = owners.Count(o => NormalizeShare(o.Share) is not null);
+        if (withShare == 0) return null;
+        if (withShare != owners.Count)
+        {
+            return "A tulajdoni hányadot vagy minden tulajdonosnál add meg, vagy egyiknél se.";
+        }
+
+        long sumNumerator = 0, sumDenominator = 1;
+        foreach (var owner in owners)
+        {
+            var share = NormalizeShare(owner.Share)!;
+
+            var parts = share.Split('/');
+            if (parts.Length != 2 || !long.TryParse(parts[0], out var n) || !long.TryParse(parts[1], out var d) || n <= 0 || d <= 0 || n > d)
+            {
+                return $"Érvénytelen tulajdoni hányad: „{owner.Share}”. Tört alakban add meg, pl. 1/2.";
+            }
+            sumNumerator = sumNumerator * d + n * sumDenominator;
+            sumDenominator *= d;
+        }
+        return sumNumerator != sumDenominator
+            ? "A tulajdoni hányadok összege nem 1 (pl. 1/2 + 1/2, vagy 1/2 + 1/4 + 1/4)."
+            : null;
+    }
+
     private static PropertyDetailDto ToDetailDto(Property property) => new(
-        property.Id, property.Name, property.RentAmount, property.DriveFolderId, property.InvoicePrefix,
+        property.Id, property.Name, property.RentAmount, property.InvoicePrefix,
         property.BillingDayOfMonth, property.BillingHour, property.BillingMinute, property.IsActive,
-        [.. property.PropertyOwners.Select(po => new PropertyOwnerDto(po.OwnerId, po.Owner!.Name))],
+        [.. property.PropertyOwners.Select(po => new PropertyOwnerDto(po.OwnerId, po.Owner!.Name, po.Share))],
         [.. property.Tenants.Select(t => new TenantDto(t.Id, t.Name, t.Email, t.Phone, t.Address, t.TaxId, t.PropertyId, property.Name, t.MoveInDate, t.MoveOutDate, t.Notes, t.RentCurrency))]);
 
     private static UtilityCostEntryDto ToDto(UtilityCostEntry entry, bool isLocked) => new(entry.Id, entry.Year, entry.Month, entry.Label, entry.Amount, entry.CreatedAt, isLocked);

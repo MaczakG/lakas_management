@@ -1,6 +1,6 @@
-using Lakaskezelo.Api.GoogleDrive;
 using Lakaskezelo.Api.Notifications;
 using Lakaskezelo.Api.Settings;
+using Lakaskezelo.Api.Storage;
 using Lakaskezelo.Data;
 using Lakaskezelo.Domain.Entities;
 using Lakaskezelo.Domain.Enums;
@@ -8,15 +8,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.Billing;
 
-// Egy adott ingatlan adott havi számlájának összeállítása, PDF-generálása, Drive-feltöltése és
+// Egy adott ingatlan adott havi számlájának összeállítása, PDF-generálása, S3-ba mentése és
 // e-mailes kiküldése — ezt hívja mind a BillingSchedulerService (automatikus, ütemezett), mind az
 // InvoicesController manuális "Generálás most" / "Újraküldés" végpontja, hogy a logika egy helyen
 // éljen.
 public class InvoiceGenerationService(
     LakaskezeloDbContext db,
     AppSettingsService settingsService,
-    GoogleDriveService driveService,
-    IEmailSender emailSender)
+    S3InvoiceStorage storage,
+    IEmailSender emailSender,
+    ILogger<InvoiceGenerationService> logger)
 {
     // A Beállítások oldalon szerkeszthető sablon alapértéke — csak akkor kerül elő, ha a mező
     // üres, hogy a régebbi (még nem testreszabott) telepítéseken ne változzon a kiküldött szöveg.
@@ -88,12 +89,21 @@ public class InvoiceGenerationService(
 
             var pdfBytes = InvoicePdfGenerator.Generate(invoice, property, tenant, settings, newLines);
 
-            if (!string.IsNullOrWhiteSpace(property.DriveFolderId) && await driveService.IsConfiguredAsync(ct))
+            // A tárhely hibája nem akaszthatja meg a számla kiküldését: ilyenkor a PDF letöltéskor
+            // (InvoicePdfStore) a tárolt adatokból újragenerálódik és akkor mentődik el.
+            invoice.PdfStorageKey = null;
+            if (await storage.IsConfiguredAsync(ct))
             {
-                var fileName = $"{invoice.Number} - {property.Name} - {year}-{month:D2}.pdf";
-                var uploaded = await driveService.UploadFileAsync(property.DriveFolderId, fileName, pdfBytes, "application/pdf", ct);
-                invoice.PdfDriveFileId = uploaded?.Id;
-                invoice.PdfDriveLink = uploaded?.WebViewLink;
+                try
+                {
+                    var key = InvoicePdfStore.StorageKey(invoice);
+                    await storage.UploadAsync(key, pdfBytes, "application/pdf", ct);
+                    invoice.PdfStorageKey = key;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Storing invoice PDF {Number} in S3 failed", invoice.Number);
+                }
             }
 
             var emailed = false;
@@ -115,9 +125,6 @@ public class InvoiceGenerationService(
                 var bodyParagraphsHtml = string.Concat(bodyText
                     .Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
                     .Select(p => $"""<p style="margin:0 0 12px;">{System.Net.WebUtility.HtmlEncode(p).Replace("\n", "<br>")}</p>"""));
-                // Nincs Drive-link a szövegben: a PDF már közvetlenül csatolva van, egy hivatkozás a
-                // saját Drive-fájlra csak feleslegesen duplikálná (pl. Gmail a linket automatikusan
-                // egy második, "csatolmány-szerű" kártyaként is megjeleníti a valódi melléklet mellett).
                 var htmlBody = EmailTemplate.Render(preheader: $"{subject} — {periodLabel}", heading: subject, bodyHtml: bodyParagraphsHtml);
                 var attachment = new EmailAttachment($"{invoice.Number}.pdf", pdfBytes, "application/pdf");
                 emailed = await emailSender.SendAsync(tenant.Email!, EmailTemplate.UniqueSubject(subject), htmlBody, bodyText, attachment, ct);

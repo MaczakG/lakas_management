@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Számla csomagok</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .year-field{max-width:160px;}
+  .failed-note{font-size:12px;color:var(--coral);}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Számla csomagok</h1>
+        <p>Havonta az összes számla PDF-je egy ZIP-fájlban, egy Excelben megnyitható összesítővel együtt.</p>
+      </div>
+    </div>
+
+    <section class="section">
+      <div class="field year-field"><label for="year-input">Év</label><input type="number" id="year-input"></div>
+    </section>
+
+    <div class="card-table">
+      <table>
+        <thead>
+          <tr><th>Hónap</th><th>Számlák</th><th>Összesen</th><th></th></tr>
+        </thead>
+        <tbody id="bundles-tbody">
+          <tr class="empty-row"><td colspan="4">Betöltés...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="hint" style="margin-top:10px;">A sikertelen számlák nem kerülnek a csomagba, mert nem mentek ki. A Számlázás oldalon újrapróbálhatók.</p>
+  </main>
+</div>
+
+<script>
+requireAuth();
+
+const yearInput = document.getElementById('year-input');
+yearInput.value = new Date().getFullYear();
+
+async function loadBundles() {
+  const year = Number(yearInput.value);
+  const tbody = document.getElementById('bundles-tbody');
+  const res = await apiFetch(`/api/invoice-bundles?year=${year}`);
+  const months = await res.json();
+
+  if (months.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Ebben az évben még nincs számla.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = months.map((m) => {
+    const label = `${m.year}. ${MONTH_NAMES[m.month - 1]}`;
+    const fileName = `szamlak-${m.year}-${String(m.month).padStart(2, '0')}.zip`;
+    return `
+      <tr>
+        <td class="cell-main">${label}</td>
+        <td>${m.invoiceCount} db${m.failedCount > 0 ? `<div class="failed-note">+ ${m.failedCount} sikertelen</div>` : ''}</td>
+        <td>${formatCurrency(m.totalAmount)}</td>
+        <td class="row-actions">${m.invoiceCount > 0
+          ? `<button class="btn btn-primary btn-sm" type="button" onclick="exportBundle(this, ${m.year}, ${m.month}, '${fileName}')">Exportálás (ZIP)</button>`
+          : ''}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// A csomag összeállítása több másodperc is lehet (régi számláknál a PDF újragenerálódik), ezért
+// a gomb addig le van tiltva.
+window.exportBundle = async (button, year, month, fileName) => {
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Készül...';
+  try {
+    await downloadFile(`/api/invoice-bundles/${year}/${month}/zip`, fileName);
+  } finally {
+    button.disabled = false;
+    button.textContent = original;
+  }
+};
+
+yearInput.addEventListener('input', loadBundles);
+loadBundles();
+</script>
+</body>
+</html>

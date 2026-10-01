@@ -29,7 +29,7 @@
     <div class="page-header">
       <div>
         <h1>Beállítások</h1>
-        <p>Mailgun, SMTP, Google Drive és a számlázás rendszer-szintű beállításai.</p>
+        <p>Mailgun, SMTP, számla-tárhely és a számlázás rendszer-szintű beállításai.</p>
       </div>
     </div>
 
@@ -102,30 +102,16 @@
       <section class="section">
         <div class="section-head">
           <div>
-            <h3>Google Drive</h3>
-            <p>Saját Google-fiókkal kapcsolódik (OAuth) — a Google Cloud Console-ban létrehozott OAuth Client ID/Secret kell hozzá, "Web application" típussal. Ez a kapcsolat szolgál a számla-PDF-ek Drive-feltöltésére.</p>
+            <h3>Számla-tárhely (Amazon S3)</h3>
+            <p>Ide menti a rendszer a számla-PDF-eket. A hozzáférést a szerverhez rendelt AWS IAM-szerep adja, kulcsot itt nem kell megadni.</p>
           </div>
         </div>
         <div class="field-row">
-          <div class="field"><label for="drive-client-id">OAuth Client ID</label><input type="text" id="drive-client-id"></div>
-          <div class="field"><label for="drive-client-secret">OAuth Client Secret</label><input type="password" id="drive-client-secret" autocomplete="off"></div>
+          <div class="field"><label for="s3-bucket">Bucket neve</label><input type="text" id="s3-bucket" placeholder="pl. lakaskezelo-szamlak"></div>
+          <div class="field"><label for="s3-region">Régió</label><input type="text" id="s3-region" placeholder="eu-central-1"></div>
         </div>
-        <div class="field">
-          <label>Engedélyezett átirányítási URI (Authorized redirect URI)</label>
-          <input type="text" id="drive-redirect-uri" readonly>
-          <span class="hint">Ezt add hozzá pontosan a Google Cloud Console-ban az OAuth kliens "Authorized redirect URIs" listájához.</span>
-        </div>
-
-        <div id="drive-disconnected-state">
-          <button class="btn btn-secondary" type="button" id="drive-connect-btn">Csatlakoztatás Google-fiókkal</button>
-          <span class="hint" style="display:block;margin-top:8px;">A Mentés gombbal előbb mentsd el a Client ID/Secret-et, utána kattints ide.</span>
-        </div>
-        <div id="drive-connected-state" style="display:none;">
-          <div class="form-success show" id="drive-connected-note"></div>
-          <button class="btn btn-danger btn-sm" type="button" id="drive-disconnect-btn">Leválasztás</button>
-          <button class="btn btn-ghost btn-sm" type="button" id="drive-test-btn">Drive-kapcsolat tesztelése</button>
-        </div>
-        <div class="test-result" id="drive-test-result"></div>
+        <button class="btn btn-ghost btn-sm" type="button" id="s3-test-btn">Kapcsolat tesztelése</button>
+        <div class="test-result" id="s3-test-result"></div>
       </section>
 
       <section class="section">
@@ -171,7 +157,7 @@
         <div class="field">
           <label for="invoice-email-body">Szöveg</label>
           <textarea id="invoice-email-body" rows="5" placeholder="Elkészült a(z) {ingatlan} ingatlanhoz tartozó számlád a(z) {időszak} időszakra.&#10;&#10;Fizetendő összeg: {összeg}"></textarea>
-          <span class="hint">Használható helyőrzők: {ingatlan}, {időszak}, {összeg}, {számlaszám}. A bekezdéseket üres sor választja el. A Drive-hivatkozás (ha van) automatikusan a szöveg végére kerül.</span>
+          <span class="hint">Használható helyőrzők: {ingatlan}, {időszak}, {összeg}, {számlaszám}. A bekezdéseket üres sor választja el.</span>
         </div>
       </section>
 
@@ -202,14 +188,8 @@ async function loadSettings() {
   document.getElementById('smtp-password').value = s.smtpPassword || '';
   document.getElementById('smtp-from-address').value = s.smtpFromAddress || '';
   document.getElementById('smtp-from-name').value = s.smtpFromName || '';
-  document.getElementById('drive-client-id').value = s.googleOAuthClientId || '';
-  document.getElementById('drive-client-secret').value = s.googleOAuthClientSecret || '';
-  document.getElementById('drive-redirect-uri').value = `${API_BASE}/api/settings/google-oauth/callback`;
-  document.getElementById('drive-disconnected-state').style.display = s.googleDriveConnected ? 'none' : 'block';
-  document.getElementById('drive-connected-state').style.display = s.googleDriveConnected ? 'block' : 'none';
-  if (s.googleDriveConnected) {
-    document.getElementById('drive-connected-note').textContent = `Csatlakoztatva: ${s.googleConnectedEmail || 'ismeretlen fiók'}`;
-  }
+  document.getElementById('s3-bucket').value = s.s3BucketName || '';
+  document.getElementById('s3-region').value = s.s3Region || '';
   document.getElementById('utility-email').value = s.utilityContactEmail || '';
   document.getElementById('utility-deadline').value = s.utilityDeadlineDay || 5;
   document.getElementById('issuer-name').value = s.issuerName || '';
@@ -234,8 +214,8 @@ async function saveSettings() {
     smtpPassword: document.getElementById('smtp-password').value.trim() || null,
     smtpFromAddress: document.getElementById('smtp-from-address').value.trim() || null,
     smtpFromName: document.getElementById('smtp-from-name').value.trim() || null,
-    googleOAuthClientId: document.getElementById('drive-client-id').value.trim() || null,
-    googleOAuthClientSecret: document.getElementById('drive-client-secret').value.trim() || null,
+    s3BucketName: document.getElementById('s3-bucket').value.trim() || null,
+    s3Region: document.getElementById('s3-region').value.trim() || null,
     utilityContactEmail: document.getElementById('utility-email').value.trim() || null,
     utilityDeadlineDay: Number(document.getElementById('utility-deadline').value) || 5,
     issuerName: document.getElementById('issuer-name').value.trim() || null,
@@ -276,16 +256,16 @@ document.getElementById('mg-test-btn').addEventListener('click', async () => {
   resultEl.className = 'test-result ' + (data.success ? 'ok' : 'error');
 });
 
-document.getElementById('drive-test-btn').addEventListener('click', async () => {
-  const resultEl = document.getElementById('drive-test-result');
+document.getElementById('s3-test-btn').addEventListener('click', async () => {
+  const resultEl = document.getElementById('s3-test-result');
   resultEl.textContent = 'Ellenőrzés...';
   resultEl.className = 'test-result';
 
-  const res = await apiFetch('/api/settings/test-drive', { method: 'POST' });
+  // A mentetlen mezőket is figyelembe véve teszteljük — előbb elmentjük az aktuális form-tartalmat.
+  await saveSettings();
+  const res = await apiFetch('/api/settings/test-storage', { method: 'POST' });
   const data = await res.json();
-  resultEl.textContent = data.success
-    ? `Sikeres — csatlakoztatva: ${data.serviceAccountEmail}.`
-    : (data.error || 'Sikertelen.');
+  resultEl.textContent = data.success ? 'Sikeres — a rendszer tud írni a bucketbe.' : (data.error || 'Sikertelen.');
   resultEl.className = 'test-result ' + (data.success ? 'ok' : 'error');
 });
 
@@ -304,46 +284,6 @@ document.getElementById('smtp-test-btn').addEventListener('click', async () => {
   resultEl.textContent = data.success ? 'Sikeres — nézd meg a postaládát.' : (data.error || 'Sikertelen.');
   resultEl.className = 'test-result ' + (data.success ? 'ok' : 'error');
 });
-
-document.getElementById('drive-connect-btn').addEventListener('click', async () => {
-  const resultEl = document.getElementById('drive-test-result');
-  resultEl.className = 'test-result';
-
-  // A mentetlen Client ID/Secret-et is figyelembe véve — előbb elmentjük az aktuális form-tartalmat.
-  const saved = await saveSettings();
-  if (!saved) { resultEl.textContent = 'Nem sikerült elmenteni a beállításokat.'; resultEl.className = 'test-result error'; return; }
-
-  const res = await apiFetch('/api/settings/google-oauth/start');
-  const data = await res.json();
-  if (!res.ok) {
-    resultEl.textContent = data.message || 'Nem sikerült elindítani a csatlakoztatást.';
-    resultEl.className = 'test-result error';
-    return;
-  }
-  location.href = data.authUrl;
-});
-
-document.getElementById('drive-disconnect-btn').addEventListener('click', async () => {
-  if (!confirm('Biztosan leválasztod a Google Drive-ot?')) return;
-  await apiFetch('/api/settings/google-oauth/disconnect', { method: 'POST' });
-  loadSettings();
-});
-
-// Google visszairányítás után (?driveConnected=1 / ?driveError=1) jelezzük az eredményt.
-(() => {
-  const params = new URLSearchParams(location.search);
-  const resultEl = document.getElementById('drive-test-result');
-  if (params.get('driveConnected')) {
-    resultEl.textContent = 'Sikeresen csatlakoztatva.';
-    resultEl.className = 'test-result ok';
-  } else if (params.get('driveError')) {
-    resultEl.textContent = 'A csatlakoztatás sikertelen volt — próbáld újra.';
-    resultEl.className = 'test-result error';
-  }
-  if (params.get('driveConnected') || params.get('driveError')) {
-    history.replaceState(null, '', location.pathname);
-  }
-})();
 
 loadSettings();
 </script>

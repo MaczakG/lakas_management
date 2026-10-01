@@ -6,7 +6,6 @@ public class Property
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty; // cím / megnevezés
     public decimal RentAmount { get; set; }
-    public string? DriveFolderId { get; set; }
 
     // A számla sorszámának előtagja — a végleges szám "{Előtag}-{hónap}-{év}" alakban épül fel
     // (ld. InvoiceGenerationService), pl. "A22-8-2026".

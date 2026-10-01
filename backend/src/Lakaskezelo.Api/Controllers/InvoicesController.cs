@@ -11,7 +11,7 @@ namespace Lakaskezelo.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/invoices")]
-public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationService generator) : ControllerBase
+public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationService generator, InvoicePdfStore pdfStore) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<InvoiceDto>>> List(CancellationToken ct)
@@ -21,6 +21,21 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
             .ToListAsync(ct);
         return Ok(invoices.Select(ToDto));
     }
+
+    [HttpGet("{id:guid}/pdf")]
+    public async Task<IActionResult> DownloadPdf(Guid id, CancellationToken ct)
+    {
+        var invoice = await WithPdfData(db.Invoices).FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (invoice is null) return NotFound();
+        var pdf = await pdfStore.GetOrCreateAsync(invoice, ct);
+        return File(pdf, "application/pdf", InvoicePdfStore.FileName(invoice));
+    }
+
+    // Minden, ami a PDF (újra)generálásához kell — ld. InvoicePdfStore.GetOrCreateAsync.
+    public static IQueryable<Invoice> WithPdfData(IQueryable<Invoice> invoices) => invoices
+        .Include(i => i.Lines)
+        .Include(i => i.Tenant)
+        .Include(i => i.Property!).ThenInclude(p => p.PropertyOwners).ThenInclude(po => po.Owner);
 
     // Manuális "Generálás most" / "Újraküldés" — ugyanazt a logikát futtatja, mint az automatikus
     // ütemező (InvoiceGenerationService), így egy korábban Failed számla is újrapróbálható innen.
@@ -62,6 +77,6 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
     public static InvoiceDto ToDto(Invoice invoice) => new(
         invoice.Id, invoice.PropertyId, invoice.Property?.Name ?? "", invoice.Tenant?.Name,
         invoice.PeriodYear, invoice.PeriodMonth, invoice.Number, invoice.IssuedAt, invoice.DueDate,
-        invoice.AmountTotal, invoice.Status, invoice.PdfDriveLink, invoice.SentAt, invoice.ErrorMessage,
+        invoice.AmountTotal, invoice.Status, invoice.SentAt, invoice.ErrorMessage,
         [.. invoice.Lines.Select(l => new InvoiceLineDto(l.Label, l.Amount))]);
 }

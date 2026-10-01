@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Lakaskezelo.Api.Auth;
 using Lakaskezelo.Api.Billing;
 using Lakaskezelo.Api.ExchangeRates;
-using Lakaskezelo.Api.GoogleDrive;
+using Lakaskezelo.Api.Storage;
 using Lakaskezelo.Api.Notifications;
 using Lakaskezelo.Api.Settings;
 using Lakaskezelo.Api.UtilityReminder;
@@ -71,7 +71,8 @@ builder.Services.AddCors(options =>
     {
         if (allowedOrigins.Length > 0)
         {
-            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+            // Content-Disposition: a letöltött PDF/ZIP fájlnevét a frontend (app.js downloadFile) innen olvassa.
+            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("Content-Disposition");
         }
     });
 });
@@ -113,8 +114,9 @@ builder.Services.AddHttpClient<MailgunEmailSender>();
 builder.Services.AddScoped<SmtpEmailSender>();
 builder.Services.AddScoped<IEmailSender, EmailSenderRouter>();
 
-// ---------- Google Drive ----------
-builder.Services.AddScoped<GoogleDriveService>();
+// ---------- Számla-PDF tárhely (Amazon S3) ----------
+builder.Services.AddScoped<S3InvoiceStorage>();
+builder.Services.AddScoped<InvoicePdfStore>();
 
 // ---------- Számlázás ----------
 builder.Services.AddScoped<InvoiceGenerationService>();

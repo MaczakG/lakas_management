@@ -16,13 +16,13 @@
   .owner-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:10px;align-items:center;}
   .owner-row select,.owner-row input{margin:0;}
   .owner-row button{width:36px;height:42px;border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;color:var(--coral);flex-shrink:0;}
+  .owner-share-row{grid-template-columns:1fr 90px auto;}
 
   .utility-add-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:20px;}
   .utility-add-row .field{margin-bottom:0;}
 
-  .tenant-chip,.doc-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
-  .tenant-chip:last-child,.doc-row:last-child{border-bottom:none;}
-  .doc-row .doc-meta{color:var(--muted);font-size:12px;}
+  .tenant-chip{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .tenant-chip:last-child{border-bottom:none;}
 
   .loading-note{color:var(--muted);font-size:13px;padding:16px 0;}
 </style>
@@ -74,7 +74,6 @@
       <div class="tabs" id="modal-tabs">
         <button class="tab-btn active" data-tab="basic" type="button">Alapadatok</button>
         <button class="tab-btn" data-tab="utility" type="button" id="tab-btn-utility" disabled>Rezsi</button>
-        <button class="tab-btn" data-tab="documents" type="button" id="tab-btn-documents" disabled>Dokumentumok</button>
         <button class="tab-btn" data-tab="invoices" type="button" id="tab-btn-invoices" disabled>Számlák</button>
       </div>
 
@@ -87,13 +86,11 @@
             <div class="field"><label for="f-rent">Bérleti díj</label><input type="number" id="f-rent" min="0" step="0.01" required>
               <span class="hint">A bérlőnél beállított devizanemben (alapértelmezetten Ft) — ld. Bérlők oldal.</span>
             </div>
-            <div class="field"><label for="f-drive-folder">Google Drive mappa ID</label><input type="text" id="f-drive-folder" placeholder="pl. 1AbCDefGhIjKlmnOpQrstuVwxyz"></div>
-          </div>
-
-          <div class="field">
-            <label for="f-invoice-prefix">Számla előtag</label>
-            <input type="text" id="f-invoice-prefix" placeholder="pl. A22">
-            <span class="hint">A számla sorszáma ebből épül fel: előtag-hónap-év, pl. „A22-8-2026”.</span>
+            <div class="field">
+              <label for="f-invoice-prefix">Számla előtag</label>
+              <input type="text" id="f-invoice-prefix" placeholder="pl. A22">
+              <span class="hint">A számla sorszáma ebből épül fel: előtag-hónap-év, pl. „A22-8-2026”.</span>
+            </div>
           </div>
 
           <div class="field-row-3">
@@ -105,8 +102,9 @@
           <label class="checkbox-row" style="margin-bottom:18px;"><input type="checkbox" id="f-active" checked> Aktív (a rendszer csak aktív ingatlanokat számláz)</label>
 
           <div class="field">
-            <label>Tulajdonosok</label>
+            <label>Tulajdonosok és tulajdoni hányaduk</label>
             <div id="owner-rows"></div>
+            <span class="hint" style="display:block;margin:-2px 0 8px;">A hányad tört alakban (pl. 1/2) — a számlán így jelenik meg. Vagy mindenkinél add meg (összesen 1), vagy hagyd mindenkinél üresen (ekkor egyenlő arány).</span>
             <button class="btn btn-ghost btn-sm" type="button" id="add-owner-row">+ Tulajdonos hozzáadása</button>
           </div>
         </form>
@@ -132,11 +130,6 @@
             <tbody id="utility-tbody"><tr class="empty-row"><td colspan="4">Betöltés...</td></tr></tbody>
           </table>
         </div>
-      </div>
-
-      <!-- ---- Dokumentumok ---- -->
-      <div class="tab-panel" id="panel-documents">
-        <div id="documents-list" class="loading-note">Betöltés...</div>
       </div>
 
       <!-- ---- Számlák ---- -->
@@ -236,11 +229,12 @@ function ownerOptionsHtml(selectedId) {
   return owners.map((o) => `<option value="${o.id}" ${o.id === selectedId ? 'selected' : ''}>${escapeHtml(o.name)}</option>`).join('');
 }
 
-function addOwnerRow(ownerId) {
+function addOwnerRow(ownerId, share) {
   const row = document.createElement('div');
-  row.className = 'owner-row';
+  row.className = 'owner-row owner-share-row';
   row.innerHTML = `
     <select class="owner-select">${ownerOptionsHtml(ownerId)}</select>
+    <input type="text" class="owner-share" placeholder="pl. 1/2" title="Tulajdoni hányad" value="${escapeHtml(share || '')}">
     <button type="button" class="remove-owner-row">✕</button>
   `;
   row.querySelector('.remove-owner-row').addEventListener('click', () => row.remove());
@@ -263,7 +257,7 @@ function closeModal() {
   document.getElementById('tenants-readonly').style.display = 'none';
   editingId = null;
   editingPropertyName = null;
-  ['utility', 'documents', 'invoices'].forEach((t) => document.getElementById('tab-btn-' + t).disabled = true);
+  ['utility', 'invoices'].forEach((t) => document.getElementById('tab-btn-' + t).disabled = true);
 }
 
 document.getElementById('modal-close').addEventListener('click', closeModal);
@@ -287,7 +281,6 @@ window.openEdit = async (id) => {
 
   document.getElementById('f-name').value = p.name;
   document.getElementById('f-rent').value = p.rentAmount;
-  document.getElementById('f-drive-folder').value = p.driveFolderId || '';
   document.getElementById('f-invoice-prefix').value = p.invoicePrefix || '';
   document.getElementById('f-billing-day').value = p.billingDayOfMonth;
   document.getElementById('f-billing-hour').value = p.billingHour;
@@ -296,7 +289,7 @@ window.openEdit = async (id) => {
 
   document.getElementById('owner-rows').innerHTML = '';
   if (p.owners.length === 0) addOwnerRow(owners[0]?.id);
-  else p.owners.forEach((o) => addOwnerRow(o.ownerId));
+  else p.owners.forEach((o) => addOwnerRow(o.ownerId, o.share));
 
   const tenantsList = document.getElementById('tenants-list');
   document.getElementById('tenants-readonly').style.display = 'block';
@@ -304,11 +297,10 @@ window.openEdit = async (id) => {
     ? p.tenants.map((t) => `<div class="tenant-chip"><span>${escapeHtml(t.name)}</span><span class="cell-sub">${escapeHtml(t.email || '')}</span></div>`).join('')
     : '<div class="cell-sub">Nincs bérlő hozzárendelve.</div>';
 
-  ['utility', 'documents', 'invoices'].forEach((t) => document.getElementById('tab-btn-' + t).disabled = false);
+  ['utility', 'invoices'].forEach((t) => document.getElementById('tab-btn-' + t).disabled = false);
   openModal('Ingatlan szerkesztése');
 
   loadUtilityCosts(id);
-  loadDocuments(id);
   loadPropertyInvoices(id);
 };
 
@@ -317,20 +309,19 @@ document.getElementById('property-form').addEventListener('submit', async (e) =>
   const errorEl = document.getElementById('modal-error');
   errorEl.classList.remove('show');
 
-  const ownerIds = [...document.querySelectorAll('#owner-rows .owner-select')]
-    .map((select) => select.value)
-    .filter(Boolean);
+  const ownerRows = [...document.querySelectorAll('#owner-rows .owner-share-row')]
+    .map((row) => ({ ownerId: row.querySelector('.owner-select').value, share: row.querySelector('.owner-share').value.trim() || null }))
+    .filter((o) => o.ownerId);
 
   const payload = {
     name: document.getElementById('f-name').value.trim(),
     rentAmount: Number(document.getElementById('f-rent').value) || 0,
-    driveFolderId: document.getElementById('f-drive-folder').value.trim() || null,
     invoicePrefix: document.getElementById('f-invoice-prefix').value.trim() || null,
     billingDayOfMonth: Number(document.getElementById('f-billing-day').value) || 5,
     billingHour: Number(document.getElementById('f-billing-hour').value) || 0,
     billingMinute: Number(document.getElementById('f-billing-minute').value) || 0,
     isActive: document.getElementById('f-active').checked,
-    ownerIds,
+    owners: ownerRows,
   };
 
   const url = editingId ? `/api/properties/${editingId}` : '/api/properties';
@@ -404,31 +395,6 @@ document.getElementById('open-utility-month-btn').addEventListener('click', () =
   openUtilityMonth(Number(document.getElementById('u-year').value), Number(utilityMonthSelect.value));
 });
 
-// ---------- Dokumentumok tab ----------
-async function loadDocuments(propertyId) {
-  const listEl = document.getElementById('documents-list');
-  listEl.className = 'loading-note';
-  listEl.textContent = 'Betöltés...';
-
-  try {
-    const res = await apiFetch(`/api/properties/${propertyId}/documents`);
-    const docs = await res.json();
-    listEl.className = '';
-    if (docs.length === 0) {
-      listEl.innerHTML = '<div class="loading-note">Nincs Drive mappa beállítva, vagy a mappa üres.</div>';
-      return;
-    }
-    listEl.innerHTML = docs.map((d) => `
-      <div class="doc-row">
-        <a href="${d.webViewLink || '#'}" target="_blank" rel="noopener">${escapeHtml(d.name)}</a>
-        <span class="doc-meta">${formatDate(d.createdAt)}</span>
-      </div>
-    `).join('');
-  } catch (err) {
-    listEl.innerHTML = '<div class="loading-note">Nem sikerült betölteni a dokumentumokat.</div>';
-  }
-}
-
 // ---------- Számlák tab ----------
 const propInvoiceStatusLabels = { Sent: 'Elküldve', Generated: 'Legenerálva', Failed: 'Sikertelen' };
 
@@ -448,7 +414,7 @@ async function loadPropertyInvoices(propertyId) {
       <td>${i.periodYear}.${String(i.periodMonth).padStart(2, '0')}</td>
       <td>${formatCurrency(i.amountTotal)}</td>
       <td><span class="status-tag ${i.status}">${propInvoiceStatusLabels[i.status] || i.status}</span></td>
-      <td>${i.pdfDriveLink ? `<a class="btn btn-ghost btn-sm" href="${i.pdfDriveLink}" target="_blank" rel="noopener">PDF</a>` : ''}</td>
+      <td>${i.status !== 'Failed' ? `<button class="btn btn-ghost btn-sm" type="button" onclick="downloadFile('/api/invoices/${i.id}/pdf', '${i.number}.pdf')">PDF</button>` : ''}</td>
     </tr>
   `).join('');
 }

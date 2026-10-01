@@ -7,5 +7,5 @@ namespace Lakaskezelo.Api;
 // nincs .git előzménye a build kontextusban.
 public static class AppVersion
 {
-    public const string Current = "2026.08.24";
+    public const string Current = "2026.10.01";
 }

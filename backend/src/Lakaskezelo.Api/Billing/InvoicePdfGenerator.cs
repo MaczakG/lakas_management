@@ -87,7 +87,9 @@ public static class InvoicePdfGenerator
                     if (property.PropertyOwners.Count > 0)
                     {
                         var owners = property.PropertyOwners;
-                        var shareLabel = string.Join("-", Enumerable.Repeat($"1/{owners.Count}", owners.Count));
+                        // A tulajdonosnál megadott hányad; ha nincs megadva, egyenlő arányt feltételezünk.
+                        string ShareOf(PropertyOwner po) => string.IsNullOrWhiteSpace(po.Share) ? $"1/{owners.Count}" : po.Share;
+                        var shareLabel = string.Join("-", owners.Select(ShareOf));
 
                         col.Item().Text($"Bérleti díj jogosultjai {shareLabel} arányban:");
 
@@ -98,6 +100,7 @@ public static class InvoicePdfGenerator
                                 columns.RelativeColumn(3);
                                 columns.RelativeColumn(4);
                                 columns.RelativeColumn(2);
+                                columns.RelativeColumn(2);
                             });
 
                             table.Header(header =>
@@ -105,7 +108,8 @@ public static class InvoicePdfGenerator
                                 header.Cell().Text("Név").Bold();
                                 header.Cell().Text("Lakcím").Bold();
                                 header.Cell().Text("Adóazonosító jele").Bold();
-                                header.Cell().ColumnSpan(3).PaddingTop(4).BorderBottom(1).BorderColor(Colors.Grey.Lighten1);
+                                header.Cell().Text("Tulajdoni hányad").Bold();
+                                header.Cell().ColumnSpan(4).PaddingTop(4).BorderBottom(1).BorderColor(Colors.Grey.Lighten1);
                             });
 
                             foreach (var po in owners)
@@ -113,6 +117,7 @@ public static class InvoicePdfGenerator
                                 table.Cell().PaddingVertical(3).Text(po.Owner!.Name);
                                 table.Cell().PaddingVertical(3).Text(po.Owner!.Address ?? "—");
                                 table.Cell().PaddingVertical(3).Text(po.Owner!.TaxId ?? "—");
+                                table.Cell().PaddingVertical(3).Text(ShareOf(po));
                             }
                         });
                     }

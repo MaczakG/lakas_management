@@ -24,8 +24,9 @@ public class Invoice
     public string? RentConversionNote { get; set; }
 
     public InvoiceStatus Status { get; set; } = InvoiceStatus.Generated;
-    public string? PdfDriveFileId { get; set; }
-    public string? PdfDriveLink { get; set; }
+    // Az S3-ban tárolt PDF kulcsa; null, ha a feltöltés nem sikerült vagy a számla még a Drive-os
+    // időszakból való — ilyenkor a PDF letöltéskor a tárolt adatokból újragenerálódik.
+    public string? PdfStorageKey { get; set; }
     public DateTime? SentAt { get; set; }
     public string? ErrorMessage { get; set; }
 

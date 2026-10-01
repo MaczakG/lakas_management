@@ -118,7 +118,7 @@ function renderInvoices() {
         ${i.status === 'Failed' && i.errorMessage ? `<div class="error-note">${escapeHtml(i.errorMessage)}</div>` : ''}
       </td>
       <td class="row-actions">
-        ${i.pdfDriveLink ? `<a class="btn btn-ghost btn-sm" href="${i.pdfDriveLink}" target="_blank" rel="noopener">PDF</a>` : ''}
+        ${i.status !== 'Failed' ? `<button class="btn btn-ghost btn-sm" onclick="downloadFile('/api/invoices/${i.id}/pdf', '${i.number}.pdf')">PDF</button>` : ''}
         ${i.status === 'Failed' ? `<button class="btn btn-secondary btn-sm" onclick="retryInvoice('${i.propertyId}', ${i.periodYear}, ${i.periodMonth})">Újrapróbálás</button>` : ''}
         ${i.status !== 'Sent' ? `<button class="btn btn-danger btn-sm" onclick="deleteInvoice('${i.id}')">Törlés</button>` : ''}
       </td>
