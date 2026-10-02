@@ -1,0 +1,75 @@
+# Éles Docker Compose (EC2: /home/ubuntu/lakaskezelo/docker-compose.yml). A titkok (DB_PASSWORD,
+# JWT_SIGNING_KEY) a mellette lévő .env fájlból jönnek (jogosultság: 600), soha nem kerülnek a repóba.
+# Élesítés menete: ld. deploy/README.md.
+
+# Minden konténer naplója legfeljebb 5 × 10 MB — ne tölthesse meg a lemezt.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lakaskezelo
+      POSTGRES_USER: lakaskezelo
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lakaskezelo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__LakaskezeloDb: "Host=postgres;Port=5432;Database=lakaskezelo;Username=lakaskezelo;Password=${DB_PASSWORD}"
+      Jwt__Issuer: lakaskezelo-api
+      Jwt__Audience: lakaskezelo-frontend
+      Jwt__SigningKey: ${JWT_SIGNING_KEY}
+      Jwt__AccessTokenMinutes: "120"
+      Cors__AllowedOrigins__0: "https://lakaskezelo.alts.hu"
+      Frontend__BaseUrl: "https://lakaskezelo.alts.hu"
+      # Kétlépcsős (e-mailes kódos) belépés. Csak vészhelyzetben állítsd "false"-ra (pl. ha az
+      # e-mail küldés tartósan nem működik, és emiatt senki sem tud belépni), utána azonnal vissza.
+      Auth__TwoFactorEnabled: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  nginx:
+    # A mindenkori stabil (biztonsági javításokat kapó) nginx ág — az élesítés "docker compose pull"
+    # lépése frissíti. (Az 1.27-es ág már nem kapott javításokat.)
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./certbot-webroot:/var/www/certbot:ro
+    depends_on:
+      - api
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+volumes:
+  pgdata:

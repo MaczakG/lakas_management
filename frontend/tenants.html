@@ -134,12 +134,6 @@ function renderTenants() {
   `).join('');
 }
 
-function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s ?? '';
-  return d.innerHTML;
-}
-
 function openModal(title) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-error').classList.remove('show');

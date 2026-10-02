@@ -20,6 +20,7 @@ public class JwtTokenService(IOptions<JwtOptions> options)
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(ClaimTypes.Name, user.FullName),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(SecurityStamp.ClaimType, user.SecurityStamp),
         };
 
         var expiresAt = DateTime.UtcNow.AddMinutes(_options.AccessTokenMinutes);

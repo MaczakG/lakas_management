@@ -118,18 +118,12 @@ function renderInvoices() {
         ${i.status === 'Failed' && i.errorMessage ? `<div class="error-note">${escapeHtml(i.errorMessage)}</div>` : ''}
       </td>
       <td class="row-actions">
-        ${i.status !== 'Failed' ? `<button class="btn btn-ghost btn-sm" onclick="downloadFile('/api/invoices/${i.id}/pdf', '${i.number}.pdf')">PDF</button>` : ''}
+        ${i.status !== 'Failed' ? `<button class="btn btn-ghost btn-sm" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">PDF</button>` : ''}
         ${i.status === 'Failed' ? `<button class="btn btn-secondary btn-sm" onclick="retryInvoice('${i.propertyId}', ${i.periodYear}, ${i.periodMonth})">Újrapróbálás</button>` : ''}
-        <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${i.id}', '${escapeHtml(i.number)}', ${i.status === 'Sent'})">Törlés</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${i.id}', ${jsArg(i.number)}, ${i.status === 'Sent'})">Törlés</button>
       </td>
     </tr>
   `).join('');
-}
-
-function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s ?? '';
-  return d.innerHTML;
 }
 
 document.getElementById('search-input').addEventListener('input', renderInvoices);

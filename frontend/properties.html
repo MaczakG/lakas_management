@@ -198,12 +198,6 @@ function formatNextBilling(day, hour, minute) {
   return `${next.getFullYear()}.${pad(next.getMonth() + 1)}.${pad(next.getDate())}. ${pad(next.getHours())}:${pad(next.getMinutes())}`;
 }
 
-function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s ?? '';
-  return d.innerHTML;
-}
-
 document.getElementById('search-input').addEventListener('input', renderProperties);
 
 // ---------- Tab switching ----------
@@ -414,7 +408,7 @@ async function loadPropertyInvoices(propertyId) {
       <td>${i.periodYear}.${String(i.periodMonth).padStart(2, '0')}</td>
       <td>${formatCurrency(i.amountTotal)}</td>
       <td><span class="status-tag ${i.status}">${propInvoiceStatusLabels[i.status] || i.status}</span></td>
-      <td>${i.status !== 'Failed' ? `<button class="btn btn-ghost btn-sm" type="button" onclick="downloadFile('/api/invoices/${i.id}/pdf', '${i.number}.pdf')">PDF</button>` : ''}</td>
+      <td>${i.status !== 'Failed' ? `<button class="btn btn-ghost btn-sm" type="button" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">PDF</button>` : ''}</td>
     </tr>
   `).join('');
 }

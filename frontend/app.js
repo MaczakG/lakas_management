@@ -1,6 +1,7 @@
 // Megosztott auth/API segédfüggvények — minden oldal betölti <script src="app.js"> a saját
-// inline szkriptje előtt. localStorage-ban tárolja a munkamenetet (nincs "emlékezz rám" opció,
-// nincs 2FA — csak egyszerű JWT bejelentkezés).
+// inline szkriptje előtt. localStorage-ban tárolja a munkamenetet (nincs "emlékezz rám" opció).
+// A bejelentkezés kétlépcsős: jelszó + e-mailben kapott 6 jegyű kód (ld. login.html), a kapott JWT
+// a szerveren visszavonható (jelszócsere/inaktiválás után 401 → automatikus kijelentkeztetés).
 // A lakaskezelo-api Render URL-je véletlen utótagot kapott (a sima név ütközés miatt foglalt lett
 // egy korábbi, sikertelen duplikált Blueprint-próbálkozás során) — ha a szolgáltatást újra
 // létrehoznák és megint más utótagot kapna, ezt kell frissíteni.
@@ -101,6 +102,35 @@ async function downloadFile(path, fallbackName) {
 // Magyar számformátum explicit szeparátorokkal ("100 000", "1 234,56") — nem a böngésző
 // locale-adataira bízzuk, mert egyes környezetekben vesszőt tett ezres elválasztónak.
 // Nem törő szóközt használunk, hogy az összeg ne törjön két sorba.
+// Hibaválasz szövege: a backend { message } JSON-t ad, de a túl sok kérésre (429) az nginx is
+// válaszolhat saját, nem JSON törzzsel — ezért a JSON-olvasás itt nem dobhat hibát.
+async function readJson(res) {
+  return res.json().catch(() => ({}));
+}
+
+function errorMessage(res, data, fallback) {
+  if (data && data.message) return data.message;
+  if (res.status === 429) return 'Túl sok próbálkozás. Várj egy kicsit, és próbáld újra.';
+  return fallback;
+}
+
+// HTML-escape szöveghez ÉS attribútumértékhez is (az idézőjeleket is kódolja) — minden oldal ezt
+// használja, ha API-ból jövő szöveget tesz innerHTML-be vagy egy attribútumba.
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Inline eseménykezelő (onclick="f(${jsArg(x)})") szöveges argumentuma: JS-string literál, ami
+// HTML-attribútumban is biztonságos. Idézőjelek NÉLKÜL kell beilleszteni — a literál hozza a sajátját.
+function jsArg(s) {
+  return escapeHtml(JSON.stringify(String(s ?? '')));
+}
+
 function formatNumber(amount, decimals = 0) {
   const [intPart, fracPart] = Math.abs(Number(amount) || 0).toFixed(decimals).split('.');
   const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');

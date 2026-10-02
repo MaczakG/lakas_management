@@ -75,12 +75,6 @@ let properties = [];
 const CHART_COLORS = ['var(--accent)', 'var(--green)', 'var(--amber)', 'var(--coral)', '#7C3AED', '#0891B2'];
 const CHART_HEIGHT = 220;
 
-function escapeHtml(s) {
-  const div = document.createElement('div');
-  div.textContent = s ?? '';
-  return div.innerHTML;
-}
-
 async function loadProperties() {
   yearInput.value = new Date().getFullYear();
 
