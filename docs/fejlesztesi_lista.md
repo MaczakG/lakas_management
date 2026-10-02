@@ -1,13 +1,14 @@
 # Lakáskezelő — fejlesztési lista
 
 Ez a dokumentum a fejlesztések nyomon követésére szolgál — **innen dolgozunk**, ezt tartjuk
-naprakészen minden munkamenet elején/végén. Legfrissebb frissítés: 2026-10-01.
+naprakészen minden munkamenet elején/végén. Legfrissebb frissítés: 2026-10-02.
 
 **Igazságforrás: a GitHub `main` ág.** Élesíteni csak a `main`-ről szabad. Az augusztusi, csak
 helyben élesített munka emiatt veszett el élesben (ld. lent).
 
 | Állapot | Fejlesztés | Megjegyzés |
 |---|---|---|
+| 🟡 Kód kész | Árfolyamok: devizánként egy, óránként frissülő sor | 2026-10-02: a napi árfolyam-előzmény (lista) helyett EUR és USD egy-egy sora, amit az óránkénti MNB-lekérdezés és a „Frissítés most” gomb felülír. A migráció a régi sorokból devizánként a legfrissebbet tartja meg. A számlázás eddig is a legutolsó árfolyamot használta, és a számla a felhasznált árfolyamot a saját szövegében őrzi, így a régi számlákat nem érinti. **Hátravan: élesítés.** |
 | 🔴 Sürgős | Sikertelen szept./okt. számlák újrapróbálása | 2026-10-01: a lejárt Google-token (`invalid_grant`) miatt szeptember 1. óta minden számla `Failed` lett, egyik sem ment ki. A Google-fiók 15:33-kor újra lett csatlakoztatva, így a jelenlegi éles verzióval a Számlázás oldalon az „Újrapróbálás” már működik. |
 | 🟡 Kód kész | Számla-PDF tárolás Amazon S3-ban (Google Drive helyett) | 2026-10-01: a Google Drive teljesen kikerült (Beállítások szekció, OAuth, ingatlanonkénti Drive-mappa, Dokumentumok fül). Új Beállítások szekció: S3 bucket + régió + kapcsolat-teszt. Hozzáférés az EC2-höz rendelt IAM-szereppel, kulcs nincs tárolva. Az S3-hiba nem állítja le a számla kiküldését. A régi (Drive-os) számlák PDF-je letöltéskor újragenerálódik a tárolt adatokból. **Hátravan: bucket + IAM-szerep a konzolban, commit + push, élesítés.** |
 | 🟡 Kód kész | Számla csomagok oldal | 2026-10-01: `invoice-bundles.html`, havonta egy ZIP az összes kiküldött/legenerált számla PDF-jével és egy `osszesito.csv`-vel (UTF-8 BOM, pontosvessző, magyar Excelhez). A sikertelen számlák nem kerülnek bele. |

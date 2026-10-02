@@ -125,6 +125,7 @@ builder.Services.AddHostedService<UtilityReminderService>();
 
 // ---------- MNB árfolyamok ----------
 builder.Services.AddHttpClient<MnbExchangeRateClient>();
+builder.Services.AddScoped<ExchangeRateUpdater>();
 builder.Services.AddHostedService<ExchangeRateFetchService>();
 
 var app = builder.Build();

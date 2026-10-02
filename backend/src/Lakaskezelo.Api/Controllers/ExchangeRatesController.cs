@@ -1,7 +1,6 @@
 using Lakaskezelo.Api.Contracts;
 using Lakaskezelo.Api.ExchangeRates;
 using Lakaskezelo.Data;
-using Lakaskezelo.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,17 +10,13 @@ namespace Lakaskezelo.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/exchange-rates")]
-public class ExchangeRatesController(LakaskezeloDbContext db, MnbExchangeRateClient client) : ControllerBase
+public class ExchangeRatesController(LakaskezeloDbContext db, ExchangeRateUpdater updater) : ControllerBase
 {
-    private static readonly string[] TrackedCurrencies = ["EUR", "USD"];
-
+    // Devizánként egy sor — az aktuális árfolyam.
     [HttpGet]
     public async Task<ActionResult<List<ExchangeRateDto>>> List(CancellationToken ct)
     {
-        var rates = await db.ExchangeRates
-            .OrderByDescending(r => r.RateDate).ThenBy(r => r.CurrencyCode)
-            .Take(200)
-            .ToListAsync(ct);
+        var rates = await db.ExchangeRates.OrderBy(r => r.CurrencyCode).ToListAsync(ct);
         return Ok(rates.Select(r => new ExchangeRateDto(r.Id, r.CurrencyCode, r.RateToHuf, r.RateDate, r.FetchedAt)));
     }
 
@@ -30,33 +25,14 @@ public class ExchangeRatesController(LakaskezeloDbContext db, MnbExchangeRateCli
     [HttpPost("fetch-now")]
     public async Task<ActionResult<List<ExchangeRateDto>>> FetchNow(CancellationToken ct)
     {
-        List<MnbRate> rates;
         try
         {
-            rates = await client.FetchCurrentRatesAsync(ct);
+            await updater.UpdateAsync(ct);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is HttpRequestException or System.Xml.XmlException)
         {
             return StatusCode(502, new { message = $"Nem sikerült elérni az MNB árfolyam-szolgáltatást: {ex.Message}" });
         }
-
-        var tracked = rates.Where(r => TrackedCurrencies.Contains(r.CurrencyCode)).ToList();
-        foreach (var rate in tracked)
-        {
-            var existing = await db.ExchangeRates.FirstOrDefaultAsync(
-                r => r.CurrencyCode == rate.CurrencyCode && r.RateDate == rate.RateDate, ct);
-            if (existing is not null) continue;
-
-            db.ExchangeRates.Add(new ExchangeRate
-            {
-                Id = Guid.NewGuid(),
-                CurrencyCode = rate.CurrencyCode,
-                RateToHuf = rate.RateToHuf,
-                RateDate = rate.RateDate,
-                FetchedAt = DateTime.UtcNow,
-            });
-        }
-        await db.SaveChangesAsync(ct);
 
         return await List(ct);
     }
