@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using QuestPDF.Infrastructure;
 
@@ -40,19 +41,21 @@ builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, _, _) =>
     {
-        document.Components ??= new();
-        document.Components.SecuritySchemes["Bearer"] = new()
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+        document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
         {
-            Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+            Type = SecuritySchemeType.Http,
             Scheme = "bearer",
             BearerFormat = "JWT",
         };
-        foreach (var operation in document.Paths.SelectMany(p => p.Value.Operations))
+        foreach (var operation in document.Paths.Values.SelectMany(p => p.Operations ?? []))
         {
-            operation.Value.Security.Add(new() { [new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            operation.Value.Security ??= [];
+            operation.Value.Security.Add(new OpenApiSecurityRequirement
             {
-                Reference = new() { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" }
-            }] = [] });
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = [],
+            });
         }
         return Task.CompletedTask;
     });
@@ -221,7 +224,7 @@ if (!app.Environment.IsDevelopment())
         ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
         ForwardLimit = 1,
     };
-    forwardedHeadersOptions.KnownNetworks.Clear();
+    forwardedHeadersOptions.KnownIPNetworks.Clear();
     forwardedHeadersOptions.KnownProxies.Clear();
     app.UseForwardedHeaders(forwardedHeadersOptions);
 }
