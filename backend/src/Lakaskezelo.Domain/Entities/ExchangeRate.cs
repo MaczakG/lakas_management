@@ -1,12 +1,13 @@
 namespace Lakaskezelo.Domain.Entities;
 
-// Egy nap egy devizájának MNB középárfolyama HUF-ban — a napi automatikus lekérdezés (ld.
-// ExchangeRates/MnbExchangeRateClient) tölti fel, egy sor devizánként/naponta.
+// Egy deviza aktuális MNB középárfolyama HUF-ban — devizánként egyetlen sor, amit az óránkénti
+// automatikus lekérdezés (ld. Api/ExchangeRates/ExchangeRateUpdater) mindig felülír. Előzmény nem
+// kell: a kiállított számla a felhasznált árfolyamot és dátumát a saját szövegében őrzi.
 public class ExchangeRate
 {
     public Guid Id { get; set; }
     public string CurrencyCode { get; set; } = string.Empty; // "EUR", "USD"
     public decimal RateToHuf { get; set; }
-    public DateOnly RateDate { get; set; }
-    public DateTime FetchedAt { get; set; }
+    public DateOnly RateDate { get; set; } // az MNB árfolyam érvényességi napja (hétvégén a legutóbbi banki nap)
+    public DateTime FetchedAt { get; set; } // az utolsó sikeres lekérdezés ideje
 }

@@ -19,7 +19,7 @@
     <div class="page-header">
       <div>
         <h1>Árfolyamok</h1>
-        <p>Az MNB EUR/USD árfolyamainak napi, automatikus lekérdezése — óránként fut, de csak akkor ment el új sort, ha aznapra még nincs rögzítve.</p>
+        <p>Az MNB aktuális EUR/USD középárfolyama — óránként automatikusan frissül. Számlázáskor mindig az itt látható árfolyam kerül felhasználásra.</p>
       </div>
       <button class="btn btn-primary" id="refresh-btn">Frissítés most</button>
     </div>
@@ -30,7 +30,7 @@
     <div class="card-table">
       <table>
         <thead>
-          <tr><th>Dátum</th><th>Deviza</th><th>Árfolyam (Ft)</th><th>Lekérve</th></tr>
+          <tr><th>Deviza</th><th>Árfolyam (Ft)</th><th>MNB árfolyam napja</th><th>Utoljára frissítve</th></tr>
         </thead>
         <tbody id="rates-tbody">
           <tr class="empty-row"><td colspan="4">Betöltés...</td></tr>
@@ -61,9 +61,9 @@ async function loadRates() {
 
   tbody.innerHTML = rates.map((r) => `
     <tr>
-      <td>${r.rateDate}</td>
       <td class="cell-main">${escapeHtml(r.currencyCode)}</td>
       <td>${formatNumber(r.rateToHuf, 2)} Ft</td>
+      <td>${r.rateDate}</td>
       <td class="cell-sub">${new Date(r.fetchedAt).toLocaleString('hu-HU')}</td>
     </tr>
   `).join('');

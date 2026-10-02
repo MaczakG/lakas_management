@@ -11,6 +11,6 @@ public class ExchangeRateConfiguration : IEntityTypeConfiguration<ExchangeRate>
         builder.HasKey(r => r.Id);
         builder.Property(r => r.CurrencyCode).IsRequired().HasMaxLength(3);
         builder.Property(r => r.RateToHuf).HasColumnType("numeric(12,4)");
-        builder.HasIndex(r => new { r.CurrencyCode, r.RateDate }).IsUnique();
+        builder.HasIndex(r => r.CurrencyCode).IsUnique();
     }
 }
