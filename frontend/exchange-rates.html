@@ -63,7 +63,7 @@ async function loadRates() {
     <tr>
       <td>${r.rateDate}</td>
       <td class="cell-main">${escapeHtml(r.currencyCode)}</td>
-      <td>${Number(r.rateToHuf).toLocaleString('hu-HU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ft</td>
+      <td>${formatNumber(r.rateToHuf, 2)} Ft</td>
       <td class="cell-sub">${new Date(r.fetchedAt).toLocaleString('hu-HU')}</td>
     </tr>
   `).join('');

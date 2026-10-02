@@ -75,7 +75,7 @@ public static class InvoicePdfGenerator
                         foreach (var line in lines)
                         {
                             table.Cell().Border(0.75f).BorderColor(Colors.Grey.Lighten1).Padding(8).Text(line.Label);
-                            table.Cell().Border(0.75f).BorderColor(Colors.Grey.Lighten1).Padding(8).Text($"{line.Amount:N0} Ft");
+                            table.Cell().Border(0.75f).BorderColor(Colors.Grey.Lighten1).Padding(8).Text(MoneyFormat.Huf(line.Amount));
                         }
                     });
 
@@ -99,25 +99,27 @@ public static class InvoicePdfGenerator
                             {
                                 columns.RelativeColumn(3);
                                 columns.RelativeColumn(4);
-                                columns.RelativeColumn(2);
-                                columns.RelativeColumn(2);
+                                columns.RelativeColumn(2.2f);
+                                columns.RelativeColumn(1.8f);
                             });
 
                             table.Header(header =>
                             {
-                                header.Cell().Text("Név").Bold();
-                                header.Cell().Text("Lakcím").Bold();
-                                header.Cell().Text("Adóazonosító jele").Bold();
-                                header.Cell().Text("Tulajdoni hányad").Bold();
+                                header.Cell().PaddingRight(8).Text("Név").FontSize(9).Bold();
+                                header.Cell().PaddingRight(12).Text("Lakcím").FontSize(9).Bold();
+                                header.Cell().PaddingRight(8).Text("Adóazonosító jele").FontSize(9).Bold();
+                                header.Cell().Text("Tulajdoni hányad").FontSize(9).Bold();
                                 header.Cell().ColumnSpan(4).PaddingTop(4).BorderBottom(1).BorderColor(Colors.Grey.Lighten1);
                             });
 
+                            // Kisebb betűméret és cellánkénti jobb oldali térköz, hogy a hosszabb
+                            // lakcím ne folyjon bele a szomszédos adóazonosító oszlopba.
                             foreach (var po in owners)
                             {
-                                table.Cell().PaddingVertical(3).Text(po.Owner!.Name);
-                                table.Cell().PaddingVertical(3).Text(po.Owner!.Address ?? "—");
-                                table.Cell().PaddingVertical(3).Text(po.Owner!.TaxId ?? "—");
-                                table.Cell().PaddingVertical(3).Text(ShareOf(po));
+                                table.Cell().PaddingVertical(3).PaddingRight(8).Text(po.Owner!.Name).FontSize(9);
+                                table.Cell().PaddingVertical(3).PaddingRight(12).Text(po.Owner!.Address ?? "—").FontSize(9);
+                                table.Cell().PaddingVertical(3).PaddingRight(8).Text(po.Owner!.TaxId ?? "—").FontSize(9);
+                                table.Cell().PaddingVertical(3).Text(ShareOf(po)).FontSize(9);
                             }
                         });
                     }

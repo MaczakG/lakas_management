@@ -98,15 +98,24 @@ async function downloadFile(path, fallbackName) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// Magyar számformátum explicit szeparátorokkal ("100 000", "1 234,56") — nem a böngésző
+// locale-adataira bízzuk, mert egyes környezetekben vesszőt tett ezres elválasztónak.
+// Nem törő szóközt használunk, hogy az összeg ne törjön két sorba.
+function formatNumber(amount, decimals = 0) {
+  const [intPart, fracPart] = Math.abs(Number(amount) || 0).toFixed(decimals).split('.');
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
+  return `${Number(amount) < 0 ? '-' : ''}${grouped}${fracPart ? ',' + fracPart : ''}`;
+}
+
 function formatCurrency(amount) {
-  return `${Number(amount).toLocaleString('hu-HU')} Ft`;
+  return `${formatNumber(amount)} Ft`;
 }
 
 // Devizanem-érzékeny formázás — HUF-nál a megszokott "N Ft" (tizedesjegy nélkül), EUR/USD-nál
 // "N,NN EUR/USD" (2 tizedesjeggyel, mivel ott gyakori a törtösszeg).
 function formatMoney(amount, currency) {
   if (!currency || currency === 'HUF') return formatCurrency(amount);
-  return `${Number(amount).toLocaleString('hu-HU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+  return `${formatNumber(amount, 2)} ${currency}`;
 }
 
 function formatDate(value) {
