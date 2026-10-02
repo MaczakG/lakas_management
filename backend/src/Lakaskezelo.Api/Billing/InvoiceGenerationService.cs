@@ -114,7 +114,7 @@ public class InvoiceGenerationService(
                 {
                     ["{ingatlan}"] = property.Name,
                     ["{időszak}"] = periodLabel,
-                    ["{összeg}"] = $"{invoice.AmountTotal:N0} Ft",
+                    ["{összeg}"] = MoneyFormat.Huf(invoice.AmountTotal),
                     ["{számlaszám}"] = invoice.Number,
                 };
                 string Fill(string template) => placeholders.Aggregate(template, (acc, kv) => acc.Replace(kv.Key, kv.Value));
@@ -162,7 +162,7 @@ public class InvoiceGenerationService(
                 $"Nincs elérhető MNB árfolyam ehhez: {currencyCode}. A rezsi/díj számításhoz az Árfolyamok oldalon kell legalább egy sikeres lekérdezésnek megtörténnie.");
 
         var amountHuf = Math.Round(property.RentAmount * rate.RateToHuf, 0, MidpointRounding.AwayFromZero);
-        var note = $"Bérleti díj devizában: {property.RentAmount:N2} {currencyCode} × {rate.RateToHuf:N2} Ft/{currencyCode} MNB árfolyamon ({rate.RateDate:yyyy.MM.dd.}).";
+        var note = $"Bérleti díj devizában: {MoneyFormat.N2(property.RentAmount)} {currencyCode} × {MoneyFormat.N2(rate.RateToHuf)} Ft/{currencyCode} MNB árfolyamon ({rate.RateDate:yyyy.MM.dd.}).";
         return (amountHuf, note);
     }
 
