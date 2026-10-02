@@ -120,7 +120,7 @@ function renderInvoices() {
       <td class="row-actions">
         ${i.status !== 'Failed' ? `<button class="btn btn-ghost btn-sm" onclick="downloadFile('/api/invoices/${i.id}/pdf', '${i.number}.pdf')">PDF</button>` : ''}
         ${i.status === 'Failed' ? `<button class="btn btn-secondary btn-sm" onclick="retryInvoice('${i.propertyId}', ${i.periodYear}, ${i.periodMonth})">Újrapróbálás</button>` : ''}
-        ${i.status !== 'Sent' ? `<button class="btn btn-danger btn-sm" onclick="deleteInvoice('${i.id}')">Törlés</button>` : ''}
+        <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${i.id}', '${escapeHtml(i.number)}', ${i.status === 'Sent'})">Törlés</button>
       </td>
     </tr>
   `).join('');
@@ -141,9 +141,20 @@ window.retryInvoice = async (propertyId, year, month) => {
   else alert('Nem sikerült újrapróbálni a számla generálását.');
 };
 
-window.deleteInvoice = async (id) => {
-  if (!confirm('Biztosan törlöd ezt a számlát? Ez a lépés nem vonható vissza.')) return;
-  const res = await apiFetch(`/api/invoices/${id}`, { method: 'DELETE' });
+// Kiküldött számla törlése csak szándékos felülbírálással (pl. téves teszt-küldés) — ehhez a
+// számla sorszámát be kell gépelni, hogy véletlenül ne lehessen valós bizonylatot törölni.
+window.deleteInvoice = async (id, number, isSent) => {
+  if (isSent) {
+    const typed = prompt(`Ez a számla már ki lett küldve a bérlőnek. Csak téves/teszt számlát törölj!\n\nA törléshez gépeld be a számla sorszámát: ${number}`);
+    if (typed === null) return;
+    if (typed.trim() !== number) {
+      alert('A beírt sorszám nem egyezik, a számla nem lett törölve.');
+      return;
+    }
+  } else if (!confirm('Biztosan törlöd ezt a számlát? Ez a lépés nem vonható vissza.')) {
+    return;
+  }
+  const res = await apiFetch(`/api/invoices/${id}${isSent ? '?force=true' : ''}`, { method: 'DELETE' });
   if (!res.ok && res.status !== 204) {
     const data = await res.json().catch(() => ({}));
     alert(data.message || 'Nem sikerült törölni a számlát.');
