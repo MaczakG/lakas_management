@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(aws ssm send-command:*)",
+      "Bash(aws ssm get-command-invocation:*)"
+    ]
+  }
+}
