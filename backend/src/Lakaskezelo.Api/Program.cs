@@ -1,7 +1,11 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Lakaskezelo.Api.Auth;
 using Lakaskezelo.Api.Billing;
+using Lakaskezelo.Api.Controllers;
 using Lakaskezelo.Api.ExchangeRates;
 using Lakaskezelo.Api.Storage;
 using Lakaskezelo.Api.Notifications;
@@ -103,8 +107,51 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
             ClockSkew = TimeSpan.FromSeconds(30),
         };
+        options.Events = new JwtBearerEvents
+        {
+            // Minden kérésnél ellenőrizzük, hogy a fiók még aktív-e, és a token a felhasználó
+            // aktuális biztonsági bélyegével készült-e (ld. User.SecurityStamp) — így inaktiválás,
+            // törlés vagy jelszócsere után a korábban kiadott tokenek azonnal használhatatlanok,
+            // nem csak a lejáratukkor.
+            OnTokenValidated = async context =>
+            {
+                var principal = context.Principal;
+                var rawUserId = principal?.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal?.FindFirstValue(JwtRegisteredClaimNames.Sub);
+                var stamp = principal?.FindFirstValue(SecurityStamp.ClaimType);
+                if (!Guid.TryParse(rawUserId, out var userId) || string.IsNullOrEmpty(stamp))
+                {
+                    context.Fail("Token has no user id or security stamp.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices.GetRequiredService<LakaskezeloDbContext>();
+                var valid = await db.Users.AsNoTracking()
+                    .AnyAsync(u => u.Id == userId && u.IsActive && u.SecurityStamp == stamp, context.HttpContext.RequestAborted);
+                if (!valid)
+                {
+                    context.Fail("Token has been revoked.");
+                }
+            },
+        };
     });
 builder.Services.AddAuthorization();
+
+// A bejelentkezési végpontok (login, kód-ellenőrzés, elfelejtett/új jelszó) IP-címenként percenként
+// legfeljebb 10 kérést fogadnak — a jelszó és a belépési kód találgatása, valamint az e-mail-küldő
+// végpontokkal való visszaélés ellen. A kliens IP-je az nginx X-Forwarded-For fejlécéből jön (ld.
+// UseForwardedHeaders lent).
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, ct) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json; charset=utf-8";
+        await context.HttpContext.Response.WriteAsync("{\"message\":\"Túl sok próbálkozás. Várj egy percet, és próbáld újra.\"}", ct);
+    };
+    options.AddPolicy(AuthController.RateLimitPolicy, httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
 
 // ---------- Beállítások (DB-backed, nem appsettings) ----------
 builder.Services.AddScoped<AppSettingsService>();
@@ -151,6 +198,7 @@ using (var scope = app.Services.CreateScope())
             FullName = "Adminisztrátor",
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
+            SecurityStamp = SecurityStamp.New(),
         };
         user.PasswordHash = hasher.HashPassword(user, seedPassword);
         db.Users.Add(user);
@@ -158,12 +206,20 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Render terminates TLS at its edge and forwards to the container over plain HTTP.
+if (!app.Configuration.GetValue("Auth:TwoFactorEnabled", true))
+{
+    app.Logger.LogWarning("Two-factor sign-in is DISABLED (Auth:TwoFactorEnabled=false) — only use this as a temporary emergency measure.");
+}
+
+// TLS-t az nginx (EC2) zárja le, és sima HTTP-n továbbít a konténernek — a kliens valódi IP-je és a
+// séma az X-Forwarded-* fejlécekből jön. ForwardLimit = 1: csak az utolsó (nginx által hozzáfűzött)
+// értéket fogadjuk el, így a kliens által küldött hamis X-Forwarded-For nem számít.
 if (!app.Environment.IsDevelopment())
 {
     var forwardedHeadersOptions = new ForwardedHeadersOptions
     {
         ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        ForwardLimit = 1,
     };
     forwardedHeadersOptions.KnownNetworks.Clear();
     forwardedHeadersOptions.KnownProxies.Clear();
@@ -178,6 +234,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

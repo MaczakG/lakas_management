@@ -53,12 +53,6 @@
 
   let state = { propertyId: null, year: null, month: null, onClose: null };
 
-  function escapeHtml(s) {
-    const d = document.createElement('div');
-    d.textContent = s ?? '';
-    return d.innerHTML;
-  }
-
   function addDraftRow() {
     const row = document.createElement('div');
     row.className = 'um-draft-row';

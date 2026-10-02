@@ -1,3 +1,4 @@
+using Lakaskezelo.Api.Auth;
 using Lakaskezelo.Api.Contracts;
 using Lakaskezelo.Data;
 using Lakaskezelo.Domain.Entities;
@@ -42,6 +43,7 @@ public class UsersController(LakaskezeloDbContext db, PasswordHasher<User> passw
             FullName = request.FullName.Trim(),
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow,
+            SecurityStamp = SecurityStamp.New(),
         };
         user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
 
@@ -62,6 +64,10 @@ public class UsersController(LakaskezeloDbContext db, PasswordHasher<User> passw
             return Conflict(new { message = "Ehhez az e-mail címhez már tartozik felhasználó." });
         }
 
+        // Új jelszó, új e-mail cím (ide megy a belépési kód) vagy inaktiválás után a felhasználó
+        // korábban kiadott tokenjei azonnal érvényüket vesztik (ld. User.SecurityStamp).
+        var revokeSessions = user.Email != normalizedEmail || (user.IsActive && !request.IsActive);
+
         user.Email = normalizedEmail;
         user.FullName = request.FullName.Trim();
         user.IsActive = request.IsActive;
@@ -69,6 +75,11 @@ public class UsersController(LakaskezeloDbContext db, PasswordHasher<User> passw
         {
             if (request.Password.Length < 8) return BadRequest(new { message = "A jelszónak legalább 8 karakter hosszúnak kell lennie." });
             user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+            revokeSessions = true;
+        }
+        if (revokeSessions)
+        {
+            SecurityStamp.Rotate(user);
         }
 
         await db.SaveChangesAsync(ct);

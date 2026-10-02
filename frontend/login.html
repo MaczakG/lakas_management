@@ -18,7 +18,7 @@
   #code-step{display:none;}
   #code-step .hint{margin-bottom:18px;}
   .code-input{letter-spacing:8px;font-size:22px;text-align:center;font-weight:700;}
-  .back-link{display:block;text-align:center;margin-top:14px;font-size:13px;}
+  .code-links{display:flex;justify-content:space-between;margin-top:14px;font-size:13px;}
 </style>
 </head>
 <body>
@@ -52,7 +52,10 @@
       <input type="text" id="login-code" class="code-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" required>
     </div>
     <button class="btn btn-primary btn-block" type="submit" id="code-submit">Megerősítés</button>
-    <a class="back-link link-muted" href="#" id="back-to-login">Vissza</a>
+    <div class="code-links">
+      <a class="link-muted" href="#" id="back-to-login">Vissza</a>
+      <a class="link-muted" href="#" id="resend-code">Új kód kérése</a>
+    </div>
   </form>
 </div>
 
@@ -82,15 +85,15 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         password: document.getElementById('login-pass').value,
       }),
     });
-    const data = await res.json();
+    const data = await readJson(res);
     if (!res.ok) {
-      errorEl.textContent = data.message || 'Hiba történt a bejelentkezés során.';
+      errorEl.textContent = errorMessage(res, data, 'Hiba történt a bejelentkezés során.');
       errorEl.classList.add('show');
       return;
     }
-    // A backend a kétlépcsős lépéstől függően vagy rögtön a hozzáférési tokent adja vissza
-    // (accessToken — jelenleg ez van, a 2FA teszt időszakra ki van kapcsolva), vagy egy
-    // challengeId-t, ami a kód-lépést indítja el (ld. AuthController.TwoFactorEnabled).
+    // A backend egy challengeId-t ad vissza, ami a kód-lépést indítja el (a kódot e-mailben kapja
+    // a felhasználó). Közvetlenül accessToken csak akkor jön, ha a kétlépcsős belépést vészhelyzetre
+    // kikapcsolták a szerveren (ld. AuthController.TwoFactorEnabled).
     if (data.accessToken) {
       storeAuth(data);
       location.href = 'properties.html';
@@ -126,9 +129,9 @@ document.getElementById('code-step').addEventListener('submit', async (e) => {
         code: document.getElementById('login-code').value.trim(),
       }),
     });
-    const data = await res.json();
+    const data = await readJson(res);
     if (!res.ok) {
-      errorEl.textContent = data.message || 'Hiba történt az ellenőrzés során.';
+      errorEl.textContent = errorMessage(res, data, 'Hiba történt az ellenőrzés során.');
       errorEl.classList.add('show');
       return;
     }
@@ -141,6 +144,13 @@ document.getElementById('code-step').addEventListener('submit', async (e) => {
     btn.disabled = false;
     btn.textContent = 'Megerősítés';
   }
+});
+
+// Új kód: ugyanaz, mint a jelszó újbóli beküldése (a jelszó mező még ki van töltve) — a szerver
+// új kódot küld, a korábbi érvényét veszti.
+document.getElementById('resend-code').addEventListener('click', (e) => {
+  e.preventDefault();
+  document.getElementById('login-form').requestSubmit();
 });
 
 document.getElementById('back-to-login').addEventListener('click', (e) => {

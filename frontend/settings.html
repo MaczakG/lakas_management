@@ -172,12 +172,20 @@
 <script>
 requireAuth();
 
+function setSecretField(id, isSet) {
+  const input = document.getElementById(id);
+  input.value = '';
+  input.placeholder = isSet ? '•••••••• (beállítva — üresen hagyva nem változik)' : 'nincs beállítva';
+}
+
 async function loadSettings() {
   const res = await apiFetch('/api/settings');
   const s = await res.json();
 
   document.getElementById(s.emailProvider === 'Smtp' ? 'ep-smtp' : 'ep-mailgun').checked = true;
-  document.getElementById('mg-key').value = s.mailgunApiKey || '';
+  // A titkos mezőket a szerver nem adja vissza — csak azt, hogy van-e eltárolt érték. Üresen hagyva
+  // mentéskor a meglévő marad, új érték beírásával cserélhető.
+  setSecretField('mg-key', s.mailgunApiKeySet);
   document.getElementById('mg-domain').value = s.mailgunDomain || '';
   document.getElementById('mg-from-address').value = s.mailgunFromAddress || '';
   document.getElementById('mg-from-name').value = s.mailgunFromName || '';
@@ -185,7 +193,7 @@ async function loadSettings() {
   document.getElementById('smtp-host').value = s.smtpHost || '';
   document.getElementById('smtp-port').value = s.smtpPort || '';
   document.getElementById('smtp-username').value = s.smtpUsername || '';
-  document.getElementById('smtp-password').value = s.smtpPassword || '';
+  setSecretField('smtp-password', s.smtpPasswordSet);
   document.getElementById('smtp-from-address').value = s.smtpFromAddress || '';
   document.getElementById('smtp-from-name').value = s.smtpFromName || '';
   document.getElementById('s3-bucket').value = s.s3BucketName || '';

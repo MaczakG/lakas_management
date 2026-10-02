@@ -34,7 +34,7 @@ public class SettingsController(
         }
 
         settings.EmailProvider = dto.EmailProvider;
-        settings.MailgunApiKey = dto.MailgunApiKey;
+        if (!string.IsNullOrWhiteSpace(dto.MailgunApiKey)) settings.MailgunApiKey = dto.MailgunApiKey;
         settings.MailgunDomain = dto.MailgunDomain;
         settings.MailgunFromAddress = dto.MailgunFromAddress;
         settings.MailgunFromName = dto.MailgunFromName;
@@ -42,7 +42,7 @@ public class SettingsController(
         settings.SmtpHost = dto.SmtpHost;
         settings.SmtpPort = dto.SmtpPort;
         settings.SmtpUsername = dto.SmtpUsername;
-        settings.SmtpPassword = dto.SmtpPassword;
+        if (!string.IsNullOrWhiteSpace(dto.SmtpPassword)) settings.SmtpPassword = dto.SmtpPassword;
         settings.SmtpFromAddress = dto.SmtpFromAddress;
         settings.SmtpFromName = dto.SmtpFromName;
         settings.S3BucketName = string.IsNullOrWhiteSpace(dto.S3BucketName) ? null : dto.S3BucketName.Trim();
@@ -88,10 +88,11 @@ public class SettingsController(
 
     private static AppSettingsDto ToDto(Domain.Entities.AppSettings s) => new(
         s.EmailProvider,
-        s.MailgunApiKey, s.MailgunDomain, s.MailgunFromAddress, s.MailgunFromName, s.MailgunApiBaseUrl,
-        s.SmtpHost, s.SmtpPort, s.SmtpUsername, s.SmtpPassword, s.SmtpFromAddress, s.SmtpFromName,
+        null, s.MailgunDomain, s.MailgunFromAddress, s.MailgunFromName, s.MailgunApiBaseUrl,
+        s.SmtpHost, s.SmtpPort, s.SmtpUsername, null, s.SmtpFromAddress, s.SmtpFromName,
         s.S3BucketName, s.S3Region,
         s.UtilityContactEmail, s.UtilityDeadlineDay,
         s.IssuerName, s.IssuerAddress, s.IssuerTaxId, s.IssuerBankAccount,
-        s.InvoiceEmailSubject, s.InvoiceEmailBody);
+        s.InvoiceEmailSubject, s.InvoiceEmailBody,
+        MailgunApiKeySet: !string.IsNullOrEmpty(s.MailgunApiKey), SmtpPasswordSet: !string.IsNullOrEmpty(s.SmtpPassword));
 }
