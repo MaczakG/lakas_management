@@ -1,6 +1,9 @@
 # Éles környezet (AWS EC2)
 
 - **Szerver:** `i-0f4ed5f6f5afb59f0` (eu-central-1, t3.micro, Ubuntu 24.04), `https://lakaskezelo.alts.hu`
+  (Elastic IP: `63.188.91.152`). A root EBS-kötet KMS-sel titkosított.
+- **Futtatókörnyezet:** .NET 10 (LTS) a `mcr.microsoft.com/dotnet/aspnet:10.0` image-ben, a beépített nem root
+  `app` felhasználóként.
 - **Könyvtár:** `/home/ubuntu/lakaskezelo` — `docker-compose.yml`, `nginx.conf`, `.env` (titkok, 600-as
   jogosultság), `backend/`, `frontend/`, `certbot-webroot/`. **Nem git-klón**: élesítéskor a `main`
   ág tartalma kerül ide.
