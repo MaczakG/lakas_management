@@ -1,4 +1,5 @@
 using Lakaskezelo.Api.Auth;
+using Lakaskezelo.Api.Billing;
 using Lakaskezelo.Api.Contracts;
 using Lakaskezelo.Data;
 using Lakaskezelo.Domain.Entities;
@@ -37,7 +38,8 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
             string.Join(", ", p.PropertyOwners.Select(po => po.Owner!.Name)),
             string.Join(", ", p.Tenants.Where(t => t.MoveOutDate == null).Select(t => t.Name)),
             propertiesWithEntries.Contains(p.Id),
-            p.BillingDayOfMonth, p.BillingHour, p.BillingMinute)));
+            p.BillingDayOfMonth, p.BillingHour, p.BillingMinute,
+            BillingCalendar.NextBillingAt(now, p.BillingDayOfMonth, p.BillingHour, p.BillingMinute))));
     }
 
     [HttpGet("{id:guid}")]

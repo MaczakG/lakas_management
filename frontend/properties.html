@@ -182,20 +182,21 @@ function renderProperties() {
       <td>${formatMoney(p.rentAmount, p.rentCurrency)}</td>
       <td><span class="status-tag ${p.utilityComplete ? 'ok' : 'missing'}">${p.utilityComplete ? 'Rendben' : 'Hiányzik'}</span></td>
       <td>${String(p.billingDayOfMonth).padStart(2, '0')}. nap ${String(p.billingHour).padStart(2, '0')}:${String(p.billingMinute).padStart(2, '0')}</td>
-      <td>${p.isActive ? formatNextBilling(p.billingDayOfMonth, p.billingHour, p.billingMinute) : '—'}</td>
+      <td>${p.isActive ? formatNextBilling(p.nextBillingAt, p.billingDayOfMonth) : '—'}</td>
     </tr>
   `).join('');
 }
 
-// A következő időpont, amikor a BillingSchedulerService (havonta ismétlődő nap/óra/perc alapján)
-// legenerálja és kiküldi ennek az ingatlannak a számláját — a böngésző helyi idejéből számolva.
-function formatNextBilling(day, hour, minute) {
-  const now = new Date();
-  let next = new Date(now.getFullYear(), now.getMonth(), day, hour, minute, 0, 0);
-  if (next <= now) next = new Date(now.getFullYear(), now.getMonth() + 1, day, hour, minute, 0, 0);
-
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${next.getFullYear()}.${pad(next.getMonth() + 1)}.${pad(next.getDate())}. ${pad(next.getHours())}:${pad(next.getMinutes())}`;
+// A következő időpont, amikor a BillingSchedulerService legenerálja és kiküldi ennek az ingatlannak a
+// számláját — a szerver számolja (budapesti idő, "2026-11-02T08:00:00" alakban), mert ha a beállított
+// nap hétvégére vagy munkaszüneti napra esik, a kiküldés az utána következő első munkanapra tolódik.
+function formatNextBilling(nextBillingAt, billingDay) {
+  const [date, time] = String(nextBillingAt).split('T');
+  const [y, m, d] = date.split('-');
+  const shifted = Number(d) !== billingDay
+    ? ' <span class="cell-sub" title="A beállított nap hétvégére vagy munkaszüneti napra esik">(munkanapra tolva)</span>'
+    : '';
+  return `${y}.${m}.${d}. ${time.slice(0, 5)}${shifted}`;
 }
 
 document.getElementById('search-input').addEventListener('input', renderProperties);

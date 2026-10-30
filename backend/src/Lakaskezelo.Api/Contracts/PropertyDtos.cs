@@ -5,7 +5,8 @@ namespace Lakaskezelo.Api.Contracts;
 public record PropertyListItemDto(
     Guid Id, string Name, decimal RentAmount, RentCurrency RentCurrency, bool IsActive,
     string OwnerNames, string TenantNames,
-    bool UtilityComplete, int BillingDayOfMonth, int BillingHour, int BillingMinute);
+    bool UtilityComplete, int BillingDayOfMonth, int BillingHour, int BillingMinute,
+    DateTime NextBillingAt); // budapesti helyi idő, munkanapra tolva (ld. Billing.BillingCalendar)
 
 public record PropertyDetailDto(
     Guid Id, string Name, decimal RentAmount, string? InvoicePrefix,
