@@ -8,6 +8,10 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Élesben
 
+### v2026.11.02.9 — 2026. 11. 02.
+
+- **2026.11.02.9** — Számla csomagok: a lenyíló számlalista teljes szélességű, külön keret nélkül.
+
 ### v2026.11.02.8 — 2026. 11. 02.
 
 - **2026.11.02.8** — Számla csomagok: a hónap sorára kattintva alatta lenyílik a csomag számláinak listája
