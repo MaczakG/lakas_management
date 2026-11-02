@@ -37,6 +37,17 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
                 g.Where(i => i.Status != InvoiceStatus.Failed).Sum(i => i.AmountTotal))));
     }
 
+    // Egy havi csomag tartalma (a lista lenyíló soraihoz): ugyanazok a számlák, amik a ZIP-be kerülnek.
+    [HttpGet("{year:int}/{month:int}")]
+    public async Task<ActionResult<List<InvoiceDto>>> Invoices(int year, int month, CancellationToken ct)
+    {
+        var invoices = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
+            .Where(i => i.PeriodYear == year && i.PeriodMonth == month && i.Status != InvoiceStatus.Failed)
+            .OrderBy(i => i.Number)
+            .ToListAsync(ct);
+        return Ok(invoices.Select(InvoicesController.ToDto));
+    }
+
     [HttpGet("{year:int}/{month:int}/zip")]
     public async Task<IActionResult> DownloadZip(int year, int month, CancellationToken ct)
     {

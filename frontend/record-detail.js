@@ -139,14 +139,14 @@ function setupTabs(storageKey, fallback) {
   activate(document.querySelector(`.record-tab[data-tab="${saved}"]`) ? saved : fallback);
 }
 
-function renderInvoiceTable(invoices, emptyText, { showProperty = true, showTenant = true } = {}) {
+function renderInvoiceTable(invoices, emptyText, { showProperty = true, showTenant = true, showPeriod = true } = {}) {
   if (!invoices.length) return `<div class="panel-empty">${escapeHtml(emptyText)}</div>`;
   return `<table>
-    <thead><tr><th>Sorszám</th><th>Időszak</th>${showProperty ? '<th>Ingatlan</th>' : ''}${showTenant ? '<th>Bérlő</th>' : ''}<th>Kiállítva</th><th class="num">Összeg</th><th>Állapot</th><th></th></tr></thead>
+    <thead><tr><th>Sorszám</th>${showPeriod ? '<th>Időszak</th>' : ''}${showProperty ? '<th>Ingatlan</th>' : ''}${showTenant ? '<th>Bérlő</th>' : ''}<th>Kiállítva</th><th class="num">Összeg</th><th>Állapot</th><th></th></tr></thead>
     <tbody>${invoices.map((i) => `
       <tr>
         <td><span class="mono">${escapeHtml(i.number)}</span></td>
-        <td>${i.periodYear}. ${MONTH_NAMES[i.periodMonth - 1].toLowerCase()}</td>
+        ${showPeriod ? `<td>${i.periodYear}. ${MONTH_NAMES[i.periodMonth - 1].toLowerCase()}</td>` : ''}
         ${showProperty ? `<td><a class="link" href="property-detail.html?id=${encodeURIComponent(i.propertyId)}">${escapeHtml(i.propertyName)}</a></td>` : ''}
         ${showTenant ? `<td>${escapeHtml(i.tenantName || '—')}</td>` : ''}
         <td>${formatDate(i.issuedAt)}</td>
