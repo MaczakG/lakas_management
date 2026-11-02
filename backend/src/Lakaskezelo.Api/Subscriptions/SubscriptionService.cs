@@ -230,7 +230,7 @@ public class SubscriptionService(
             subscription.BillingoPartnerId);
         var line = new BillingoLine(
             $"{ProductName} előfizetés, {IntervalLabel(payment.Interval)} díj ({payment.PeriodStart:yyyy.MM.dd.}–{payment.PeriodEnd.AddDays(-1):yyyy.MM.dd.})",
-            payment.PropertyCount, "ingatlan", payment.UnitNetPrice, payment.VatPercent, payment.VatExemption);
+            payment.PropertyCount, "ingatlan", payment.UnitPrice, payment.UnitPriceIncludesVat, payment.VatPercent, payment.VatExemption);
 
         var result = await billingo.IssuePaidInvoiceAsync(settings, buyer, [line], DateOnly.FromDateTime(payment.CompletedAt ?? DateTime.UtcNow),
             $"Barion fizetés: {payment.BarionPaymentId}", ct);
@@ -260,7 +260,8 @@ public class SubscriptionService(
         Status = SubscriptionPaymentStatus.Pending,
         Interval = quote.Interval,
         PropertyCount = quote.PropertyCount,
-        UnitNetPrice = quote.UnitNetPrice,
+        UnitPrice = quote.UnitPrice,
+        UnitPriceIncludesVat = quote.UnitPriceIncludesVat,
         NetAmount = quote.NetAmount,
         VatAmount = quote.VatAmount,
         GrossAmount = quote.GrossAmount,

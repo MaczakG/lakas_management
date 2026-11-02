@@ -139,7 +139,8 @@ function selectedInterval() {
 }
 
 function vatText(q) {
-  return q.vatExemption ? 'alanyi adómentes, ÁFA nélkül' : `nettó ${huf(q.netAmount)} + ${q.vatPercent}% ÁFA`;
+  if (q.vatExemption) return 'ÁFA nélkül (alanyi adómentes)';
+  return q.unitPriceIncludesVat ? `bruttó, benne ${huf(q.vatAmount)} ÁFA (${q.vatPercent}%)` : `nettó ${huf(q.netAmount)} + ${q.vatPercent}% ÁFA`;
 }
 
 function render() {
@@ -163,7 +164,7 @@ function render() {
   document.getElementById('save-yearly').textContent = data.yearlyDiscountPercent > 0 ? `−${data.yearlyDiscountPercent}%` : '';
   document.getElementById('save-yearly').hidden = !(data.yearlyDiscountPercent > 0);
   document.getElementById('calc').textContent =
-    `${data.activeProperties} aktív ingatlan${data.activeProperties < 1 ? ' (legalább 1 ingatlan díját számoljuk)' : ''} × ${huf(data.monthlyNetPricePerProperty)} + ÁFA / hó.`;
+    `${data.activeProperties} aktív ingatlan${data.activeProperties < 1 ? ' (legalább 1 ingatlan díját számoljuk)' : ''} × ${huf(data.monthlyPricePerProperty)}${data.pricesIncludeVat ? '' : ' + ÁFA'} / hó.`;
 
   const canPay = !(st.status === 'Active' && data.cardRegistered && !st.locked);
   document.getElementById('pay-row').hidden = !canPay;

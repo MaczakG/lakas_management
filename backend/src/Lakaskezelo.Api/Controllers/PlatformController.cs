@@ -26,7 +26,7 @@ public class PlatformController(LakaskezeloDbContext db, PlatformSettingsService
     [HttpPut("settings")]
     public async Task<ActionResult<PlatformSettingsDto>> UpdateSettings(UpdatePlatformSettingsRequest r, CancellationToken ct)
     {
-        if (r.MonthlyNetPricePerProperty is < 0 or > 1_000_000) return BadRequest(new { message = "Érvénytelen havi díj." });
+        if (r.MonthlyPricePerProperty is < 0 or > 1_000_000) return BadRequest(new { message = "Érvénytelen havi díj." });
         if (r.YearlyDiscountPercent is < 0 or > 90) return BadRequest(new { message = "Az éves kedvezmény 0–90% lehet." });
         if (r.TrialDays is < 0 or > 365 || r.GraceDays is < 0 or > 60) return BadRequest(new { message = "Érvénytelen próbaidő vagy türelmi idő." });
         if (r.VatPercent is < 0 or > 100) return BadRequest(new { message = "Érvénytelen ÁFA-kulcs." });
@@ -42,7 +42,8 @@ public class PlatformController(LakaskezeloDbContext db, PlatformSettingsService
             db.PlatformSettings.Add(s);
         }
         s.BillingEnabled = r.BillingEnabled;
-        s.MonthlyNetPricePerProperty = r.MonthlyNetPricePerProperty;
+        s.MonthlyPricePerProperty = r.MonthlyPricePerProperty;
+        s.PricesIncludeVat = r.PricesIncludeVat;
         s.YearlyDiscountPercent = r.YearlyDiscountPercent;
         s.TrialDays = r.TrialDays;
         s.GraceDays = r.GraceDays;
@@ -83,6 +84,6 @@ public class PlatformController(LakaskezeloDbContext db, PlatformSettingsService
     }
 
     private static PlatformSettingsDto ToDto(PlatformSettings s) => new(
-        s.BillingEnabled, s.MonthlyNetPricePerProperty, s.YearlyDiscountPercent, s.TrialDays, s.GraceDays, s.VatPercent, s.VatExemption,
+        s.BillingEnabled, s.MonthlyPricePerProperty, s.PricesIncludeVat, s.YearlyDiscountPercent, s.TrialDays, s.GraceDays, s.VatPercent, s.VatExemption,
         s.BarionEnvironment, !string.IsNullOrEmpty(s.BarionPosKey), s.BarionPayeeEmail, !string.IsNullOrEmpty(s.BillingoApiKey), s.BillingoBlockId);
 }

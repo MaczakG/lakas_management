@@ -12,7 +12,10 @@ public class PlatformSettings
     // Főkapcsoló: amíg ki van kapcsolva, senki nem fizet és semmi nem zárolódik.
     public bool BillingEnabled { get; set; }
 
-    public decimal MonthlyNetPricePerProperty { get; set; } = 1990m;
+    // Havi díj aktív ingatlanonként (Ft). PricesIncludeVat: a díj bruttó (az ÁFÁ-t tartalmazza) — ilyenkor
+    // a terhelt összeg pontosan ennyi × ingatlanszám, a nettó és az ÁFA ebből adódik.
+    public decimal MonthlyPricePerProperty { get; set; } = 1990m;
+    public bool PricesIncludeVat { get; set; } = true;
     public decimal YearlyDiscountPercent { get; set; } = 15m;
     public int TrialDays { get; set; } = 14;
     public int GraceDays { get; set; } = 7;

@@ -43,7 +43,8 @@
       <section class="section">
         <div class="section-head"><div><h3>Árak</h3><p>Az új díjak a következő fizetéstől érvényesek.</p></div></div>
         <div class="field-row">
-          <div class="field"><label for="p-price">Havi nettó díj / aktív ingatlan (Ft)</label><input type="number" id="p-price" min="0" step="1" required></div>
+          <div class="field"><label for="p-price">Havi díj / aktív ingatlan (Ft)</label><input type="number" id="p-price" min="0" step="1" required>
+            <label class="checkbox-row" style="margin-top:4px;"><input type="checkbox" id="p-gross"> Bruttó ár (tartalmazza az ÁFÁ-t)</label></div>
           <div class="field"><label for="p-discount">Éves fizetés kedvezménye (%)</label><input type="number" id="p-discount" min="0" max="90" step="0.5" required></div>
         </div>
         <div class="field-row">
@@ -110,7 +111,8 @@ async function load() {
   const s = await readJson(res);
   if (!res.ok) { show('page-error', errorMessage(res, s, 'Nem sikerült betölteni.')); return; }
   $('p-enabled').checked = s.billingEnabled;
-  $('p-price').value = s.monthlyNetPricePerProperty;
+  $('p-price').value = s.monthlyPricePerProperty;
+  $('p-gross').checked = s.pricesIncludeVat;
   $('p-discount').value = s.yearlyDiscountPercent;
   $('p-trial').value = s.trialDays;
   $('p-grace').value = s.graceDays;
@@ -154,7 +156,8 @@ $('platform-form').addEventListener('submit', async (e) => {
   const block = $('p-billingo-block').value;
   const payload = {
     billingEnabled: $('p-enabled').checked,
-    monthlyNetPricePerProperty: num('p-price'),
+    monthlyPricePerProperty: num('p-price'),
+    pricesIncludeVat: $('p-gross').checked,
     yearlyDiscountPercent: num('p-discount'),
     trialDays: num('p-trial'),
     graceDays: num('p-grace'),

@@ -28,7 +28,7 @@ public class SubscriptionPaymentConfiguration : IEntityTypeConfiguration<Subscri
         builder.HasKey(p => p.Id);
         builder.HasIndex(p => p.BarionPaymentId).IsUnique();
         builder.HasIndex(p => new { p.Status, p.CreatedAt });
-        builder.Property(p => p.UnitNetPrice).HasPrecision(12, 2);
+        builder.Property(p => p.UnitPrice).HasPrecision(12, 2);
         builder.Property(p => p.NetAmount).HasPrecision(12, 2);
         builder.Property(p => p.VatAmount).HasPrecision(12, 2);
         builder.Property(p => p.GrossAmount).HasPrecision(12, 2);
@@ -47,7 +47,7 @@ public class PlatformSettingsConfiguration : IEntityTypeConfiguration<PlatformSe
     public void Configure(EntityTypeBuilder<PlatformSettings> builder)
     {
         builder.HasKey(s => s.Id);
-        builder.Property(s => s.MonthlyNetPricePerProperty).HasPrecision(12, 2);
+        builder.Property(s => s.MonthlyPricePerProperty).HasPrecision(12, 2);
         builder.Property(s => s.YearlyDiscountPercent).HasPrecision(5, 2);
         builder.Property(s => s.VatPercent).HasPrecision(5, 2);
         builder.Property(s => s.VatExemption).HasMaxLength(10);

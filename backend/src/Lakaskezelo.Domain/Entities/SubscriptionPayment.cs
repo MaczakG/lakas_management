@@ -12,9 +12,11 @@ public class SubscriptionPayment : ICompanyOwned
     public SubscriptionPaymentStatus Status { get; set; } = SubscriptionPaymentStatus.Pending;
     public BillingInterval Interval { get; set; }
 
-    // A díj alapja: ennyi aktív ingatlan × ingatlanonkénti egységár (nettó, Ft) az időszakra.
+    // A díj alapja: ennyi aktív ingatlan × ingatlanonkénti egységár (Ft) az időszakra.
     public int PropertyCount { get; set; }
-    public decimal UnitNetPrice { get; set; }
+    // Ingatlanonkénti egységár az időszakra; UnitPriceIncludesVat: bruttó (ÁFÁ-val) vagy nettó.
+    public decimal UnitPrice { get; set; }
+    public bool UnitPriceIncludesVat { get; set; }
     public decimal NetAmount { get; set; }
     public decimal VatAmount { get; set; }
     public decimal GrossAmount { get; set; }

@@ -9,7 +9,7 @@ namespace Lakaskezelo.Api.Subscriptions;
 
 public record BillingoIssueResult(bool Success, int? DocumentId, string? PublicUrl, string? ErrorMessage, int? PartnerId = null);
 public sealed record BillingoBuyer(string Name, string? Email, string? TaxNumber, string PostCode, string City, string Street, int? PartnerId);
-public sealed record BillingoLine(string Name, int Quantity, string Unit, decimal UnitNetPrice, decimal? VatPercent, string? VatExemption);
+public sealed record BillingoLine(string Name, int Quantity, string Unit, decimal UnitPrice, bool UnitPriceIsGross, decimal? VatPercent, string? VatExemption);
 
 // A Billingo v3 API (api.billingo.hu/v3) vékony burkolója (a Yardly BillingoClient-je alapján): a
 // sikeres kártyás fizetésről kifizetett ("bankcard") számlát állít ki a vevő partnerére. Minden hívás
@@ -64,8 +64,8 @@ public partial class BillingoClient(HttpClient http, IConfiguration configuratio
                     name = l.Name,
                     quantity = l.Quantity,
                     unit = l.Unit,
-                    unit_price = l.UnitNetPrice,
-                    unit_price_type = "net",
+                    unit_price = l.UnitPrice,
+                    unit_price_type = l.UnitPriceIsGross ? "gross" : "net",
                     vat = l.VatExemption ?? $"{l.VatPercent:0.##}%",
                 }).ToArray(),
             };

@@ -17,7 +17,8 @@ namespace Lakaskezelo.Data.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     BillingEnabled = table.Column<bool>(type: "boolean", nullable: false),
-                    MonthlyNetPricePerProperty = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
+                    MonthlyPricePerProperty = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
+                    PricesIncludeVat = table.Column<bool>(type: "boolean", nullable: false),
                     YearlyDiscountPercent = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
                     TrialDays = table.Column<int>(type: "integer", nullable: false),
                     GraceDays = table.Column<int>(type: "integer", nullable: false),
@@ -45,7 +46,8 @@ namespace Lakaskezelo.Data.Migrations
                     Status = table.Column<int>(type: "integer", nullable: false),
                     Interval = table.Column<int>(type: "integer", nullable: false),
                     PropertyCount = table.Column<int>(type: "integer", nullable: false),
-                    UnitNetPrice = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
+                    UnitPrice = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
+                    UnitPriceIncludesVat = table.Column<bool>(type: "boolean", nullable: false),
                     NetAmount = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
                     VatAmount = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
                     GrossAmount = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
@@ -114,8 +116,8 @@ namespace Lakaskezelo.Data.Migrations
 
             migrationBuilder.InsertData(
                 table: "PlatformSettings",
-                columns: new[] { "Id", "BarionEnvironment", "BarionPayeeEmail", "BarionPosKey", "BillingEnabled", "BillingoApiKey", "BillingoBlockId", "GraceDays", "MonthlyNetPricePerProperty", "TrialDays", "UpdatedAt", "VatExemption", "VatPercent", "YearlyDiscountPercent" },
-                values: new object[] { new Guid("22222222-2222-4222-8222-222222222222"), "Test", null, null, false, null, null, 7, 1990m, 14, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, 27m, 15m });
+                columns: new[] { "Id", "BarionEnvironment", "BarionPayeeEmail", "BarionPosKey", "BillingEnabled", "BillingoApiKey", "BillingoBlockId", "GraceDays", "MonthlyPricePerProperty", "PricesIncludeVat", "TrialDays", "UpdatedAt", "VatExemption", "VatPercent", "YearlyDiscountPercent" },
+                values: new object[] { new Guid("22222222-2222-4222-8222-222222222222"), "Test", null, null, false, null, null, 7, 1990m, true, 14, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, 27m, 15m });
 
             migrationBuilder.CreateIndex(
                 name: "IX_SubscriptionPayments_BarionPaymentId",

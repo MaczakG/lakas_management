@@ -5,7 +5,7 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 ## Csak a teszten (staging) — még nincs élesben
 
 - **2026.11.02.4** — SaaS 3. lépés: előfizetés. Ingatlanonkénti havi díj, éves fizetésnél kedvezménnyel,
-  próbaidővel (alapár: 1990 Ft + ÁFA / ingatlan / hó, a Platform oldalon módosítható). Bankkártyás fizetés a Barion oldalán (a kártya a megújításokhoz elmentve), automatikus
+  próbaidővel (alapár: bruttó 1990 Ft / ingatlan / hó, a Platform oldalon módosítható). Bankkártyás fizetés a Barion oldalán (a kártya a megújításokhoz elmentve), automatikus
   megújítás, minden fizetésről Billingo-számla. Sikertelen megújításnál türelmi idő, utána (és lejárt
   próbaidőnél) a fiók csak olvasható, és nem megy ki bérlői számla/emlékeztető. Előfizetés oldal (díjcsomag,
   számlázási adatok, fizetések és számlák, lemondás) és Platform oldal az üzemeltetőnek (díjszedés

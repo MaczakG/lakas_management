@@ -6,14 +6,32 @@ namespace Lakaskezelo.Tests;
 
 public class PricingTests
 {
+    // Nettó árazás (PricesIncludeVat = false) — a bruttó árazás külön tesztben.
     private static PlatformSettings Settings(decimal price = 990m, decimal discount = 15m, decimal vat = 27m, string? exemption = null) =>
-        new() { MonthlyNetPricePerProperty = price, YearlyDiscountPercent = discount, VatPercent = vat, VatExemption = exemption };
+        new() { MonthlyPricePerProperty = price, PricesIncludeVat = false, YearlyDiscountPercent = discount, VatPercent = vat, VatExemption = exemption };
+
+    [Fact]
+    public void Gross_price_is_charged_exactly_and_vat_is_derived()
+    {
+        var gross = new PlatformSettings { MonthlyPricePerProperty = 1990m, PricesIncludeVat = true, YearlyDiscountPercent = 15m, VatPercent = 27m };
+        for (var n = 1; n <= 50; n++)
+        {
+            var q = Pricing.Quote(gross, n, BillingInterval.Monthly);
+            Assert.Equal(1990m * n, q.GrossAmount);
+            Assert.Equal(q.GrossAmount, q.NetAmount + q.VatAmount);
+            Assert.True(q.UnitPriceIncludesVat);
+        }
+        Assert.Equal(1567m, Pricing.Quote(gross, 1, BillingInterval.Monthly).NetAmount); // 1990 / 1,27 = 1566,93
+        var yearly = Pricing.Quote(gross, 2, BillingInterval.Yearly);
+        Assert.Equal(20298m, yearly.UnitPrice); // 1990 × 12 × 0,85
+        Assert.Equal(40596m, yearly.GrossAmount);
+    }
 
     [Fact]
     public void Monthly_price_is_per_active_property_with_vat()
     {
         var q = Pricing.Quote(Settings(), 3, BillingInterval.Monthly);
-        Assert.Equal(990m, q.UnitNetPrice);
+        Assert.Equal(990m, q.UnitPrice);
         Assert.Equal(2970m, q.NetAmount);
         Assert.Equal(802m, q.VatAmount); // 2970 × 27% = 801,9 → 802
         Assert.Equal(3772m, q.GrossAmount);
@@ -29,7 +47,7 @@ public class PricingTests
     public void Yearly_price_is_twelve_months_with_discount_rounded_to_whole_forints()
     {
         var q = Pricing.Quote(Settings(), 2, BillingInterval.Yearly);
-        Assert.Equal(10098m, q.UnitNetPrice); // 990 × 12 × 0,85
+        Assert.Equal(10098m, q.UnitPrice); // 990 × 12 × 0,85
         Assert.Equal(20196m, q.NetAmount);
         Assert.Equal(25649m, q.GrossAmount); // 20196 × 1,27 = 25648,92 → 25649
     }

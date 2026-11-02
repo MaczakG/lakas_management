@@ -37,7 +37,8 @@ public class SubscriptionController(
             new BillingDetailsDto(subscription.BillingName, subscription.BillingTaxNumber, subscription.BillingPostCode,
                 subscription.BillingCity, subscription.BillingStreet, subscription.BillingEmail),
             active,
-            settings.MonthlyNetPricePerProperty,
+            settings.MonthlyPricePerProperty,
+            settings.PricesIncludeVat,
             settings.YearlyDiscountPercent,
             ToDto(Pricing.Quote(settings, active, BillingInterval.Monthly)),
             ToDto(Pricing.Quote(settings, active, BillingInterval.Yearly)),
@@ -138,7 +139,7 @@ public class SubscriptionController(
     }
 
     private static QuoteDto ToDto(PriceQuote q) =>
-        new(q.Interval, q.PropertyCount, q.UnitNetPrice, q.NetAmount, q.VatAmount, q.GrossAmount, q.VatPercent, q.VatExemption);
+        new(q.Interval, q.PropertyCount, q.UnitPrice, q.UnitPriceIncludesVat, q.NetAmount, q.VatAmount, q.GrossAmount, q.VatPercent, q.VatExemption);
 }
 
 // A Barion szerver-oldali értesítése (CallbackUrl): POST, "PaymentId" mezővel. Bejelentkezés nélküli,

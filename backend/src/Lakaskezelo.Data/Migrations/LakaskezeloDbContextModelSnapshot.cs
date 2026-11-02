@@ -374,9 +374,12 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<int>("GraceDays")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("MonthlyNetPricePerProperty")
+                    b.Property<decimal>("MonthlyPricePerProperty")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
+
+                    b.Property<bool>("PricesIncludeVat")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("TrialDays")
                         .HasColumnType("integer");
@@ -407,7 +410,8 @@ namespace Lakaskezelo.Data.Migrations
                             BarionEnvironment = "Test",
                             BillingEnabled = false,
                             GraceDays = 7,
-                            MonthlyNetPricePerProperty = 1990m,
+                            MonthlyPricePerProperty = 1990m,
+                            PricesIncludeVat = true,
                             TrialDays = 14,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             VatPercent = 27m,
@@ -692,9 +696,12 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("UnitNetPrice")
+                    b.Property<decimal>("UnitPrice")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
+
+                    b.Property<bool>("UnitPriceIncludesVat")
+                        .HasColumnType("boolean");
 
                     b.Property<decimal>("VatAmount")
                         .HasPrecision(12, 2)
