@@ -19,6 +19,25 @@ public class TenantsController(LakaskezeloDbContext db) : ControllerBase
         return Ok(tenants.Select(ToDto));
     }
 
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<TenantDto>> Get(Guid id, CancellationToken ct)
+    {
+        var tenant = await db.Tenants.Include(t => t.Property).FirstOrDefaultAsync(t => t.Id == id, ct);
+        return tenant is null ? NotFound() : Ok(ToDto(tenant));
+    }
+
+    // A bérlő adatlapjához: a neki kiállított számlák.
+    [HttpGet("{id:guid}/invoices")]
+    public async Task<ActionResult<List<InvoiceDto>>> Invoices(Guid id, CancellationToken ct)
+    {
+        if (!await db.Tenants.AnyAsync(t => t.Id == id, ct)) return NotFound();
+        var invoices = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
+            .Where(i => i.TenantId == id)
+            .OrderByDescending(i => i.PeriodYear).ThenByDescending(i => i.PeriodMonth)
+            .ToListAsync(ct);
+        return Ok(invoices.Select(InvoicesController.ToDto));
+    }
+
     [HttpPost]
     public async Task<ActionResult<TenantDto>> Create(UpsertTenantRequest request, CancellationToken ct)
     {

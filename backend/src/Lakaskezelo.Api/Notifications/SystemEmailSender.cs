@@ -27,17 +27,16 @@ public class SystemEmailSender(
             return true;
         }
 
-        var companyId = configuration.GetValue("Platform:EmailCompanyId", Company.DefaultCompanyId);
-        var settings = await settingsService.GetForCompanyAsync(companyId, ct);
+        var settings = await settingsService.GetPlatformAsync(ct);
         bool sent;
         if (settings.EmailProvider == EmailProvider.Smtp)
         {
-            sent = await smtp.SendWithAsync(settings, ProductName, to, subject, htmlBody, textBody, null, ct);
+            sent = await smtp.SendWithAsync(settings, ProductName, null, to, subject, htmlBody, textBody, null, ct);
             LastError = smtp.LastError;
         }
         else
         {
-            sent = await mailgun.SendWithAsync(settings, ProductName, to, subject, htmlBody, textBody, null, ct);
+            sent = await mailgun.SendWithAsync(settings, ProductName, null, to, subject, htmlBody, textBody, null, ct);
             LastError = mailgun.LastError;
         }
         return sent;

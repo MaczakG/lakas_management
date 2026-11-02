@@ -35,20 +35,20 @@
       ${item('users.html', 'user-check', 'Felhasználók')}
       ${item('subscription.html', 'circle-dollar-sign', 'Előfizetés', 'billing')}
       ${item('settings.html', 'lock', 'Beállítások', 'admin')}
-      ${item('platform.html', 'server', 'Platform', 'operator')}
     </nav>
 
     <div class="sidebar-footer">
       <div class="avatar" id="avatar">··</div>
       <div class="who"><span id="who-name">—</span><small id="who-company"></small></div>
     </div>
+    <a class="btn btn-secondary btn-sm logout-btn" href="platform.html" data-only="operator" hidden>${icon('server')}Platform admin</a>
     <button class="btn btn-secondary btn-sm logout-btn" type="button" id="logout-link">${icon('log-out')}Kilépés</button>
     <span class="sidebar-version"><span id="version-tag"></span> · <a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelés</a></span>
   </aside>`);
 
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.
   const page = location.pathname.split('/').pop() || 'properties.html';
-  const activePage = { 'property-detail.html': 'properties.html' }[page] || page;
+  const activePage = { 'property-detail.html': 'properties.html', 'tenant-detail.html': 'tenants.html', 'owner-detail.html': 'owners.html' }[page] || page;
   window.__currentPage = page;
   document.querySelectorAll('.sidebar .nav-item[href]').forEach((a) => {
     if (a.getAttribute('href') === activePage) a.classList.add('active');

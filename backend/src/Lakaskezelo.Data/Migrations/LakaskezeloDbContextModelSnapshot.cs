@@ -46,6 +46,10 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<string>("IssuerBankAccount")
                         .HasColumnType("text");
 
+                    b.Property<string>("IssuerEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<string>("IssuerName")
                         .HasColumnType("text");
 

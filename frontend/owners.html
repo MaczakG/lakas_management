@@ -98,14 +98,14 @@ function renderOwners() {
   }
 
   tbody.innerHTML = filtered.map((o) => `
-    <tr>
-      <td class="cell-main">${escapeHtml(o.name)}</td>
+    <tr class="clickable" title="Adatlap megnyitása" onclick="location.href='owner-detail.html?id=${encodeURIComponent(o.id)}'">
+      <td class="cell-main"><a class="link" href="owner-detail.html?id=${encodeURIComponent(o.id)}" onclick="event.stopPropagation()">${escapeHtml(o.name)}</a></td>
       <td>${escapeHtml(o.email || '—')}${o.phone ? `<div class="cell-sub">${escapeHtml(o.phone)}</div>` : ''}</td>
       <td>${escapeHtml(o.taxId || '—')}</td>
       <td>${o.propertyNames.length ? escapeHtml(o.propertyNames.join(', ')) : '—'}</td>
       <td class="row-actions">
-        <button class="btn btn-ghost btn-sm" onclick="editOwner('${o.id}')">Szerkesztés</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteOwner('${o.id}')">Törlés</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); editOwner('${o.id}')">Szerkesztés</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteOwner('${o.id}')">Törlés</button>
       </td>
     </tr>
   `).join('');

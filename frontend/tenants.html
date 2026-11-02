@@ -124,16 +124,16 @@ function renderTenants() {
   }
 
   tbody.innerHTML = filtered.map((t) => `
-    <tr>
-      <td class="cell-main">${escapeHtml(t.name)}</td>
+    <tr class="clickable" title="Adatlap megnyitása" onclick="location.href='tenant-detail.html?id=${encodeURIComponent(t.id)}'">
+      <td class="cell-main"><a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}" onclick="event.stopPropagation()">${escapeHtml(t.name)}</a></td>
       <td>${escapeHtml(t.email || '—')}${t.phone ? `<div class="cell-sub">${escapeHtml(t.phone)}</div>` : ''}</td>
       <td>${escapeHtml(t.propertyName || '—')}</td>
       <td>${t.rentCurrency === 'HUF' ? 'Ft' : t.rentCurrency}</td>
       <td>${formatDate(t.moveInDate)}</td>
       <td>${formatDate(t.moveOutDate)}</td>
       <td class="row-actions">
-        <button class="btn btn-ghost btn-sm" onclick="editTenant('${t.id}')">Szerkesztés</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteTenant('${t.id}')">Törlés</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); editTenant('${t.id}')">Szerkesztés</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteTenant('${t.id}')">Törlés</button>
       </td>
     </tr>
   `).join('');
