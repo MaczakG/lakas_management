@@ -83,6 +83,7 @@ public class SubscriptionService(
         var start = subscription.Status == SubscriptionStatus.Trial && subscription.TrialEndsAt > now ? subscription.TrialEndsAt : now;
         var quote = Pricing.Quote(settings, await ActivePropertyCountAsync(ct), interval);
         var payment = NewPayment(SubscriptionPaymentKind.Checkout, quote, start, Guid.NewGuid().ToString("N"));
+        payment.ImmediatePerformanceConsentAt = now;
         db.SubscriptionPayments.Add(payment);
         await db.SaveChangesAsync(ct);
 

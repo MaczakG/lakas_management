@@ -14,7 +14,7 @@ namespace Lakaskezelo.Api.Controllers;
 [PlatformOperator]
 [ApiController]
 [Route("api/platform")]
-public class PlatformController(LakaskezeloDbContext db, PlatformSettingsService platform) : ControllerBase
+public class PlatformController(LakaskezeloDbContext db, PlatformSettingsService platform, ICompanyContext companyContext) : ControllerBase
 {
     [HttpGet("settings")]
     public async Task<ActionResult<PlatformSettingsDto>> GetSettings(CancellationToken ct)
@@ -52,6 +52,22 @@ public class PlatformController(LakaskezeloDbContext db, PlatformSettingsService
         s.BarionEnvironment = r.BarionEnvironment;
         s.BarionPayeeEmail = string.IsNullOrWhiteSpace(r.BarionPayeeEmail) ? null : r.BarionPayeeEmail.Trim();
         s.BillingoBlockId = r.BillingoBlockId;
+        if (r.Operator is { } o)
+        {
+            static string? Clean(string? v, int max) => string.IsNullOrWhiteSpace(v) ? null : v.Trim()[..Math.Min(v.Trim().Length, max)];
+            s.OperatorName = Clean(o.Name, 200);
+            s.OperatorAddress = Clean(o.Address, 300);
+            s.OperatorTaxNumber = Clean(o.TaxNumber, 20);
+            s.OperatorRegistrationNumber = Clean(o.RegistrationNumber, 50);
+            s.OperatorEmail = Clean(o.Email, 256);
+            s.OperatorPhone = Clean(o.Phone, 50);
+        }
+        if (!string.IsNullOrWhiteSpace(r.TermsVersion))
+        {
+            if (!DateOnly.TryParseExact(r.TermsVersion.Trim(), "yyyy-MM-dd", out _))
+                return BadRequest(new { message = "A jogi dokumentumok hatálybalépése ÉÉÉÉ-HH-NN formátumú dátum." });
+            s.TermsVersion = r.TermsVersion.Trim();
+        }
         if (!string.IsNullOrWhiteSpace(r.BarionPosKey)) s.BarionPosKey = r.BarionPosKey.Trim();
         if (!string.IsNullOrWhiteSpace(r.BillingoApiKey)) s.BillingoApiKey = r.BillingoApiKey.Trim();
         s.UpdatedAt = DateTime.UtcNow;
@@ -85,5 +101,59 @@ public class PlatformController(LakaskezeloDbContext db, PlatformSettingsService
 
     private static PlatformSettingsDto ToDto(PlatformSettings s) => new(
         s.BillingEnabled, s.MonthlyPricePerProperty, s.PricesIncludeVat, s.YearlyDiscountPercent, s.TrialDays, s.GraceDays, s.VatPercent, s.VatExemption,
-        s.BarionEnvironment, !string.IsNullOrEmpty(s.BarionPosKey), s.BarionPayeeEmail, !string.IsNullOrEmpty(s.BillingoApiKey), s.BillingoBlockId);
+        s.BarionEnvironment, !string.IsNullOrEmpty(s.BarionPosKey), s.BarionPayeeEmail, !string.IsNullOrEmpty(s.BillingoApiKey), s.BillingoBlockId,
+        new OperatorInfoDto(s.OperatorName, s.OperatorAddress, s.OperatorTaxNumber, s.OperatorRegistrationNumber, s.OperatorEmail, s.OperatorPhone),
+        s.TermsVersion);
+
+    // Díjmentes napok egy cégnek (pl. reklamáció, bevezető kedvezmény): próbaidőben a próbaidőt, fizetőnél a
+    // kifizetett időszakot hosszabbítja; zárolt cégnél új próbaidőt indít — mindhárom feloldja a zárolást.
+    [HttpPost("companies/{id:guid}/extend")]
+    public async Task<IActionResult> Extend(Guid id, ExtendRequest request, CancellationToken ct)
+    {
+        if (request.Days is < 1 or > 366) return BadRequest(new { message = "1 és 366 közötti napszámot adj meg." });
+        if (platform.IsOperator(id)) return BadRequest(new { message = "Az üzemeltető cég nem fizet." });
+        if (!await db.Companies.AnyAsync(c => c.Id == id, ct)) return NotFound();
+
+        var now = DateTime.UtcNow;
+        var s = await db.Subscriptions.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.CompanyId == id, ct);
+        if (s is null)
+        {
+            s = new Subscription { Id = Guid.NewGuid(), CompanyId = id, Status = SubscriptionStatus.Trial, TrialEndsAt = now, CreatedAt = now };
+            db.Subscriptions.Add(s);
+        }
+        switch (s.Status)
+        {
+            case SubscriptionStatus.Trial:
+                s.TrialEndsAt = (s.TrialEndsAt > now ? s.TrialEndsAt : now).AddDays(request.Days);
+                break;
+            // Fizető (vagy fizetett, de zárolt) cég mentett kártyával: a kifizetett időszak hosszabbodik.
+            case SubscriptionStatus.Active or SubscriptionStatus.PastDue or SubscriptionStatus.Locked
+                when s.PaidUntil is not null && (s.Status != SubscriptionStatus.Locked || s.BarionRecurrenceId is not null):
+                s.PaidUntil = (s.PaidUntil > now ? s.PaidUntil.Value : now).AddDays(request.Days);
+                s.Status = SubscriptionStatus.Active;
+                s.GraceEndsAt = null;
+                s.LockedAt = null;
+                break;
+            default:
+                s.Status = SubscriptionStatus.Trial;
+                s.TrialEndsAt = now.AddDays(request.Days);
+                s.TrialReminderSentAt = null;
+                s.LockedAt = null;
+                break;
+        }
+        s.UpdatedAt = now;
+        // Platform-művelet más cég adatán: a mentés a cél cég kontextusában fut (a DbContext ellenőrzi).
+        companyContext.Set(id);
+        await db.SaveChangesAsync(ct);
+        return Ok(new { message = $"+{request.Days} nap jóváírva." });
+    }
+
+    [HttpGet("payments")]
+    public async Task<ActionResult<List<PlatformPaymentDto>>> Payments(CancellationToken ct)
+    {
+        var names = await db.Companies.ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+        var payments = await db.SubscriptionPayments.IgnoreQueryFilters().OrderByDescending(p => p.CreatedAt).Take(200).ToListAsync(ct);
+        return Ok(payments.Select(p => new PlatformPaymentDto(p.Id, names.GetValueOrDefault(p.CompanyId, "?"), p.Kind, p.Status, p.Interval,
+            p.PropertyCount, p.GrossAmount, p.CreatedAt, p.ErrorMessage, p.BillingoPublicUrl, p.BillingoError)).ToList());
+    }
 }

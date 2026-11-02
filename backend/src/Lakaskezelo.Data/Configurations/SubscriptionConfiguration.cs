@@ -55,6 +55,13 @@ public class PlatformSettingsConfiguration : IEntityTypeConfiguration<PlatformSe
         builder.Property(s => s.BarionPosKey).HasMaxLength(200);
         builder.Property(s => s.BarionPayeeEmail).HasMaxLength(256);
         builder.Property(s => s.BillingoApiKey).HasMaxLength(200);
+        builder.Property(s => s.OperatorName).HasMaxLength(200);
+        builder.Property(s => s.OperatorAddress).HasMaxLength(300);
+        builder.Property(s => s.OperatorTaxNumber).HasMaxLength(20);
+        builder.Property(s => s.OperatorRegistrationNumber).HasMaxLength(50);
+        builder.Property(s => s.OperatorEmail).HasMaxLength(256);
+        builder.Property(s => s.OperatorPhone).HasMaxLength(50);
+        builder.Property(s => s.TermsVersion).HasMaxLength(20).HasDefaultValue("2026-11-03");
         builder.HasData(new PlatformSettings
         {
             Id = PlatformSettings.SingletonId,

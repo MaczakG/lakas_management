@@ -41,10 +41,13 @@
       <input type="password" id="password" autocomplete="new-password" minlength="8" maxlength="200" required>
       <span class="hint">Legalább 8 karakter.</span>
     </div>
+    <label class="checkbox-row" style="margin:4px 0 18px;align-items:flex-start;"><input type="checkbox" id="accept" required style="margin-top:3px;">
+      <span>Elfogadom az <a class="link" href="aszf.html" target="_blank">ÁSZF</a>-et és az <a class="link" href="adatkezeles.html" target="_blank">Adatkezelési tájékoztató</a>t.</span></label>
     <button class="btn btn-primary btn-block" type="submit" id="submit-btn">Fiók létrehozása</button>
   </form>
 
   <p class="auth-alt">Már van fiókod? <a href="login.html">Bejelentkezés</a></p>
+  <p class="auth-alt" style="margin-top:10px;font-size:12.5px;"><a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelési tájékoztató</a></p>
 </div>
 
 <script src="app.js"></script>
@@ -85,6 +88,7 @@
         fullName: document.getElementById('full-name').value.trim(),
         email: document.getElementById('email').value.trim(),
         password: document.getElementById('password').value,
+        acceptTerms: document.getElementById('accept').checked,
       });
       if (!res.ok) {
         showMsg('form-error', errorMessage(res, data, 'Nem sikerült a regisztráció.'));

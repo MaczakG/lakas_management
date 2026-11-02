@@ -11,4 +11,8 @@ public class Company
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+
+    // Regisztrációkor elfogadott ÁSZF / adatkezelési tájékoztató változata és ideje.
+    public string? TermsVersion { get; set; }
+    public DateTime? TermsAcceptedAt { get; set; }
 }

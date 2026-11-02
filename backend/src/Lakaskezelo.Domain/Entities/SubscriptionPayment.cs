@@ -35,6 +35,9 @@ public class SubscriptionPayment : ICompanyOwned
     public string? BillingoError { get; set; }
     public int BillingoAttempts { get; set; }
 
+    // A fizető kifejezett kérése a szolgáltatás azonnali megkezdésére (fogyasztói elállási jog, 45/2014. Korm. r.).
+    public DateTime? ImmediatePerformanceConsentAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
 }

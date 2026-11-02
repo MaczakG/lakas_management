@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Adatkezelési tájékoztató</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{padding:32px 16px 64px;}
+  .legal{max-width:820px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:40px 44px;}
+  .legal-top{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:820px;margin:0 auto 18px;flex-wrap:wrap;}
+  .legal-top a{font-size:13.5px;font-weight:600;color:var(--accent-deep);}
+  .legal h1{font-family:var(--font-display);font-size:26px;font-weight:600;letter-spacing:-0.02em;margin-bottom:6px;}
+  .legal .meta{color:var(--muted);font-size:13px;margin-bottom:26px;}
+  .legal h2{font-family:var(--font-display);font-size:17px;font-weight:600;margin:28px 0 10px;letter-spacing:-0.01em;}
+  .legal p,.legal li{font-size:14px;line-height:1.65;color:var(--ink-soft);}
+  .legal p{margin-bottom:10px;}
+  .legal ul,.legal ol{margin:0 0 12px 20px;}
+  .legal li{margin-bottom:4px;}
+  .legal strong{color:var(--ink);}
+  .legal table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:13px;}
+  .legal th,.legal td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;color:var(--ink-soft);line-height:1.5;}
+  .legal th{background:var(--surface-2);color:var(--ink);font-weight:600;}
+  .legal-missing{background:var(--amber-bg);color:var(--amber);border-radius:4px;padding:0 4px;font-weight:600;}
+  .table-wrap{overflow-x:auto;}
+  @media (max-width:640px){ .legal{padding:24px 18px;} }
+</style>
+</head>
+<body>
+<div class="legal-top">
+  <a class="login-brand" href="login.html" style="margin:0;"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#house"/></svg></span><span class="brand-name" data-legal="product" data-fallback="Lakáskezelő">Lakáskezelő</span></a>
+  <span><a href="aszf.html">ÁSZF</a> · <a href="adatkezeles.html">Adatkezelési tájékoztató</a></span>
+</div>
+<article class="legal">
+  <h1>Adatkezelési tájékoztató</h1>
+  <p class="meta">Hatályos: <span data-legal="version"></span> · <span data-legal="product" data-fallback="Lakáskezelő"></span> — <span data-legal="website"></span></p>
+
+  <h2>1. Az adatkezelő</h2>
+  <p><strong><span data-legal="operator.name"></span></strong> (cím: <span data-legal="operator.address"></span>; adószám: <span data-legal="operator.taxNumber"></span>; e-mail: <span data-legal="operator.email"></span>) — a továbbiakban: Szolgáltató. A tájékoztató az Európai Parlament és a Tanács (EU) 2016/679 rendelete (GDPR) és az információs önrendelkezési jogról szóló 2011. évi CXII. törvény alapján készült.</p>
+
+  <h2>2. Kinek az adatairól szól?</h2>
+  <p>A Szolgáltatás <strong>előfizetőinek és felhasználóinak</strong> (regisztrált személyek) adatairól, amelyeket a Szolgáltató saját adatkezelőként kezel.</p>
+  <p>Az előfizetők által a rendszerben rögzített <strong>bérlők, tulajdonosok és más személyek</strong> adatainak az adatkezelője az adott előfizető (a bérbeadó), a Szolgáltató ezekhez csak adatfeldolgozóként, az előfizető megbízásából fér hozzá (ld. ÁSZF 11. pont). Ezekkel az adatokkal kapcsolatos kérésével forduljon a bérbeadójához.</p>
+
+  <h2>3. A kezelt adatok, célok, jogalapok, időtartamok</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Adatok</th><th>Cél</th><th>Jogalap</th><th>Megőrzés</th></tr></thead>
+    <tbody>
+      <tr><td>Név, e-mail cím, jelszó (csak egyirányú hash), szerepkör, a cég neve; a regisztráció és az ÁSZF-elfogadás ideje</td><td>Fiók létrehozása, belépés, a Szolgáltatás nyújtása, kapcsolattartás</td><td>Szerződés teljesítése (GDPR 6. cikk (1) b)</td><td>A fiók törléséig; meg nem erősített regisztráció: 7 nap</td></tr>
+      <tr><td>Belépési kódok (hash), sikertelen belépések száma, zárolás ideje</td><td>A fiók védelme, visszaélések megelőzése</td><td>Jogos érdek (6. cikk (1) f)</td><td>Kódok: 10 perc; zárolás: 15 perc</td></tr>
+      <tr><td>Számlázási név, cím, adószám, számlaértesítő e-mail; a díjfizetések összege, időpontja, Barion-azonosítója; a kiállított számlák</td><td>Díjfizetés, számlázás, könyvelés</td><td>Jogi kötelezettség (6. cikk (1) c; 2000. évi C. tv. 169. §)</td><td>8 év</td></tr>
+      <tr><td>E-mail cím</td><td>Rendszerüzenetek (belépési kód, meghívó, fizetési értesítők, próbaidő lejárta)</td><td>Szerződés teljesítése</td><td>A fiók törléséig</td></tr>
+      <tr><td>IP-cím, időpont, kért oldal (szervernapló)</td><td>Biztonság, hibakeresés, túlterhelés elleni védelem</td><td>Jogos érdek</td><td>Legfeljebb 30 nap</td></tr>
+    </tbody>
+  </table></div>
+  <p>Kártyaadatokat a Szolgáltató nem kezel: a fizetés a Barion Payment Zrt. oldalán történik, amely a kártyaadatok és a fizetés tekintetében önálló adatkezelő (barion.com).</p>
+
+  <h2>4. Adatfeldolgozók, címzettek</h2>
+  <ul>
+    <li><strong>Amazon Web Services EMEA SARL</strong> (Luxemburg) — tárhely és mentés; a szerverek az EU-ban (Frankfurt) vannak.</li>
+    <li><strong>A Szolgáltató e-mail szolgáltatója</strong> — a rendszerüzenetek kézbesítése.</li>
+    <li><strong>Billingo Technologies Zrt.</strong> (billingo.hu) — számlakiállítás; a számlák adatai a NAV Online Számla rendszerébe is továbbításra kerülnek.</li>
+    <li><strong>Barion Payment Zrt.</strong> (barion.com) — bankkártyás fizetés (önálló adatkezelő).</li>
+  </ul>
+  <p>Az adatokat a Szolgáltató az Európai Unión kívülre nem továbbítja, és nem adja el; hatóság részére csak jogszabályban előírt esetben ad ki adatot.</p>
+
+  <h2>5. Sütik és böngészőben tárolt adatok</h2>
+  <p>A rendszer nem használ sütiket, analitikát vagy hirdetési nyomkövetést. A bejelentkezés fenntartásához a böngésző helyi tárolójában (localStorage) egy belépési token tárolódik, amely kilépéskor törlődik — ez a Szolgáltatás működéséhez feltétlenül szükséges.</p>
+
+  <h2>6. Adatbiztonság</h2>
+  <p>Titkosított adatkapcsolat (HTTPS/TLS) és titkosított tárolás; kétlépcsős belépés; a jelszavak egyirányú, sózott hash-ként tárolódnak; a cégek adatai egymástól szigorúan elkülönítettek; rendszeres mentés; a szerverhez csak a Szolgáltató fér hozzá, naplózott módon.</p>
+
+  <h2>7. Az Ön jogai</h2>
+  <ul>
+    <li><strong>Hozzáférés</strong> — tájékoztatást kérhet a kezelt adatairól, és másolatot kaphat;</li>
+    <li><strong>Helyesbítés</strong> — a fiókadatai a rendszerben is javíthatók;</li>
+    <li><strong>Törlés</strong> — kérheti adatai törlését, kivéve, ha azok megőrzését jogszabály írja elő (pl. számlák);</li>
+    <li><strong>Korlátozás</strong> és <strong>tiltakozás</strong> — a jogos érdeken alapuló adatkezelés ellen;</li>
+    <li><strong>Adathordozhatóság</strong> — a megadott adatait géppel olvasható formában megkaphatja.</li>
+  </ul>
+  <p>Kérelmét a Szolgáltató e-mail címére (<span data-legal="operator.email"></span>) küldheti; a Szolgáltató legkésőbb egy hónapon belül válaszol.</p>
+
+  <h2>8. Jogorvoslat</h2>
+  <p>Panaszt tehet a Nemzeti Adatvédelmi és Információszabadság Hatóságnál (NAIH; 1055 Budapest, Falk Miksa utca 9–11.; ugyfelszolgalat@naih.hu; www.naih.hu), illetve bírósághoz fordulhat (a lakóhelye szerinti törvényszék előtt is). Kérjük, előbb a Szolgáltatót keresse meg, hogy panaszát mielőbb rendezhessük.</p>
+</article>
+<script src="app.js"></script>
+<script src="legal.js"></script>
+</body>
+</html>

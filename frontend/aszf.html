@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — ÁSZF</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{padding:32px 16px 64px;}
+  .legal{max-width:820px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:40px 44px;}
+  .legal-top{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:820px;margin:0 auto 18px;flex-wrap:wrap;}
+  .legal-top a{font-size:13.5px;font-weight:600;color:var(--accent-deep);}
+  .legal h1{font-family:var(--font-display);font-size:26px;font-weight:600;letter-spacing:-0.02em;margin-bottom:6px;}
+  .legal .meta{color:var(--muted);font-size:13px;margin-bottom:26px;}
+  .legal h2{font-family:var(--font-display);font-size:17px;font-weight:600;margin:28px 0 10px;letter-spacing:-0.01em;}
+  .legal p,.legal li{font-size:14px;line-height:1.65;color:var(--ink-soft);}
+  .legal p{margin-bottom:10px;}
+  .legal ul,.legal ol{margin:0 0 12px 20px;}
+  .legal li{margin-bottom:4px;}
+  .legal strong{color:var(--ink);}
+  .legal table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:13px;}
+  .legal th,.legal td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;color:var(--ink-soft);line-height:1.5;}
+  .legal th{background:var(--surface-2);color:var(--ink);font-weight:600;}
+  .legal-missing{background:var(--amber-bg);color:var(--amber);border-radius:4px;padding:0 4px;font-weight:600;}
+  .table-wrap{overflow-x:auto;}
+  @media (max-width:640px){ .legal{padding:24px 18px;} }
+</style>
+</head>
+<body>
+<div class="legal-top">
+  <a class="login-brand" href="login.html" style="margin:0;"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#house"/></svg></span><span class="brand-name" data-legal="product" data-fallback="Lakáskezelő">Lakáskezelő</span></a>
+  <span><a href="aszf.html">ÁSZF</a> · <a href="adatkezeles.html">Adatkezelési tájékoztató</a></span>
+</div>
+<article class="legal">
+  <h1>Általános Szerződési Feltételek</h1>
+  <p class="meta">Hatályos: <span data-legal="version"></span> · <span data-legal="product" data-fallback="Lakáskezelő"></span> — <span data-legal="website"></span></p>
+
+  <h2>1. A Szolgáltató</h2>
+  <ul>
+    <li>Név: <strong><span data-legal="operator.name"></span></strong></li>
+    <li>Székhely / cím: <span data-legal="operator.address"></span></li>
+    <li>Adószám: <span data-legal="operator.taxNumber"></span></li>
+    <li data-legal-if="operator.registrationNumber">Cégjegyzékszám / nyilvántartási szám: <span data-legal="operator.registrationNumber"></span></li>
+    <li>E-mail: <span data-legal="operator.email"></span></li>
+    <li data-legal-if="operator.phone">Telefon: <span data-legal="operator.phone"></span></li>
+    <li>Tárhelyszolgáltató: Amazon Web Services EMEA SARL (Luxemburg), a szerverek helye: Frankfurt (EU)</li>
+  </ul>
+
+  <h2>2. Fogalmak</h2>
+  <ul>
+    <li><strong>Szolgáltatás:</strong> a(z) <span data-legal="product" data-fallback="Lakáskezelő"></span> webes rendszer, amely ingatlanok bérbeadásának nyilvántartására és a bérleti díjak számlázására szolgál (ingatlanok, tulajdonosok, bérlők, rezsiköltségek nyilvántartása, számlák készítése és e-mailes kiküldése, árfolyamok).</li>
+    <li><strong>Előfizető:</strong> az a természetes vagy jogi személy (cég), aki a Szolgáltatásra regisztrál, és annak díját megfizeti.</li>
+    <li><strong>Felhasználó:</strong> az Előfizető által a fiókjához hozzáadott (meghívott) személy. Az <strong>adminisztrátor</strong> kezeli a felhasználókat, a beállításokat és az előfizetést; a <strong>munkatárs</strong> a napi munkát végzi.</li>
+    <li><strong>Fogyasztó:</strong> a szakmája, önálló foglalkozása vagy üzleti tevékenysége körén kívül eljáró természetes személy.</li>
+  </ul>
+
+  <h2>3. A szerződés létrejötte, regisztráció</h2>
+  <p>A szerződés a regisztrációval, a jelen ÁSZF és az Adatkezelési tájékoztató elfogadásával, elektronikus úton jön létre; a Szolgáltató a szerződést nem iktatja, az a fiók fennállása alatt a rendszerben visszakereshető. A szerződés nyelve magyar. A regisztrációhoz érvényes, az Előfizető által használt e-mail cím szükséges, amelyet megerősítő linkkel kell igazolni.</p>
+  <p>A belépés jelszóval és az e-mailben kapott egyszer használatos kóddal (kétlépcsős azonosítás) történik. Az Előfizető felel azért, hogy a jelszavakat és a belépési kódokat illetéktelen személy ne ismerje meg, és a Felhasználóit is erre kötelezi.</p>
+
+  <h2>4. Próbaidő</h2>
+  <p>A regisztrációt követően <strong><span data-legal="trialDays"></span> napig</strong> a Szolgáltatás díjmentesen, teljes körűen használható. A próbaidő lejárta után a rendszer csak akkor használható tovább (adatok módosítására, számlák kiküldésére), ha az Előfizető előfizet; addig az adatai megmaradnak és megtekinthetők.</p>
+
+  <h2>5. Díjak</h2>
+  <p>A Szolgáltatás díja: <strong><span data-legal="price"></span></strong>. Díjköteles minden aktív ingatlan, de legalább egy; az inaktívvá tett ingatlanok után díjat nem számítunk fel. A díjat az időszak elején az akkor aktív ingatlanok száma alapján számítjuk; az időszak közben felvett ingatlanok a következő időszaktól díjkötelesek.</p>
+  <p>Éves fizetés esetén a 12 havi díjból <strong><span data-legal="yearlyDiscount"></span></strong> kedvezményt adunk. A Szolgáltató a díjakat a hatálybalépés előtt legalább 30 nappal, e-mailben közölt értesítéssel módosíthatja; a módosítás a következő díjfizetési időszaktól érvényes, és az Előfizető a szerződést a módosítás hatálybalépéséig felmondhatja.</p>
+
+  <h2>6. Fizetés, számla, automatikus megújítás</h2>
+  <p>A díjat bankkártyával, a Barion Payment Zrt. (barion.com) biztonságos fizetőoldalán kell megfizetni. A kártyaadatokat a Barion kezeli, azokhoz a Szolgáltató nem fér hozzá. Az első fizetéskor a kártya a Barionnál elmentésre kerül (ismétlődő fizetés), és az előfizetés az időszak végén automatikusan megújul: a Szolgáltató a mentett kártyát a következő időszak díjával megterheli. Az automatikus megújítás az Előfizetés oldalon bármikor lemondható.</p>
+  <p>A díjfizetésről a Szolgáltató elektronikus számlát állít ki (Billingo), amelyet e-mailben küld meg, és az Előfizetés oldalon is letölthetővé tesz.</p>
+
+  <h2>7. Sikertelen fizetés, korlátozás</h2>
+  <p>Ha a megújító terhelés nem sikerül, a Szolgáltató e-mailben értesíti az Előfizetőt, és <strong><span data-legal="graceDays"></span> nap</strong> türelmi időt biztosít, amely alatt a Szolgáltatás változatlanul használható, és a díj más kártyával is megfizethető. A türelmi idő eredménytelen elteltével (valamint lejárt próbaidő vagy lemondás után) a fiók <strong>csak olvasható</strong> lesz: az adatok megtekinthetők és letölthetők, de nem módosíthatók, és a rendszer nem küld ki bérlői számlát vagy emlékeztetőt. A díj megfizetésével a korlátozás azonnal megszűnik.</p>
+
+  <h2>8. Lemondás, a szerződés megszűnése</h2>
+  <p>Az Előfizető az előfizetést bármikor lemondhatja; a lemondás a már kifizetett időszak végén lép hatályba, addig a Szolgáltatás használható. A már megfizetett időszak díja — a 9. pontban írt elállás kivételével — nem jár vissza. A fiók és az adatok végleges törlését az Előfizető adminisztrátora a Szolgáltató e-mail címén (<span data-legal="operator.email"></span>) kérheti; a Szolgáltató a kérést 30 napon belül teljesíti, kivéve azokat az adatokat (számlák), amelyek megőrzését jogszabály írja elő.</p>
+  <p>A Szolgáltató a szerződést 30 napos határidővel, súlyos szerződésszegés (pl. jogellenes használat, a rendszer biztonságának veszélyeztetése) esetén azonnali hatállyal felmondhatja.</p>
+
+  <h2>9. Fogyasztók elállási joga</h2>
+  <p>A fogyasztó a szerződés megkötésétől (az első díjfizetéstől) számított 14 napon belül indokolás nélkül elállhat a szerződéstől, a Szolgáltató e-mail címére (<span data-legal="operator.email"></span>) küldött egyértelmű nyilatkozattal. A fogyasztó a fizetéskor kifejezetten kéri a Szolgáltatás azonnali megkezdését; ezért elállás esetén az elállásig teljesített szolgáltatással arányos díjat meg kell fizetnie, a fennmaradó összeget a Szolgáltató 14 napon belül, a fizetéshez használt kártyára visszatéríti (45/2014. (II. 26.) Korm. rendelet). Ha a Szolgáltatás egésze a 14 napon belül teljesül, az elállási jog megszűnik.</p>
+
+  <h2>10. Az Előfizető kötelezettségei</h2>
+  <ul>
+    <li>A Szolgáltatást jogszerűen, a bérbeadási tevékenységével összefüggő célra használja.</li>
+    <li>A rendszerben rögzített adatok (különösen a bérlők, tulajdonosok személyes adatai) valóságáért és kezelésük jogszerűségéért (jogalap, tájékoztatás) az Előfizető felel — ezek tekintetében ő az adatkezelő (ld. 11. pont).</li>
+    <li>A számlák tartalmáért és a rá vonatkozó adó- és számviteli kötelezettségek teljesítéséért az Előfizető felel; a rendszer ehhez eszközt biztosít, adótanácsadást nem nyújt.</li>
+    <li>A saját e-mail és tárhely beállításaiért (SMTP, Mailgun, S3) az Előfizető felel.</li>
+  </ul>
+
+  <h2>11. Adatfeldolgozás (GDPR 28. cikk)</h2>
+  <p>Az Előfizető által a rendszerben rögzített személyes adatok (bérlők, tulajdonosok, kapcsolattartók adatai, számlák) tekintetében az <strong>Előfizető az adatkezelő</strong>, a <strong>Szolgáltató adatfeldolgozó</strong>. A jelen pont a felek adatfeldolgozási megállapodása:</p>
+  <ul>
+    <li><strong>Tárgy és cél:</strong> a Szolgáltatás nyújtása — az adatok tárolása, megjelenítése, a számlák elkészítése és az Előfizető utasítására történő kiküldése. Időtartam: a szerződés fennállása.</li>
+    <li><strong>Utasítás:</strong> a Szolgáltató az adatokat kizárólag az Előfizető (a rendszer használatával adott) utasításai alapján kezeli, saját célra nem használja, harmadik félnek nem adja át, kivéve jogszabályi kötelezettség esetén.</li>
+    <li><strong>Titoktartás:</strong> az adatokhoz hozzáférő személyek titoktartásra kötelezettek.</li>
+    <li><strong>Biztonság:</strong> titkosított adatkapcsolat (TLS) és titkosított tárolás, kétlépcsős belépés, jelszavak egyirányú (hash) tárolása, cégek közötti szigorú adat-elkülönítés, rendszeres mentés, hozzáférés-naplózás.</li>
+    <li><strong>További adatfeldolgozók:</strong> Amazon Web Services EMEA SARL (tárhely, Frankfurt, EU). Az Előfizető által beállított e-mail és tárhely szolgáltatókat (SMTP, Mailgun, S3) az Előfizető választja. Új további adatfeldolgozó bevonásáról a Szolgáltató előzetesen értesít; az Előfizető ez ellen tiltakozhat, és a szerződést felmondhatja.</li>
+    <li><strong>Közreműködés:</strong> a Szolgáltató segíti az Előfizetőt az érintetti kérelmek teljesítésében (az adatok a rendszerben megtekinthetők, javíthatók, törölhetők) és az adatbiztonsági kötelezettségeiben.</li>
+    <li><strong>Adatvédelmi incidens:</strong> a Szolgáltató az incidensről a tudomásszerzést követően indokolatlan késedelem nélkül, legkésőbb 48 órán belül értesíti az Előfizetőt.</li>
+    <li><strong>Megszűnés:</strong> a szerződés megszűnése után a Szolgáltató az adatokat — az Előfizető kérésére előzetes exportot követően — legkésőbb 90 napon belül törli (a mentésekből a mentések megőrzési idejének lejártával).</li>
+    <li><strong>Ellenőrzés:</strong> a Szolgáltató a megfelelés igazolásához szükséges információkat az Előfizető kérésére rendelkezésre bocsátja.</li>
+  </ul>
+
+  <h2>12. Rendelkezésre állás, felelősség</h2>
+  <p>A Szolgáltató törekszik a Szolgáltatás folyamatos, hibamentes működésére, de a rendelkezésre állásra garanciát nem vállal; a tervezett karbantartásokat lehetőség szerint munkaidőn kívül végzi. A Szolgáltató nem felel a külső szolgáltatások (internet, e-mail szolgáltatók, Barion, Billingo, MNB) hibájából eredő károkért. A Szolgáltató felelőssége — a szándékosan, súlyos gondatlansággal, illetve életben, testi épségben, egészségben okozott kár kivételével — az adott Előfizető által a kárt megelőző 12 hónapban megfizetett díj összegéig terjed.</p>
+
+  <h2>13. Szellemi tulajdon</h2>
+  <p>A Szolgáltatás (szoftver, megjelenés, dokumentáció) a Szolgáltató szellemi tulajdona; az Előfizető a szerződés időtartamára, saját bérbeadási tevékenységéhez kap nem kizárólagos, át nem ruházható használati jogot. Az Előfizető által rögzített adatok az Előfizetőéi.</p>
+
+  <h2>14. Az ÁSZF módosítása</h2>
+  <p>A Szolgáltató az ÁSZF-et módosíthatja; a módosításról a hatálybalépés előtt legalább 30 nappal e-mailben értesíti az Előfizetőket. Ha az Előfizető a módosítást nem fogadja el, a szerződést a hatálybalépésig felmondhatja.</p>
+
+  <h2>15. Panaszkezelés, jogviták</h2>
+  <p>Panaszát a Szolgáltató e-mail címén (<span data-legal="operator.email"></span>) jelezheti; a Szolgáltató 30 napon belül írásban válaszol. A fogyasztó a lakóhelye szerint illetékes békéltető testülethez fordulhat. A szerződésre a magyar jog az irányadó.</p>
+</article>
+<script src="app.js"></script>
+<script src="legal.js"></script>
+</body>
+</html>

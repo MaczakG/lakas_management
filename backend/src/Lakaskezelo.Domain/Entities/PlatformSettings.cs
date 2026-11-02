@@ -30,5 +30,15 @@ public class PlatformSettings
     public string? BillingoApiKey { get; set; }
     public int? BillingoBlockId { get; set; }
 
+    // Az üzemeltető (szolgáltató) adatai — az ÁSZF és az adatkezelési tájékoztató ezekkel töltődik ki.
+    public string? OperatorName { get; set; }
+    public string? OperatorAddress { get; set; }
+    public string? OperatorTaxNumber { get; set; }
+    public string? OperatorRegistrationNumber { get; set; }
+    public string? OperatorEmail { get; set; }
+    public string? OperatorPhone { get; set; }
+    // A jogi dokumentumok hatályos változata (pl. "2026-11-03") — regisztrációkor ezt fogadja el a cég.
+    public string TermsVersion { get; set; } = "2026-11-03";
+
     public DateTime UpdatedAt { get; set; }
 }

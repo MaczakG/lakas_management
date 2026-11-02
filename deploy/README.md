@@ -80,3 +80,20 @@ paranccsal érdemes ellenőrizni.
   csak külön teszt-Billingo-fiókkal (vagy kulcs nélkül — ilyenkor a számla „Készül…” marad).
 - **Titkok:** az SMTP-jelszót és a Mailgun API-kulcsot a Beállítások API nem adja vissza a
   böngészőnek (csak felülírni lehet őket).
+
+## SaaS indulás — ellenőrzőlista
+
+1. **Név és domain:** az `App__ProductName` (a rendszerlevelek feladóneve, az ÁSZF) és a felületen a
+   „Lakáskezelő” felirat; új domainnél DNS A-rekord az Elastic IP-re, `nginx.conf` `server_name` + Let's
+   Encrypt tanúsítvány, `Frontend__BaseUrl` és `Cors__AllowedOrigins__0` a compose-ban.
+2. **Szolgáltató adatai:** Platform oldal → „Szolgáltató adatai” (név, cím, adószám, nyilvántartási szám,
+   e-mail) és a jogi dokumentumok hatálybalépése. Az ÁSZF-et és az adatkezelési tájékoztatót jogász nézze át.
+3. **Barion (éles):** éles üzlet, a token-fizetés (ismétlődő fizetés) engedélyeztetése a Barionnal; Platform
+   oldal → Barion: környezet „Éles”, POSKey, kedvezményezett e-mail. A Barion fizetési callback címe:
+   `<domain>/api/public/barion/callback`.
+4. **Billingo:** API-kulcs és számlatömb a Platform oldalon (a számlák valódi bizonylatok).
+5. **Rendszerlevelek:** az üzemeltető cég Beállításaiban megadott e-mail fiók küldi őket (belépési kód,
+   meghívó, megerősítés, fizetési értesítők) — legyen megbízható (SPF/DKIM a feladó domainjén).
+6. **Bekapcsolás:** élesítés után Platform oldal → „Előfizetési díj bekapcsolva”, majd a compose-ban az
+   éles `api` szolgáltatásnál `Registration__Enabled: "true"` és `docker compose up -d api`.
+

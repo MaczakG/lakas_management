@@ -72,6 +72,8 @@
           <div class="calc" id="calc"></div>
 
           <div class="pay-row" id="pay-row">
+            <label class="checkbox-row" style="align-items:flex-start;font-size:13px;"><input type="checkbox" id="consent" style="margin-top:3px;">
+              <span>Elfogadom az <a class="link" href="aszf.html" target="_blank">ÁSZF</a>-et, és kérem a szolgáltatás azonnali megkezdését. Tudomásul veszem, hogy elállás esetén az addig igénybe vett időszak arányos díját meg kell fizetnem.</span></label>
             <button class="btn btn-primary" type="button" id="pay-btn">Fizetés bankkártyával</button>
             <span class="muted-note" id="pay-note"></span>
             <img class="barion-banner" src="assets/barion-banner.svg" alt="Biztonságos fizetés: Barion — elfogadott kártyák: Mastercard, Maestro, Visa, American Express">
@@ -248,11 +250,15 @@ async function syncReturn() {
 
 document.getElementById('pay-btn').addEventListener('click', async () => {
   show('page-error', '');
+  if (!document.getElementById('consent').checked) {
+    show('page-error', 'A fizetéshez fogadd el az ÁSZF-et, és kérd a szolgáltatás azonnali megkezdését (jelölőnégyzet).');
+    return;
+  }
   const btn = document.getElementById('pay-btn');
   btn.disabled = true;
   btn.textContent = 'Átirányítás a Barionra...';
   try {
-    const res = await apiFetch('/api/subscription/checkout', { method: 'POST', body: JSON.stringify({ interval: selectedInterval() }) });
+    const res = await apiFetch('/api/subscription/checkout', { method: 'POST', body: JSON.stringify({ interval: selectedInterval(), acceptImmediatePerformance: true }) });
     const body = await readJson(res);
     if (!res.ok || !body.gatewayUrl) { show('page-error', errorMessage(res, body, 'Nem sikerült elindítani a fizetést.')); return; }
     location.href = body.gatewayUrl;

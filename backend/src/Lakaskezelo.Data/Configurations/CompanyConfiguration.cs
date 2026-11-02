@@ -9,6 +9,7 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
     public void Configure(EntityTypeBuilder<Company> builder)
     {
         builder.HasKey(c => c.Id);
+        builder.Property(c => c.TermsVersion).HasMaxLength(20);
         builder.Property(c => c.Name).IsRequired().HasMaxLength(200);
         // Az első cég: a SaaS előtti adatok ide kerülnek (CompanyTenancy migráció).
         builder.HasData(new Company
