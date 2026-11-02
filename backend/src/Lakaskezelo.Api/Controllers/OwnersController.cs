@@ -30,6 +30,33 @@ public class OwnersController(LakaskezeloDbContext db) : ControllerBase
         return owner is null ? NotFound() : Ok(ToDto(owner));
     }
 
+    [HttpGet("{id:guid}/properties")]
+    public async Task<ActionResult<List<OwnerPropertyDto>>> Properties(Guid id, CancellationToken ct)
+    {
+        if (!await db.Owners.AnyAsync(o => o.Id == id, ct)) return NotFound();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var links = await db.PropertyOwners.Where(po => po.OwnerId == id)
+            .Include(po => po.Property!).ThenInclude(p => p.Tenants)
+            .ToListAsync(ct);
+        return Ok(links.OrderBy(po => po.Property!.Name).Select(po => new OwnerPropertyDto(
+            po.PropertyId, po.Property!.Name, po.Share, po.Property.IsActive, po.Property.RentAmount,
+            po.Property.Tenants.Where(t => t.MoveOutDate == null || t.MoveOutDate >= today).OrderByDescending(t => t.MoveInDate).FirstOrDefault()?.Name,
+            po.Property.City)).ToList());
+    }
+
+    // A tulajdonos ingatlanainak számlái.
+    [HttpGet("{id:guid}/invoices")]
+    public async Task<ActionResult<List<InvoiceDto>>> Invoices(Guid id, CancellationToken ct)
+    {
+        if (!await db.Owners.AnyAsync(o => o.Id == id, ct)) return NotFound();
+        var propertyIds = db.PropertyOwners.Where(po => po.OwnerId == id).Select(po => po.PropertyId);
+        var invoices = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
+            .Where(i => propertyIds.Contains(i.PropertyId))
+            .OrderByDescending(i => i.PeriodYear).ThenByDescending(i => i.PeriodMonth).ThenBy(i => i.Number)
+            .ToListAsync(ct);
+        return Ok(invoices.Select(InvoicesController.ToDto));
+    }
+
     [HttpPost]
     public async Task<ActionResult<OwnerDto>> Create(UpsertOwnerRequest request, CancellationToken ct)
     {

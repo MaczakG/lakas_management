@@ -131,8 +131,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     return;
                 }
 
-                // IgnoreQueryFilters: itt még nincs cég-kontextus — épp ebből a sorból tudjuk meg a felhasználó cégét.
                 var db = context.HttpContext.RequestServices.GetRequiredService<LakaskezeloDbContext>();
+
+                // Platform admin (külön fiók, külön token): cég-kontextus nincs, csak a PlatformAdmin szerepkört kapja.
+                if (principal!.FindFirstValue(JwtTokenService.KindClaim) == JwtTokenService.PlatformKind)
+                {
+                    var adminOk = await db.PlatformAdmins.AsNoTracking()
+                        .AnyAsync(a => a.Id == userId && a.IsActive && a.SecurityStamp == stamp, context.HttpContext.RequestAborted);
+                    if (!adminOk)
+                    {
+                        context.Fail("Token has been revoked.");
+                        return;
+                    }
+                    if (principal.Identity is ClaimsIdentity platformIdentity)
+                    {
+                        foreach (var stale in platformIdentity.FindAll(platformIdentity.RoleClaimType).ToList()) platformIdentity.RemoveClaim(stale);
+                        platformIdentity.AddClaim(new Claim(platformIdentity.RoleClaimType, PlatformAuthController.PlatformOperatorRole));
+                    }
+                    return;
+                }
+
+                // IgnoreQueryFilters: itt még nincs cég-kontextus — épp ebből a sorból tudjuk meg a felhasználó cégét.
                 var current = await db.Users.IgnoreQueryFilters().AsNoTracking()
                     .Where(u => u.Id == userId && u.IsActive && u.EmailVerifiedAt != null && u.SecurityStamp == stamp)
                     .Select(u => new { u.CompanyId, u.Role })
@@ -245,6 +264,27 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// Az első Platform admin fiók (PlatformAdmin:Email) — jelszó nélkül jön létre; az első jelszót a
+// platform-login.html „Jelszó beállítása / elfelejtett jelszó” linkjével e-mailben kapott linkkel állítja be.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<LakaskezeloDbContext>();
+    var adminEmail = app.Configuration["PlatformAdmin:Email"]?.Trim().ToLowerInvariant();
+    if (!string.IsNullOrWhiteSpace(adminEmail) && !await db.PlatformAdmins.AnyAsync())
+    {
+        db.PlatformAdmins.Add(new PlatformAdmin
+        {
+            Id = Guid.NewGuid(),
+            Email = adminEmail,
+            FullName = app.Configuration["PlatformAdmin:Name"] ?? "Platform admin",
+            IsActive = true,
+            SecurityStamp = SecurityStamp.New(),
+            CreatedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+    }
+}
+
 if (!app.Configuration.GetValue("Auth:TwoFactorEnabled", true))
 {
     app.Logger.LogWarning("Two-factor sign-in is DISABLED (Auth:TwoFactorEnabled=false) — only use this as a temporary emergency measure.");
@@ -276,6 +316,22 @@ app.UseCors("Frontend");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+// A platform-token csak a platform-végpontokat éri el (és fordítva: a cégek tokenje a platformot nem, ld.
+// PlatformOperatorAttribute) — így a két világ teljesen elkülönül.
+app.Use(async (context, next) =>
+{
+    if (context.User.IsInRole(PlatformAuthController.PlatformOperatorRole)
+        && context.Request.Path.StartsWithSegments("/api")
+        && !context.Request.Path.StartsWithSegments("/api/platform")
+        && !context.Request.Path.StartsWithSegments("/api/auth/platform")
+        && !context.Request.Path.StartsWithSegments("/api/version"))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new { message = "A Platform admin fiókkal csak a Platform admin felület érhető el." });
+        return;
+    }
+    await next(context);
+});
 // Nem fizető (zárolt) cégnél a módosító kérések 402-t kapnak — a hitelesítés után, mert a cég a tokenből jön.
 app.UseMiddleware<Lakaskezelo.Api.Subscriptions.SubscriptionWriteGuard>();
 

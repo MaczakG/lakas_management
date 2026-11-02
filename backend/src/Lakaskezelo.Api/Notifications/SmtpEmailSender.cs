@@ -17,7 +17,7 @@ public class SmtpEmailSender(AppSettingsService settingsService, ILogger<SmtpEma
 
     public async Task<bool> IsConfiguredAsync(CancellationToken ct = default)
     {
-        var settings = await settingsService.GetAsync(ct);
+        var settings = await settingsService.GetPlatformAsync(ct);
         return IsConfigured(settings.SmtpHost, settings.SmtpUsername, settings.SmtpPassword, settings.SmtpFromAddress);
     }
 
@@ -26,12 +26,12 @@ public class SmtpEmailSender(AppSettingsService settingsService, ILogger<SmtpEma
         && !string.IsNullOrWhiteSpace(password) && !string.IsNullOrWhiteSpace(from);
 
     public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct) =>
-        await SendWithAsync(await settingsService.GetAsync(ct), null, to, subject, htmlBody, textBody, attachment, ct);
+        await SendWithAsync(await settingsService.GetPlatformAsync(ct), null, null, to, subject, htmlBody, textBody, attachment, ct);
 
     // Megadott (nem feltétlenül az aktuális cég) beállításaival küld — a rendszerlevelekhez
     // (SystemEmailSender), amelyek a platform üzemeltetőjének postafiókjából mennek. fromNameOverride:
     // ha meg van adva, ez lesz a feladó neve (pl. a termék neve a cégnév helyett).
-    public async Task<bool> SendWithAsync(AppSettings settings, string? fromNameOverride, string to, string subject,
+    public async Task<bool> SendWithAsync(AppSettings settings, string? fromNameOverride, string? replyTo, string to, string subject,
         string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
     {
         if (!IsConfigured(settings.SmtpHost, settings.SmtpUsername, settings.SmtpPassword, settings.SmtpFromAddress))
@@ -47,6 +47,7 @@ public class SmtpEmailSender(AppSettingsService settingsService, ILogger<SmtpEma
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(fromName, settings.SmtpFromAddress));
             message.To.Add(MailboxAddress.Parse(to));
+            if (!string.IsNullOrWhiteSpace(replyTo) && MailboxAddress.TryParse(replyTo, out var replyAddress)) message.ReplyTo.Add(replyAddress);
             message.Subject = subject;
 
             var builder = new BodyBuilder { HtmlBody = htmlBody, TextBody = textBody };

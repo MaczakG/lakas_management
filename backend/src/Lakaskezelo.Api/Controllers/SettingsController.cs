@@ -1,100 +1,61 @@
 using Lakaskezelo.Api.Contracts;
-using Lakaskezelo.Api.Notifications;
 using Lakaskezelo.Api.Settings;
-using Lakaskezelo.Api.Storage;
 using Lakaskezelo.Data;
+using Lakaskezelo.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.Controllers;
 
+// A cég Beállítások oldala (adminisztrátornak): rezsi-emlékeztető, számlakibocsátó adatai, számla e-mail
+// szövege. Az e-mail küldés és a számla-tárhely platform-szintű (PlatformController /api/platform/delivery).
 [Authorize(Roles = UsersController.AdminRole)]
 [ApiController]
 [Route("api/settings")]
-public class SettingsController(
-    LakaskezeloDbContext db, AppSettingsService settingsService, S3InvoiceStorage storage,
-    MailgunEmailSender mailgunSender, SmtpEmailSender smtpSender) : ControllerBase
+public class SettingsController(LakaskezeloDbContext db, AppSettingsService settingsService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<AppSettingsDto>> Get(CancellationToken ct)
-    {
-        var s = await settingsService.GetAsync(ct);
-        return Ok(ToDto(s));
-    }
+    public async Task<ActionResult<CompanySettingsDto>> Get(CancellationToken ct) => Ok(ToDto(await settingsService.GetAsync(ct)));
 
     [HttpPut]
-    public async Task<ActionResult<AppSettingsDto>> Update(AppSettingsDto dto, CancellationToken ct)
+    public async Task<ActionResult<CompanySettingsDto>> Update(CompanySettingsDto dto, CancellationToken ct)
     {
+        static string? Clean(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+        var issuerEmail = Clean(dto.IssuerEmail)?.ToLowerInvariant();
+        if (issuerEmail is not null && !AuthController.LooksLikeEmail(issuerEmail))
+            return BadRequest(new { message = "Érvénytelen válaszcím (e-mail)." });
+        var utilityEmail = Clean(dto.UtilityContactEmail);
+        if (utilityEmail is not null && !AuthController.LooksLikeEmail(utilityEmail.ToLowerInvariant()))
+            return BadRequest(new { message = "Érvénytelen rezsi kontakt e-mail." });
+
         // A globális szűrő miatt ez a bejelentkezett felhasználó cégének sora; ha még nincs, létrehozzuk
         // (a CompanyId-t mentéskor a DbContext tölti ki a cég-kontextusból).
         var settings = await db.AppSettings.SingleOrDefaultAsync(ct);
         if (settings is null)
         {
-            settings = new Domain.Entities.AppSettings { Id = Guid.NewGuid() };
+            settings = new AppSettings { Id = Guid.NewGuid() };
             db.AppSettings.Add(settings);
         }
 
-        settings.EmailProvider = dto.EmailProvider;
-        if (!string.IsNullOrWhiteSpace(dto.MailgunApiKey)) settings.MailgunApiKey = dto.MailgunApiKey;
-        settings.MailgunDomain = dto.MailgunDomain;
-        settings.MailgunFromAddress = dto.MailgunFromAddress;
-        settings.MailgunFromName = dto.MailgunFromName;
-        settings.MailgunApiBaseUrl = dto.MailgunApiBaseUrl;
-        settings.SmtpHost = dto.SmtpHost;
-        settings.SmtpPort = dto.SmtpPort;
-        settings.SmtpUsername = dto.SmtpUsername;
-        if (!string.IsNullOrWhiteSpace(dto.SmtpPassword)) settings.SmtpPassword = dto.SmtpPassword;
-        settings.SmtpFromAddress = dto.SmtpFromAddress;
-        settings.SmtpFromName = dto.SmtpFromName;
-        settings.S3BucketName = string.IsNullOrWhiteSpace(dto.S3BucketName) ? null : dto.S3BucketName.Trim();
-        settings.S3Region = string.IsNullOrWhiteSpace(dto.S3Region) ? null : dto.S3Region.Trim();
-        settings.UtilityContactEmail = dto.UtilityContactEmail;
+        settings.UtilityContactEmail = utilityEmail;
         settings.UtilityDeadlineDay = Math.Clamp(dto.UtilityDeadlineDay, 1, 28);
-        settings.IssuerName = dto.IssuerName;
-        settings.IssuerAddress = dto.IssuerAddress;
-        settings.IssuerTaxId = dto.IssuerTaxId;
-        settings.IssuerBankAccount = dto.IssuerBankAccount;
-        settings.InvoiceEmailSubject = dto.InvoiceEmailSubject;
-        settings.InvoiceEmailBody = dto.InvoiceEmailBody;
+        settings.IssuerName = Clean(dto.IssuerName);
+        settings.IssuerAddress = Clean(dto.IssuerAddress);
+        settings.IssuerTaxId = Clean(dto.IssuerTaxId);
+        settings.IssuerBankAccount = Clean(dto.IssuerBankAccount);
+        settings.IssuerEmail = issuerEmail;
+        settings.InvoiceEmailSubject = Clean(dto.InvoiceEmailSubject);
+        settings.InvoiceEmailBody = Clean(dto.InvoiceEmailBody);
         settings.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
         AppSettingsService.Invalidate(settings.CompanyId);
-
         return Ok(ToDto(settings));
     }
 
-    [HttpPost("test-mailgun")]
-    public async Task<ActionResult<TestMailgunResponse>> TestMailgun(TestEmailRequest request, CancellationToken ct)
-    {
-        var htmlBody = EmailTemplate.Render("Teszt e-mail", "Teszt e-mail", "<p style=\"margin:0;\">Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról (Mailgun).</p>");
-        var sent = await mailgunSender.SendAsync(request.To, "Lakáskezelő — teszt e-mail (Mailgun)", htmlBody, "Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról.", null, ct);
-        return Ok(new TestMailgunResponse(sent, sent ? null : mailgunSender.LastError));
-    }
-
-    [HttpPost("test-smtp")]
-    public async Task<ActionResult<TestSmtpResponse>> TestSmtp(TestEmailRequest request, CancellationToken ct)
-    {
-        var htmlBody = EmailTemplate.Render("Teszt e-mail", "Teszt e-mail", "<p style=\"margin:0;\">Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról (SMTP).</p>");
-        var sent = await smtpSender.SendAsync(request.To, "Lakáskezelő — teszt e-mail (SMTP)", htmlBody, "Ez egy teszt e-mail a Lakáskezelő Beállítások oldaláról.", null, ct);
-        return Ok(new TestSmtpResponse(sent, sent ? null : smtpSender.LastError));
-    }
-
-    [HttpPost("test-storage")]
-    public async Task<ActionResult<TestStorageResponse>> TestStorage(CancellationToken ct)
-    {
-        var (success, error) = await storage.TestConnectionAsync(ct);
-        return Ok(new TestStorageResponse(success, error));
-    }
-
-    private static AppSettingsDto ToDto(Domain.Entities.AppSettings s) => new(
-        s.EmailProvider,
-        null, s.MailgunDomain, s.MailgunFromAddress, s.MailgunFromName, s.MailgunApiBaseUrl,
-        s.SmtpHost, s.SmtpPort, s.SmtpUsername, null, s.SmtpFromAddress, s.SmtpFromName,
-        s.S3BucketName, s.S3Region,
+    private static CompanySettingsDto ToDto(AppSettings s) => new(
         s.UtilityContactEmail, s.UtilityDeadlineDay,
-        s.IssuerName, s.IssuerAddress, s.IssuerTaxId, s.IssuerBankAccount,
-        s.InvoiceEmailSubject, s.InvoiceEmailBody,
-        MailgunApiKeySet: !string.IsNullOrEmpty(s.MailgunApiKey), SmtpPasswordSet: !string.IsNullOrEmpty(s.SmtpPassword));
+        s.IssuerName, s.IssuerAddress, s.IssuerTaxId, s.IssuerBankAccount, s.IssuerEmail,
+        s.InvoiceEmailSubject, s.InvoiceEmailBody);
 }

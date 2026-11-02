@@ -25,7 +25,7 @@
 - **Verziószám (`AppVersion.Current`):** dátum alapú, `ÉÉÉÉ.HH.NN` (ha egy napon több kiadás van:
   `ÉÉÉÉ.HH.NN.2`). Minden érdemi változásnál nő; a felület oldalsávjában és a `/api/version`-en látszik, a
   tesztet borostyán „TESZT KÖRNYEZET” sáv jelzi.
-- **Kiadás:** minden éles kiadás után `vÉÉÉÉ.HH.NN` git-címke a `main`-en, és a `docs/valtozasnaplo.md`-ben a
+- **Kiadás:** minden éles kiadás után (ha a környezet engedi) `vÉÉÉÉ.HH.NN` git-címke a `main`-en, és a `docs/valtozasnaplo.md`-ben a
   „Csak a teszten” rész átkerül a kiadás alá.
 
 ## Teszt-környezet (staging)
@@ -78,6 +78,9 @@ paranccsal érdemes ellenőrizni.
   kulcsokat az API nem adja vissza). A Barion a fizetés végén a `/api/public/barion/callback` címet hívja.
   A teszten Barion **sandbox** kulcs használandó; a Billingo-számla mindig valódi bizonylat, ezért a teszten
   csak külön teszt-Billingo-fiókkal (vagy kulcs nélkül — ilyenkor a számla „Készül…” marad).
+- **Platform admin:** külön fiókok és külön belépés: `<domain>/platform-login.html`. Az első fiók a `.env`
+  `PLATFORM_ADMIN_EMAIL` címével jön létre (jelszó nélkül); a „Jelszó beállítása” linkkel kap e-mailt az első
+  jelszóhoz. A platform-token csak a `/api/platform` végpontokat éri el.
 - **Titkok:** az SMTP-jelszót és a Mailgun API-kulcsot a Beállítások API nem adja vissza a
   böngészőnek (csak felülírni lehet őket).
 

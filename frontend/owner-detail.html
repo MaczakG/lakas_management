@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Tulajdonos adatlap</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="detail.css">
+</head>
+<body>
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+  <main class="main">
+    <div class="detail-page">
+      <div class="detail-head">
+        <div class="detail-head-text">
+          <ol class="crumbs">
+            <li><a href="owners.html">Tulajdonosok</a></li>
+            <li id="crumb-name">…</li>
+          </ol>
+          <div class="title-row">
+            <h1 id="p-name">Betöltés…</h1>
+            <span id="p-status"></span>
+          </div>
+          <p class="detail-sub" id="p-sub"></p>
+          <p class="detail-hint">Kattints egy adatra, és írd át — a változás azonnal mentődik.</p>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-danger btn-sm" type="button" id="delete-btn">Tulajdonos törlése</button>
+        </div>
+      </div>
+      <div class="form-error" id="load-error"></div>
+      <div class="masonry" id="masonry">
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#user"/></svg>Alapadatok</h2></div>
+          <dl class="panel-body props" id="props-basic"></dl>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#circle-dollar-sign"/></svg>Adó- és bankadatok</h2></div>
+          <dl class="panel-body props" id="props-finance"></dl>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#chart-column"/></svg>Összegzés</h2></div>
+          <dl class="panel-body props" id="summary"></dl>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#file-text"/></svg>Megjegyzés</h2></div>
+          <dl class="panel-body props" id="props-notes"></dl>
+        </section>
+      </div>
+      <section class="record-tabs">
+        <div class="record-tabbar"><div class="record-tablist" role="tablist"><button class="record-tab" type="button" role="tab" data-tab="properties"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#house"/></svg>Ingatlanok <span class="panel-count" id="count-properties"></span></button><button class="record-tab" type="button" role="tab" data-tab="invoices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Számlák <span class="panel-count" id="count-invoices"></span></button></div></div>
+        <div class="record-tab-body"><div class="record-tab-pane" data-pane="properties" role="tabpanel" hidden><div class="panel-table" id="properties-body"><div class="panel-empty">Betöltés…</div></div></div><div class="record-tab-pane" data-pane="invoices" role="tabpanel" hidden><div class="panel-table" id="invoices-body"><div class="panel-empty">Betöltés…</div></div></div></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="record-detail.js"></script>
+<script src="owner-detail.js"></script>
+</body>
+</html>

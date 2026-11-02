@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Platform admin — Jelszó beállítása</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-box{width:100%;max-width:400px;}
+  .login-box h1{font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-0.01em;margin-bottom:24px;text-align:center;}
+  .login-box .brand-mark{background:var(--ink);}
+  .link-muted{color:var(--accent-deep);font-weight:600;font-size:13px;}
+  .link-muted:hover{text-decoration:underline;}
+  .form-row-between{display:flex;justify-content:flex-end;margin:2px 0 22px;}
+  .code-input{letter-spacing:8px;font-size:22px;text-align:center;font-weight:700;}
+  .code-links{display:flex;justify-content:space-between;margin-top:14px;}
+</style>
+</head>
+<body>
+<div class="login-box">
+  <div class="login-brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#server"/></svg></span><span class="brand-name">Platform admin</span></div>
+  <h1>Jelszó beállítása</h1>
+  <div class="form-error" id="err"></div>
+  <div class="form-success" id="ok"></div>
+  <form id="reset-form">
+    <div class="field"><label for="pass">Új jelszó</label><input type="password" id="pass" autocomplete="new-password" minlength="12" maxlength="200" required>
+      <span class="hint">Legalább 12 karakter.</span></div>
+    <button class="btn btn-primary btn-block" type="submit" id="btn">Jelszó mentése</button>
+  </form>
+  <a class="btn btn-primary btn-block" href="platform-login.html" id="login-link" hidden>Tovább a belépéshez</a>
+</div>
+<script src="app.js"></script>
+<script src="platform-session.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+function msg(id, text) { $(id).textContent = text; $(id).classList.toggle('show', !!text); }
+const token = new URLSearchParams(location.search).get('token');
+if (!token) { msg('err', 'Hiányzó vagy érvénytelen link.'); $('reset-form').hidden = true; }
+$('reset-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msg('err', '');
+  $('btn').disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/platform/reset-password`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, newPassword: $('pass').value }),
+    });
+    const data = await readJson(res);
+    if (!res.ok) { msg('err', errorMessage(res, data, 'Nem sikerült beállítani a jelszót.')); return; }
+    $('reset-form').hidden = true;
+    msg('ok', data.message);
+    $('login-link').href = `platform-login.html?email=${encodeURIComponent(data.email)}`;
+    $('login-link').hidden = false;
+  } catch { msg('err', 'Nem sikerült elérni a szervert.'); } finally { $('btn').disabled = false; }
+});
+</script>
+</body>
+</html>

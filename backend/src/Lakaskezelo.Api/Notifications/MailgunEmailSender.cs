@@ -15,7 +15,7 @@ public class MailgunEmailSender(HttpClient http, AppSettingsService settingsServ
 
     public async Task<bool> IsConfiguredAsync(CancellationToken ct = default)
     {
-        var settings = await settingsService.GetAsync(ct);
+        var settings = await settingsService.GetPlatformAsync(ct);
         return IsConfigured(settings.MailgunApiKey, settings.MailgunDomain, settings.MailgunFromAddress);
     }
 
@@ -23,12 +23,12 @@ public class MailgunEmailSender(HttpClient http, AppSettingsService settingsServ
         !string.IsNullOrWhiteSpace(apiKey) && !string.IsNullOrWhiteSpace(domain) && !string.IsNullOrWhiteSpace(from);
 
     public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct) =>
-        await SendWithAsync(await settingsService.GetAsync(ct), null, to, subject, htmlBody, textBody, attachment, ct);
+        await SendWithAsync(await settingsService.GetPlatformAsync(ct), null, null, to, subject, htmlBody, textBody, attachment, ct);
 
     // Megadott (nem feltétlenül az aktuális cég) beállításaival küld — a rendszerlevelekhez
     // (SystemEmailSender), amelyek a platform üzemeltetőjének postafiókjából mennek. fromNameOverride:
     // ha meg van adva, ez lesz a feladó neve (pl. a termék neve a cégnév helyett).
-    public async Task<bool> SendWithAsync(AppSettings settings, string? fromNameOverride, string to, string subject,
+    public async Task<bool> SendWithAsync(AppSettings settings, string? fromNameOverride, string? replyTo, string to, string subject,
         string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
     {
         if (!IsConfigured(settings.MailgunApiKey, settings.MailgunDomain, settings.MailgunFromAddress))
@@ -58,6 +58,7 @@ public class MailgunEmailSender(HttpClient http, AppSettingsService settingsServ
                 { new StringContent(htmlBody), "html" },
                 { new StringContent(textBody), "text" },
             };
+            if (!string.IsNullOrWhiteSpace(replyTo)) form.Add(new StringContent(replyTo), "h:Reply-To");
             if (attachment is not null)
             {
                 var fileContent = new ByteArrayContent(attachment.Content);

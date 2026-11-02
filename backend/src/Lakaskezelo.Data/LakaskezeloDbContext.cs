@@ -29,6 +29,8 @@ public class LakaskezeloDbContext(DbContextOptions<LakaskezeloDbContext> options
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
     public DbSet<PlatformSettings> PlatformSettings => Set<PlatformSettings>();
+    public DbSet<PlatformAdmin> PlatformAdmins => Set<PlatformAdmin>();
+    public DbSet<PlatformAdminToken> PlatformAdminTokens => Set<PlatformAdminToken>();
 
     // A szűrők ezt olvassák lekérdezésenként (nem a modell építésekor), így minden DbContext-példány a
     // saját kérése cégére szűr.

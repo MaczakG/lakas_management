@@ -5,7 +5,7 @@
 // Az ikonok a Lucide-sprite-ból jönnek (assets/icons/icons.svg).
 (function () {
   const icon = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#${id}"/></svg>`;
-  // only: 'admin' (adminisztrátor), 'billing' (fizető cég adminisztrátora), 'operator' (platform üzemeltető)
+  // only: 'admin' (adminisztrátor), 'billing' (fizető cég adminisztrátora — az üzemeltető saját cége nem fizet)
   const item = (href, ico, label, only) => `<a class="nav-item" href="${href}"${only ? ` data-only="${only}" hidden` : ''}><span class="ico">${icon(ico)}</span>${label}</a>`;
 
   document.write(`
@@ -35,7 +35,6 @@
       ${item('users.html', 'user-check', 'Felhasználók')}
       ${item('subscription.html', 'circle-dollar-sign', 'Előfizetés', 'billing')}
       ${item('settings.html', 'lock', 'Beállítások', 'admin')}
-      ${item('platform.html', 'server', 'Platform', 'operator')}
     </nav>
 
     <div class="sidebar-footer">
@@ -48,7 +47,7 @@
 
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.
   const page = location.pathname.split('/').pop() || 'properties.html';
-  const activePage = { 'property-detail.html': 'properties.html' }[page] || page;
+  const activePage = { 'property-detail.html': 'properties.html', 'tenant-detail.html': 'tenants.html', 'owner-detail.html': 'owners.html' }[page] || page;
   window.__currentPage = page;
   document.querySelectorAll('.sidebar .nav-item[href]').forEach((a) => {
     if (a.getAttribute('href') === activePage) a.classList.add('active');
@@ -72,8 +71,7 @@
     document.getElementById('avatar').textContent = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
     const visible = {
       admin: isAdmin(),
-      billing: isAdmin() && !auth.isPlatformOperator && auth.billingEnabled,
-      operator: !!auth.isPlatformOperator,
+      billing: isAdmin() && auth.billingEnabled && !auth.billingExempt,
     };
     document.querySelectorAll('.sidebar [data-only]').forEach((el) => { el.hidden = !visible[el.dataset.only]; });
   };
@@ -85,7 +83,7 @@
     apiFetch('/api/auth/me').then((r) => (r.ok ? r.json() : null)).then((me) => {
       const auth = getAuth();
       if (!me || !auth) return;
-      storeAuth({ ...auth, user: me.user, companyName: me.companyName, isPlatformOperator: me.isPlatformOperator });
+      storeAuth({ ...auth, user: me.user, companyName: me.companyName });
       renderWho();
     }).catch(() => {});
 
@@ -93,7 +91,7 @@
     apiFetch('/api/subscription/status').then((r) => (r.ok ? r.json() : null)).then((st) => {
       const auth = getAuth();
       if (!st || !auth) return;
-      storeAuth({ ...auth, billingEnabled: st.billingEnabled });
+      storeAuth({ ...auth, billingEnabled: st.billingEnabled, billingExempt: st.isOperator });
       renderWho();
       if (!st.billingEnabled || st.isOperator) return;
       showSubscriptionBanner(st);

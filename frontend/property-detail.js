@@ -265,7 +265,7 @@ function renderOwners() {
   }
   const equal = owners.every((o) => !o.share);
   body.innerHTML = owners.map((o) => `
-    <div class="owner-line"><b>${escapeHtml(o.ownerName)}</b><span class="share-chip">${escapeHtml(o.share || (equal ? `1/${owners.length}` : '—'))}</span></div>
+    <div class="owner-line"><b><a class="link" href="owner-detail.html?id=${encodeURIComponent(o.ownerId)}">${escapeHtml(o.ownerName)}</a></b><span class="share-chip">${escapeHtml(o.share || (equal ? `1/${owners.length}` : '—'))}</span></div>
   `).join('');
 }
 
@@ -278,7 +278,7 @@ function renderTenant() {
   }
   const row = (label, value) => `<div class="prop"><dt>${label}</dt><dd>${value}</dd></div>`;
   body.innerHTML = [
-    row('Név', escapeHtml(t.name)),
+    row('Név', `<a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}">${escapeHtml(t.name)}</a>`),
     row('E-mail', t.email ? `<a class="link" href="mailto:${escapeHtml(t.email)}">${escapeHtml(t.email)}</a>` : '<span class="dim">—</span>'),
     row('Telefon', t.phone ? escapeHtml(t.phone) : '<span class="dim">—</span>'),
     row('Beköltözés', t.moveInDate ? formatDate(t.moveInDate) : '<span class="dim">—</span>'),
@@ -368,7 +368,7 @@ function renderTenantsTab() {
     <thead><tr><th>Név</th><th>E-mail</th><th>Telefon</th><th>Beköltözés</th><th>Kiköltözés</th><th>Deviza</th><th>Állapot</th></tr></thead>
     <tbody>${tenants.map((t) => `
       <tr>
-        <td class="cell-main">${escapeHtml(t.name)}</td>
+        <td class="cell-main"><a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}">${escapeHtml(t.name)}</a></td>
         <td>${escapeHtml(t.email || '—')}</td>
         <td>${escapeHtml(t.phone || '—')}</td>
         <td>${formatDate(t.moveInDate)}</td>

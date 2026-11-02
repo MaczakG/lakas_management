@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platform admin — Szolgáltató és jogi adatok</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .platform-form{max-width:720px;}
+  .platform-form .section{margin-bottom:20px;}
+  .switch-row{display:flex;align-items:flex-start;gap:12px;}
+  .switch-row input{margin-top:3px;width:18px;height:18px;}
+  .switch-row strong{display:block;color:var(--ink);font-size:14px;}
+  .switch-row span{font-size:12.5px;color:var(--ink-soft);}
+  .inline-test{display:flex;gap:10px;align-items:flex-end;margin-bottom:8px;}
+  .inline-test .field{flex:1;margin-bottom:0;}
+  .test-result{font-size:13px;font-weight:600;margin-top:8px;}
+  .test-result.ok{color:var(--green);}
+  .test-result.error{color:var(--coral);}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="platform-session.js"></script>
+  <script src="platform-nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Platform admin</div>
+        <h1>Szolgáltató és jogi adatok</h1>
+        <div class="page-state" id="page-state"></div>
+      </div>
+    </div>
+
+    <div class="form-error" id="page-error"></div>
+    <div class="form-success" id="page-success"></div>
+
+    <form id="legal-form" class="platform-form" hidden>
+      <section class="section">
+        <div class="section-head"><div><h3>Szolgáltató adatai</h3><p>Ezek jelennek meg az <a class="link" href="aszf.html" target="_blank">ÁSZF</a>-ben és az <a class="link" href="adatkezeles.html" target="_blank">Adatkezelési tájékoztató</a>ban. Lényeges módosításnál add meg az új hatálybalépés napját, és 30 nappal előtte értesítsd az előfizetőket.</p></div></div>
+        <div class="field-row">
+          <div class="field"><label for="o-name">Név (cég / egyéni vállalkozó)</label><input type="text" id="o-name" maxlength="200"></div>
+          <div class="field"><label for="o-tax">Adószám</label><input type="text" id="o-tax" maxlength="20"></div>
+        </div>
+        <div class="field"><label for="o-address">Székhely / cím</label><input type="text" id="o-address" maxlength="300"></div>
+        <div class="field-row">
+          <div class="field"><label for="o-reg">Cégjegyzékszám / nyilvántartási szám</label><input type="text" id="o-reg" maxlength="50"></div>
+          <div class="field"><label for="o-email">Kapcsolattartási e-mail</label><input type="email" id="o-email" maxlength="256"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="o-phone">Telefon (nem kötelező)</label><input type="text" id="o-phone" maxlength="50"></div>
+          <div class="field"><label for="o-version">Jogi dokumentumok hatálybalépése</label><input type="date" id="o-version"></div>
+        </div>
+      </section>
+      <button class="btn btn-primary" type="submit">Mentés</button>
+    </form>
+  </main>
+</div>
+
+<script>
+requireAuth();
+const $ = (id) => document.getElementById(id);
+const huf = (n) => `${Math.round(n).toLocaleString('hu-HU')} Ft`;
+const day = (d) => (d ? new Date(d).toLocaleDateString('hu-HU') : '—');
+function show(id, text) { $(id).textContent = text; $(id).classList.toggle('show', !!text); }
+function secret(id, isSet) {
+  $(id).value = '';
+  $(id).placeholder = isSet ? '•••••••• (beállítva — üresen hagyva nem változik)' : 'nincs beállítva';
+}
+// A platform beállítás-sora egyben mentődik: betöltjük, a lap a saját mezőit átírja, és visszaküldjük
+// (a titkos kulcsok üresen maradva nem változnak).
+async function getPlatformSettings() {
+  const res = await apiFetch('/api/platform/settings');
+  const s = await readJson(res);
+  if (!res.ok) throw new Error(errorMessage(res, s, 'Nem sikerült betölteni.'));
+  return s;
+}
+async function savePlatformSettings(s, overrides) {
+  const payload = {
+    billingEnabled: s.billingEnabled, monthlyPricePerProperty: s.monthlyPricePerProperty, pricesIncludeVat: s.pricesIncludeVat,
+    yearlyDiscountPercent: s.yearlyDiscountPercent, trialDays: s.trialDays, graceDays: s.graceDays, vatPercent: s.vatPercent,
+    vatExemption: s.vatExemption, barionEnvironment: s.barionEnvironment, barionPosKey: null, barionPayeeEmail: s.barionPayeeEmail,
+    billingoApiKey: null, billingoBlockId: s.billingoBlockId, operator: s.operator, termsVersion: s.termsVersion,
+    ...overrides,
+  };
+  const res = await apiFetch('/api/platform/settings', { method: 'PUT', body: JSON.stringify(payload) });
+  const body = await readJson(res);
+  if (!res.ok) throw new Error(errorMessage(res, body, 'Nem sikerült menteni.'));
+  return body;
+}
+
+let current = null;
+async function load() {
+  try { current = await getPlatformSettings(); } catch (e) { show('page-error', e.message); return; }
+  const o = current.operator || {};
+  $('o-name').value = o.name || '';
+  $('o-tax').value = o.taxNumber || '';
+  $('o-address').value = o.address || '';
+  $('o-reg').value = o.registrationNumber || '';
+  $('o-email').value = o.email || '';
+  $('o-phone').value = o.phone || '';
+  $('o-version').value = current.termsVersion || '';
+  $('legal-form').hidden = false;
+}
+$('legal-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  show('page-error', ''); show('page-success', '');
+  const val = (id) => $(id).value.trim() || null;
+  try {
+    await savePlatformSettings(current, {
+      operator: { name: val('o-name'), taxNumber: val('o-tax'), address: val('o-address'), registrationNumber: val('o-reg'), email: val('o-email'), phone: val('o-phone') },
+      termsVersion: $('o-version').value || null,
+    });
+    show('page-success', 'Elmentve.');
+    await load();
+  } catch (err) { show('page-error', err.message); }
+});
+load();
+</script>
+</body>
+</html>

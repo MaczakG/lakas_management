@@ -5,10 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.Notifications;
 
-// Az egyetlen IEmailSender, ami ténylegesen DI-be van regisztrálva (ld. Program.cs) — a Beállítások
-// oldalon kiválasztott AppSettings.EmailProvider alapján a MailgunEmailSender vagy a
-// SmtpEmailSender felé delegál. Mindkét konfiguráció megmaradhat egyszerre a Beállításokban,
-// csak az egyik van ténylegesen használatban küldéskor.
+// A cégek (bérlőknek szóló) leveleinek küldője — számla, rezsi-emlékeztető. A kézbesítés a platform
+// e-mail fiókján megy (Platform admin → E-mail és tárhely: Mailgun vagy SMTP), de a feladó neve a cég
+// számlakibocsátó neve (vagy a cég neve), a válaszcím pedig a cég e-mail címe (Beállítások → Számla-kibocsátó
+// adatai; ha üres, az első adminisztrátoré) — így a bérlő válasza a bérbeadóhoz megy, nem az üzemeltetőhöz.
 //
 // Teszt-környezetben (Email:OnlyToUsers=true, ld. deploy/docker-compose.yml api-staging) csak a
 // rendszer felhasználóinak megy ki levél (pl. a belépési kód) — minden más (számla, rezsi-emlékeztető)
@@ -19,13 +19,11 @@ public class EmailSenderRouter(
 {
     public string? LastError { get; private set; }
 
-    private async Task<IEmailSender> ResolveAsync(CancellationToken ct)
+    public async Task<bool> IsConfiguredAsync(CancellationToken ct = default)
     {
-        var settings = await settingsService.GetAsync(ct);
-        return settings.EmailProvider == EmailProvider.Smtp ? smtp : mailgun;
+        var platform = await settingsService.GetPlatformAsync(ct);
+        return platform.EmailProvider == EmailProvider.Smtp ? await smtp.IsConfiguredAsync(ct) : await mailgun.IsConfiguredAsync(ct);
     }
-
-    public async Task<bool> IsConfiguredAsync(CancellationToken ct = default) => await (await ResolveAsync(ct)).IsConfiguredAsync(ct);
 
     public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
     {
@@ -36,9 +34,25 @@ public class EmailSenderRouter(
             return true;
         }
 
-        var sender = await ResolveAsync(ct);
-        var result = await sender.SendAsync(to, subject, htmlBody, textBody, attachment, ct);
-        LastError = sender.LastError;
+        var platform = await settingsService.GetPlatformAsync(ct);
+        var company = await settingsService.GetAsync(ct);
+        var fromName = company.IssuerName is { Length: > 0 } issuer ? issuer
+            : await db.Companies.Where(c => c.Id == company.CompanyId).Select(c => c.Name).SingleOrDefaultAsync(ct);
+        var replyTo = company.IssuerEmail is { Length: > 0 } issuerEmail ? issuerEmail
+            : await db.Users.Where(u => u.Role == UserRole.Admin && u.IsActive && u.EmailVerifiedAt != null)
+                .OrderBy(u => u.CreatedAt).Select(u => u.Email).FirstOrDefaultAsync(ct);
+
+        bool result;
+        if (platform.EmailProvider == EmailProvider.Smtp)
+        {
+            result = await smtp.SendWithAsync(platform, fromName, replyTo, to, subject, htmlBody, textBody, attachment, ct);
+            LastError = smtp.LastError;
+        }
+        else
+        {
+            result = await mailgun.SendWithAsync(platform, fromName, replyTo, to, subject, htmlBody, textBody, attachment, ct);
+            LastError = mailgun.LastError;
+        }
         return result;
     }
 
@@ -48,6 +62,7 @@ public class EmailSenderRouter(
     {
         if (!configuration.GetValue("Email:OnlyToUsers", false)) return false;
         var normalized = to.Trim().ToLowerInvariant();
-        return !await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == normalized, ct);
+        return !await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == normalized, ct)
+            && !await db.PlatformAdmins.AnyAsync(a => a.Email == normalized, ct);
     }
 }

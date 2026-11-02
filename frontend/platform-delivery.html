@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platform admin — E-mail és tárhely</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .platform-form{max-width:720px;}
+  .platform-form .section{margin-bottom:20px;}
+  .switch-row{display:flex;align-items:flex-start;gap:12px;}
+  .switch-row input{margin-top:3px;width:18px;height:18px;}
+  .switch-row strong{display:block;color:var(--ink);font-size:14px;}
+  .switch-row span{font-size:12.5px;color:var(--ink-soft);}
+  .inline-test{display:flex;gap:10px;align-items:flex-end;margin-bottom:8px;}
+  .inline-test .field{flex:1;margin-bottom:0;}
+  .test-result{font-size:13px;font-weight:600;margin-top:8px;}
+  .test-result.ok{color:var(--green);}
+  .test-result.error{color:var(--coral);}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="platform-session.js"></script>
+  <script src="platform-nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Platform admin</div>
+        <h1>E-mail és tárhely</h1>
+        <div class="page-state" id="page-state"></div>
+      </div>
+    </div>
+
+    <div class="form-error" id="page-error"></div>
+    <div class="form-success" id="page-success"></div>
+
+    <form id="delivery-form" class="platform-form" hidden>
+      <section class="section">
+        <div class="section-head"><div><h3>E-mail küldés</h3><p>Ezen megy ki minden levél: a rendszerlevelek (belépési kód, meghívó, fizetési értesítők) és a cégek bérlőinek szóló számlák és emlékeztetők. A cégek leveleinél a feladó neve a cég számlakibocsátó neve, a válaszcím a cég e-mail címe.</p></div></div>
+        <label class="checkbox-row" style="margin-bottom:8px;"><input type="radio" name="email-provider" id="ep-mailgun" value="Mailgun"> Mailgun</label>
+        <label class="checkbox-row"><input type="radio" name="email-provider" id="ep-smtp" value="Smtp"> SMTP</label>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><h3>Mailgun</h3></div></div>
+        <div class="field-row">
+          <div class="field"><label for="mg-key">API kulcs</label><input type="password" id="mg-key" autocomplete="off"></div>
+          <div class="field"><label for="mg-domain">Domain</label><input type="text" id="mg-domain" placeholder="mg.pelda.hu"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="mg-from-address">Feladó e-mail cím</label><input type="email" id="mg-from-address"></div>
+          <div class="field"><label for="mg-from-name">Feladó neve</label><input type="text" id="mg-from-name" placeholder="Lakáskezelő"></div>
+        </div>
+        <div class="field"><label for="mg-base-url">API régió (opcionális)</label><input type="text" id="mg-base-url" placeholder="https://api.eu.mailgun.net">
+          <span class="hint">Üresen hagyva az amerikai régiót használja. EU domainhez: https://api.eu.mailgun.net</span></div>
+        <div class="inline-test">
+          <div class="field"><label for="mg-test-to">Teszt e-mail címzett</label><input type="email" id="mg-test-to"></div>
+          <button class="btn btn-secondary" type="button" data-test="mailgun">Kapcsolat tesztelése</button>
+        </div>
+        <div class="test-result" id="mailgun-result"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><h3>SMTP</h3><p>Pl. Google Workspace: smtp.gmail.com, 587, alkalmazásjelszóval.</p></div></div>
+        <div class="field-row">
+          <div class="field"><label for="smtp-host">Szerver</label><input type="text" id="smtp-host"></div>
+          <div class="field"><label for="smtp-port">Port</label><input type="number" id="smtp-port" placeholder="587"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="smtp-username">Felhasználónév</label><input type="text" id="smtp-username" autocomplete="off"></div>
+          <div class="field"><label for="smtp-password">Jelszó</label><input type="password" id="smtp-password" autocomplete="new-password"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="smtp-from-address">Feladó e-mail cím</label><input type="email" id="smtp-from-address"></div>
+          <div class="field"><label for="smtp-from-name">Feladó neve</label><input type="text" id="smtp-from-name"></div>
+        </div>
+        <div class="inline-test">
+          <div class="field"><label for="smtp-test-to">Teszt e-mail címzett</label><input type="email" id="smtp-test-to"></div>
+          <button class="btn btn-secondary" type="button" data-test="smtp">Kapcsolat tesztelése</button>
+        </div>
+        <div class="test-result" id="smtp-result"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><h3>Számla-tárhely (Amazon S3)</h3><p>Ide kerülnek az összes cég számla-PDF-jei (cégenként külön mappában). A hozzáférést a szerverhez rendelt AWS IAM-szerep adja, kulcsot nem kell megadni.</p></div></div>
+        <div class="field-row">
+          <div class="field"><label for="s3-bucket">Bucket neve</label><input type="text" id="s3-bucket"></div>
+          <div class="field"><label for="s3-region">Régió</label><input type="text" id="s3-region" placeholder="eu-central-1"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" data-test="storage">Kapcsolat tesztelése</button>
+        <div class="test-result" id="storage-result"></div>
+      </section>
+
+      <button class="btn btn-primary" type="submit">Mentés</button>
+    </form>
+  </main>
+</div>
+
+<script>
+requireAuth();
+const $ = (id) => document.getElementById(id);
+const huf = (n) => `${Math.round(n).toLocaleString('hu-HU')} Ft`;
+const day = (d) => (d ? new Date(d).toLocaleDateString('hu-HU') : '—');
+function show(id, text) { $(id).textContent = text; $(id).classList.toggle('show', !!text); }
+function secret(id, isSet) {
+  $(id).value = '';
+  $(id).placeholder = isSet ? '•••••••• (beállítva — üresen hagyva nem változik)' : 'nincs beállítva';
+}
+// A platform beállítás-sora egyben mentődik: betöltjük, a lap a saját mezőit átírja, és visszaküldjük
+// (a titkos kulcsok üresen maradva nem változnak).
+async function getPlatformSettings() {
+  const res = await apiFetch('/api/platform/settings');
+  const s = await readJson(res);
+  if (!res.ok) throw new Error(errorMessage(res, s, 'Nem sikerült betölteni.'));
+  return s;
+}
+async function savePlatformSettings(s, overrides) {
+  const payload = {
+    billingEnabled: s.billingEnabled, monthlyPricePerProperty: s.monthlyPricePerProperty, pricesIncludeVat: s.pricesIncludeVat,
+    yearlyDiscountPercent: s.yearlyDiscountPercent, trialDays: s.trialDays, graceDays: s.graceDays, vatPercent: s.vatPercent,
+    vatExemption: s.vatExemption, barionEnvironment: s.barionEnvironment, barionPosKey: null, barionPayeeEmail: s.barionPayeeEmail,
+    billingoApiKey: null, billingoBlockId: s.billingoBlockId, operator: s.operator, termsVersion: s.termsVersion,
+    ...overrides,
+  };
+  const res = await apiFetch('/api/platform/settings', { method: 'PUT', body: JSON.stringify(payload) });
+  const body = await readJson(res);
+  if (!res.ok) throw new Error(errorMessage(res, body, 'Nem sikerült menteni.'));
+  return body;
+}
+
+async function load() {
+  const res = await apiFetch('/api/platform/delivery');
+  const s = await readJson(res);
+  if (!res.ok) { show('page-error', errorMessage(res, s, 'Nem sikerült betölteni.')); return; }
+  $(s.emailProvider === 'Smtp' ? 'ep-smtp' : 'ep-mailgun').checked = true;
+  secret('mg-key', s.mailgunApiKeySet);
+  $('mg-domain').value = s.mailgunDomain || '';
+  $('mg-from-address').value = s.mailgunFromAddress || '';
+  $('mg-from-name').value = s.mailgunFromName || '';
+  $('mg-base-url').value = s.mailgunApiBaseUrl || '';
+  $('smtp-host').value = s.smtpHost || '';
+  $('smtp-port').value = s.smtpPort || '';
+  $('smtp-username').value = s.smtpUsername || '';
+  secret('smtp-password', s.smtpPasswordSet);
+  $('smtp-from-address').value = s.smtpFromAddress || '';
+  $('smtp-from-name').value = s.smtpFromName || '';
+  $('s3-bucket').value = s.s3BucketName || '';
+  $('s3-region').value = s.s3Region || '';
+  $('delivery-form').hidden = false;
+}
+$('delivery-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  show('page-error', ''); show('page-success', '');
+  const val = (id) => $(id).value.trim() || null;
+  const payload = {
+    emailProvider: $('ep-smtp').checked ? 'Smtp' : 'Mailgun',
+    mailgunApiKey: val('mg-key'), mailgunDomain: val('mg-domain'), mailgunFromAddress: val('mg-from-address'),
+    mailgunFromName: val('mg-from-name'), mailgunApiBaseUrl: val('mg-base-url'),
+    smtpHost: val('smtp-host'), smtpPort: Number($('smtp-port').value) || null, smtpUsername: val('smtp-username'),
+    smtpPassword: $('smtp-password').value || null, smtpFromAddress: val('smtp-from-address'), smtpFromName: val('smtp-from-name'),
+    s3BucketName: val('s3-bucket'), s3Region: val('s3-region'),
+  };
+  const res = await apiFetch('/api/platform/delivery', { method: 'PUT', body: JSON.stringify(payload) });
+  const body = await readJson(res);
+  if (!res.ok) { show('page-error', errorMessage(res, body, 'Nem sikerült menteni.')); return; }
+  show('page-success', 'Elmentve. A kapcsolat tesztelése a mentett beállításokkal fut.');
+  await load();
+});
+document.querySelectorAll('[data-test]').forEach((btn) => btn.addEventListener('click', async () => {
+  const kind = btn.dataset.test;
+  const result = $(`${kind}-result`);
+  result.className = 'test-result';
+  result.textContent = 'Tesztelés...';
+  let res;
+  if (kind === 'storage') {
+    res = await apiFetch('/api/platform/test-storage', { method: 'POST' });
+  } else {
+    const to = $(kind === 'smtp' ? 'smtp-test-to' : 'mg-test-to').value.trim();
+    if (!to) { result.textContent = 'Add meg a teszt címzettet.'; result.classList.add('error'); return; }
+    res = await apiFetch(`/api/platform/test-email?provider=${kind}`, { method: 'POST', body: JSON.stringify({ to }) });
+  }
+  const r = await readJson(res);
+  const ok = res.ok && r.success;
+  result.textContent = ok ? (kind === 'storage' ? 'Sikeres kapcsolat.' : 'Elküldve.') : (r.error || errorMessage(res, r, 'Sikertelen.'));
+  result.classList.add(ok ? 'ok' : 'error');
+}));
+load();
+</script>
+</body>
+</html>

@@ -10,7 +10,7 @@ namespace Lakaskezelo.Api.Settings;
 //
 // Cégenkénti in-memory cache: az ütemezők percenként/óránként hívják, nem indokolt minden hívásnál
 // adatbázist ütni; a Beállítások mentése után a SettingsController Invalidate()-tel üríti a cég sorát.
-public class AppSettingsService(LakaskezeloDbContext db, ICompanyContext companyContext)
+public class AppSettingsService(LakaskezeloDbContext db, ICompanyContext companyContext, IConfiguration configuration)
 {
     private static readonly ConcurrentDictionary<Guid, AppSettings> Cache = new();
 
@@ -30,6 +30,13 @@ public class AppSettingsService(LakaskezeloDbContext db, ICompanyContext company
         Cache[companyId] = settings;
         return settings;
     }
+
+    // A platform kézbesítési beállításai (e-mail küldés: Mailgun/SMTP, számla-tárhely: S3) — mindig az
+    // üzemeltető cég (Platform:EmailCompanyId, alapból az első cég) sorából, a Platform admin felületen
+    // szerkeszthetők. A cégek a saját soruk e mezőit nem használják.
+    public Guid PlatformCompanyId => configuration.GetValue("Platform:EmailCompanyId", Company.DefaultCompanyId);
+
+    public Task<AppSettings> GetPlatformAsync(CancellationToken ct = default) => GetForCompanyAsync(PlatformCompanyId, ct);
 
     public static void Invalidate(Guid companyId) => Cache.TryRemove(companyId, out _);
 }
