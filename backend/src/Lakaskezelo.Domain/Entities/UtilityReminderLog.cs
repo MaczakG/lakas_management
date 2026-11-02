@@ -2,9 +2,10 @@ namespace Lakaskezelo.Domain.Entities;
 
 // Nyilvántartja, hogy egy ingatlanhoz egy adott hónapra már kiment-e a hiányzó-rezsi emlékeztető,
 // hogy a napi ellenőrzés ne küldjön minden nap újra levelet ugyanazért a hónapért.
-public class UtilityReminderLog
+public class UtilityReminderLog : ICompanyOwned
 {
     public Guid Id { get; set; }
+    public Guid CompanyId { get; set; }
     public Guid PropertyId { get; set; }
     public Property? Property { get; set; }
     public int Year { get; set; }

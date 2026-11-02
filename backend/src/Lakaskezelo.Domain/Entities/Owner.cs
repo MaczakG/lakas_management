@@ -1,9 +1,10 @@
 namespace Lakaskezelo.Domain.Entities;
 
 // Tulajdonos
-public class Owner
+public class Owner : ICompanyOwned
 {
     public Guid Id { get; set; }
+    public Guid CompanyId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Phone { get; set; }

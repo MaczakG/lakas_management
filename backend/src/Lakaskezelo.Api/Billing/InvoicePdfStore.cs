@@ -10,8 +10,10 @@ namespace Lakaskezelo.Api.Billing;
 // számla-adatokból újragenerálja, és el is menti, hogy legközelebb már az eredeti jöjjön.
 public class InvoicePdfStore(LakaskezeloDbContext db, AppSettingsService settingsService, S3InvoiceStorage storage, ILogger<InvoicePdfStore> logger)
 {
+    // Cégenkénti előtag: a tárhelyen is elkülönülnek az előfizetők PDF-jei. (A korábban feltöltött,
+    // előtag nélküli kulcsok az Invoice.PdfStorageKey-ben vannak, azok így is megtalálhatók.)
     public static string StorageKey(Invoice invoice) =>
-        $"invoices/{invoice.PeriodYear}/{invoice.PeriodMonth:D2}/{invoice.Id}.pdf";
+        $"companies/{invoice.CompanyId}/invoices/{invoice.PeriodYear}/{invoice.PeriodMonth:D2}/{invoice.Id}.pdf";
 
     public static string FileName(Invoice invoice) =>
         SanitizeFileName($"{invoice.Number} - {invoice.Property?.Name}.pdf");

@@ -41,9 +41,12 @@ public class BillingSchedulerService(IServiceScopeFactory scopeFactory, ILogger<
         var today = DateOnly.FromDateTime(now);
         if (!BillingCalendar.IsWorkday(today)) return;
 
-        var candidates = await db.Properties
+        // Minden előfizető cég ingatlana (IgnoreQueryFilters); a számlázás előtt a kérés az ingatlan
+        // cégére áll, hogy a bérlő, rezsi, beállítások stb. annak a cégnek az adataiból jöjjenek.
+        var candidates = await db.Properties.IgnoreQueryFilters()
             .Where(p => p.IsActive && p.BillingHour == now.Hour && p.BillingMinute == now.Minute)
             .ToListAsync(ct);
+        var companyContext = scope.ServiceProvider.GetRequiredService<ICompanyContext>();
 
         // Az előző hónap is számít: ha annak kiküldési napja hétvége/ünnep miatt átcsúszott ebbe a
         // hónapba (pl. február 28. szombat → március 2.), a februári számla most megy ki.
@@ -59,6 +62,7 @@ public class BillingSchedulerService(IServiceScopeFactory scopeFactory, ILogger<
 
         foreach (var (property, period) in due)
         {
+            companyContext.Set(property.CompanyId);
             var alreadyInvoiced = await db.Invoices.AnyAsync(
                 i => i.PropertyId == property.Id && i.PeriodYear == period.Year && i.PeriodMonth == period.Month, ct);
             if (alreadyInvoiced) continue;

@@ -5,6 +5,16 @@
 
 BEGIN;
 
+-- Minden mintaadat az alapértelmezett cégé (Company.DefaultCompanyId). A CompanyId-nak nincs alapértéke
+-- (az alkalmazás tölti ki), ezért a betöltés idejére ideiglenesen adunk neki egyet.
+ALTER TABLE "Owners" ALTER COLUMN "CompanyId" SET DEFAULT 'd0000000-0000-4000-8000-000000000001';
+ALTER TABLE "Properties" ALTER COLUMN "CompanyId" SET DEFAULT 'd0000000-0000-4000-8000-000000000001';
+ALTER TABLE "PropertyOwners" ALTER COLUMN "CompanyId" SET DEFAULT 'd0000000-0000-4000-8000-000000000001';
+ALTER TABLE "Tenants" ALTER COLUMN "CompanyId" SET DEFAULT 'd0000000-0000-4000-8000-000000000001';
+ALTER TABLE "UtilityCostEntries" ALTER COLUMN "CompanyId" SET DEFAULT 'd0000000-0000-4000-8000-000000000001';
+ALTER TABLE "Invoices" ALTER COLUMN "CompanyId" SET DEFAULT 'd0000000-0000-4000-8000-000000000001';
+ALTER TABLE "InvoiceLines" ALTER COLUMN "CompanyId" SET DEFAULT 'd0000000-0000-4000-8000-000000000001';
+
 INSERT INTO "Owners" ("Id","Name","Email","Phone","TaxId","BankAccount","Address","Notes","CreatedAt") VALUES
  ('a0000000-0000-4000-8000-000000000001','Minta Anna','anna@minta.invalid','+36 30 111 2233','8412345678','11773016-00000000-00000000','1111 Budapest, Minta utca 1.',NULL,now()),
  ('a0000000-0000-4000-8000-000000000002','Példa Péter','peter@pelda.invalid','+36 20 444 5566',NULL,'10700024-00000000-00000000','2890 Tata, Példa tér 2.',NULL,now()),
@@ -57,5 +67,13 @@ FROM generate_series(date_trunc('month', now()) - interval '4 months', date_trun
 
 INSERT INTO "InvoiceLines" ("Id","InvoiceId","Label","Amount")
 SELECT gen_random_uuid(), i."Id", 'Bérleti díj', 185000 FROM "Invoices" i;
+
+ALTER TABLE "Owners" ALTER COLUMN "CompanyId" DROP DEFAULT;
+ALTER TABLE "Properties" ALTER COLUMN "CompanyId" DROP DEFAULT;
+ALTER TABLE "PropertyOwners" ALTER COLUMN "CompanyId" DROP DEFAULT;
+ALTER TABLE "Tenants" ALTER COLUMN "CompanyId" DROP DEFAULT;
+ALTER TABLE "UtilityCostEntries" ALTER COLUMN "CompanyId" DROP DEFAULT;
+ALTER TABLE "Invoices" ALTER COLUMN "CompanyId" DROP DEFAULT;
+ALTER TABLE "InvoiceLines" ALTER COLUMN "CompanyId" DROP DEFAULT;
 
 COMMIT;

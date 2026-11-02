@@ -28,6 +28,9 @@ namespace Lakaskezelo.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("EmailProvider")
                         .HasColumnType("integer");
 
@@ -99,15 +102,46 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompanyId")
+                        .IsUnique();
+
                     b.ToTable("AppSettings");
 
                     b.HasData(
                         new
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
+                            CompanyId = new Guid("d0000000-0000-4000-8000-000000000001"),
                             EmailProvider = 0,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             UtilityDeadlineDay = 5
+                        });
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Company", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Companies");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("d0000000-0000-4000-8000-000000000001"),
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Alapértelmezett cég"
                         });
                 });
 
@@ -147,6 +181,9 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<decimal>("AmountTotal")
                         .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateOnly>("DueDate")
                         .HasColumnType("date");
@@ -188,6 +225,8 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("TenantId");
 
                     b.HasIndex("PropertyId", "PeriodYear", "PeriodMonth")
@@ -205,6 +244,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("InvoiceId")
                         .HasColumnType("uuid");
 
@@ -214,6 +256,8 @@ namespace Lakaskezelo.Data.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
 
                     b.HasIndex("InvoiceId");
 
@@ -231,6 +275,9 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<string>("BankAccount")
                         .HasColumnType("text");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -253,6 +300,8 @@ namespace Lakaskezelo.Data.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
 
                     b.ToTable("Owners");
                 });
@@ -311,6 +360,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<string>("City")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -376,6 +428,8 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompanyId");
+
                     b.ToTable("Properties");
                 });
 
@@ -383,6 +437,9 @@ namespace Lakaskezelo.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("OwnerId")
@@ -396,6 +453,8 @@ namespace Lakaskezelo.Data.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
 
                     b.HasIndex("OwnerId");
 
@@ -413,6 +472,9 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<string>("Address")
                         .HasColumnType("text");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -447,6 +509,8 @@ namespace Lakaskezelo.Data.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
 
                     b.HasIndex("PropertyId");
 
@@ -492,6 +556,9 @@ namespace Lakaskezelo.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -525,6 +592,8 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("Email")
                         .IsUnique();
 
@@ -539,6 +608,9 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -562,6 +634,8 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("PropertyId", "Year", "Month");
 
                     b.ToTable("UtilityCostEntries");
@@ -571,6 +645,9 @@ namespace Lakaskezelo.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Month")
@@ -587,14 +664,31 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("PropertyId", "Year", "Month")
                         .IsUnique();
 
                     b.ToTable("UtilityReminderLogs");
                 });
 
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.AppSettings", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Invoice", b =>
                 {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Lakaskezelo.Domain.Entities.Property", "Property")
                         .WithMany("Invoices")
                         .HasForeignKey("PropertyId")
@@ -613,6 +707,12 @@ namespace Lakaskezelo.Data.Migrations
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.InvoiceLine", b =>
                 {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Lakaskezelo.Domain.Entities.Invoice", "Invoice")
                         .WithMany("Lines")
                         .HasForeignKey("InvoiceId")
@@ -620,6 +720,15 @@ namespace Lakaskezelo.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Invoice");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Owner", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.PasswordResetToken", b =>
@@ -633,8 +742,23 @@ namespace Lakaskezelo.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Property", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.PropertyOwner", b =>
                 {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Lakaskezelo.Domain.Entities.Owner", "Owner")
                         .WithMany("PropertyOwners")
                         .HasForeignKey("OwnerId")
@@ -654,6 +778,12 @@ namespace Lakaskezelo.Data.Migrations
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Tenant", b =>
                 {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Lakaskezelo.Domain.Entities.Property", "Property")
                         .WithMany("Tenants")
                         .HasForeignKey("PropertyId")
@@ -673,8 +803,23 @@ namespace Lakaskezelo.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.User", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.UtilityCostEntry", b =>
                 {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Lakaskezelo.Domain.Entities.Property", "Property")
                         .WithMany("UtilityCostEntries")
                         .HasForeignKey("PropertyId")
@@ -686,6 +831,12 @@ namespace Lakaskezelo.Data.Migrations
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.UtilityReminderLog", b =>
                 {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Lakaskezelo.Domain.Entities.Property", "Property")
                         .WithMany()
                         .HasForeignKey("PropertyId")

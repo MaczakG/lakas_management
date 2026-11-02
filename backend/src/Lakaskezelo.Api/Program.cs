@@ -66,6 +66,9 @@ var connectionString = builder.Configuration.GetConnectionString("LakaskezeloDb"
 connectionString = ConnectionStringHelper.NormalizeToNpgsqlFormat(connectionString);
 
 builder.Services.AddHttpContextAccessor();
+// Több-cégesség: kérésenként egy cég-kontextus, amire a DbContext globális szűrője szűr (ld.
+// LakaskezeloDbContext). A JwtBearer OnTokenValidated tölti ki a bejelentkezett felhasználó cégével.
+builder.Services.AddScoped<ICompanyContext, CompanyContext>();
 builder.Services.AddDbContext<LakaskezeloDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddHealthChecks()
@@ -127,13 +130,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     return;
                 }
 
+                // IgnoreQueryFilters: itt még nincs cég-kontextus — épp ebből a sorból tudjuk meg a felhasználó cégét.
                 var db = context.HttpContext.RequestServices.GetRequiredService<LakaskezeloDbContext>();
-                var valid = await db.Users.AsNoTracking()
-                    .AnyAsync(u => u.Id == userId && u.IsActive && u.SecurityStamp == stamp, context.HttpContext.RequestAborted);
-                if (!valid)
+                var companyId = await db.Users.IgnoreQueryFilters().AsNoTracking()
+                    .Where(u => u.Id == userId && u.IsActive && u.SecurityStamp == stamp)
+                    .Select(u => (Guid?)u.CompanyId)
+                    .FirstOrDefaultAsync(context.HttpContext.RequestAborted);
+                if (companyId is null)
                 {
                     context.Fail("Token has been revoked.");
+                    return;
                 }
+                context.HttpContext.RequestServices.GetRequiredService<ICompanyContext>().Set(companyId);
             },
         };
     });
@@ -191,12 +199,14 @@ using (var scope = app.Services.CreateScope())
     var seedEmail = app.Configuration["InitialUser:Email"];
     var seedPassword = app.Configuration["InitialUser:Password"];
 
-    if (!string.IsNullOrWhiteSpace(seedEmail) && !string.IsNullOrWhiteSpace(seedPassword) && !await db.Users.AnyAsync())
+    if (!string.IsNullOrWhiteSpace(seedEmail) && !string.IsNullOrWhiteSpace(seedPassword) && !await db.Users.IgnoreQueryFilters().AnyAsync())
     {
+        // Az első felhasználó az alapértelmezett céghez kerül (a cég a CompanyTenancy migrációval jön létre).
         var hasher = scope.ServiceProvider.GetRequiredService<PasswordHasher<User>>();
         var user = new User
         {
             Id = Guid.NewGuid(),
+            CompanyId = Company.DefaultCompanyId,
             Email = seedEmail.Trim().ToLowerInvariant(),
             FullName = "Adminisztrátor",
             IsActive = true,

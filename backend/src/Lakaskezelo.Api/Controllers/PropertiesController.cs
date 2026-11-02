@@ -57,6 +57,7 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
     {
         if (ValidateShares(request.Owners) is { } shareError) return BadRequest(new { message = shareError });
         if (ValidateSheet(request.Sheet) is { } sheetError) return BadRequest(new { message = sheetError });
+        if (!await OwnersExistAsync(request.Owners, ct)) return BadRequest(new { message = "A megadott tulajdonos nem található." });
 
         var property = new Property { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow };
         Apply(property, request);
@@ -71,6 +72,7 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
     {
         if (ValidateShares(request.Owners) is { } shareError) return BadRequest(new { message = shareError });
         if (ValidateSheet(request.Sheet) is { } sheetError) return BadRequest(new { message = sheetError });
+        if (!await OwnersExistAsync(request.Owners, ct)) return BadRequest(new { message = "A megadott tulajdonos nem található." });
 
         var property = await db.Properties.Include(p => p.PropertyOwners).FirstOrDefaultAsync(p => p.Id == id, ct);
         if (property is null) return NotFound();
@@ -237,6 +239,13 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
         {
             db.PropertyOwners.Add(new PropertyOwner { Id = Guid.NewGuid(), PropertyId = property.Id, OwnerId = ownerId, Share = share });
         }
+    }
+
+    // Csak a saját cég tulajdonosai választhatók (a szűrő miatt a másik cégé "nem létezik").
+    private async Task<bool> OwnersExistAsync(List<PropertyOwnerInput> owners, CancellationToken ct)
+    {
+        var ids = owners.Select(o => o.OwnerId).Distinct().ToList();
+        return ids.Count == 0 || await db.Owners.CountAsync(o => ids.Contains(o.Id), ct) == ids.Count;
     }
 
     private static string? NormalizeShare(string? share) =>

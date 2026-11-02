@@ -21,6 +21,7 @@ public class AuthController(
     JwtTokenService tokenService,
     IEmailSender emailSender,
     IConfiguration configuration,
+    ICompanyContext companyContext,
     ILogger<AuthController> logger) : ControllerBase
 {
     // A bejelentkezési végpontok IP-címenkénti korlátja (ld. Program.cs AddRateLimiter).
@@ -57,7 +58,10 @@ public class AuthController(
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        var user = await db.Users.SingleOrDefaultAsync(u => u.Email == normalizedEmail, ct);
+        // Bejelentkezés előtt még nincs cég-kontextus: a felhasználót minden cégben keressük, utána a
+        // kérés az ő cégére áll (a mentés és az e-mail-beállítások ehhez kellenek).
+        var user = await db.Users.IgnoreQueryFilters().SingleOrDefaultAsync(u => u.Email == normalizedEmail, ct);
+        if (user is not null) companyContext.Set(user.CompanyId);
 
         if (user is null || !user.IsActive)
         {
@@ -129,8 +133,9 @@ public class AuthController(
     [HttpPost("verify-2fa")]
     public async Task<ActionResult<AuthResponse>> VerifyTwoFactor(VerifyTwoFactorRequest request, CancellationToken ct)
     {
-        var challenge = await db.TwoFactorChallenges.Include(t => t.User)
+        var challenge = await db.TwoFactorChallenges.IgnoreQueryFilters().Include(t => t.User)
             .SingleOrDefaultAsync(t => t.Id == request.ChallengeId, ct);
+        if (challenge?.User is { } challengeUser) companyContext.Set(challengeUser.CompanyId);
 
         if (challenge is null || challenge.UsedAt is not null || challenge.ExpiresAt < DateTime.UtcNow
             || challenge.AttemptCount >= MaxTwoFactorAttempts || challenge.User is not { IsActive: true })
@@ -163,7 +168,10 @@ public class AuthController(
     {
         const string genericMessage = "Ha létezik ehhez a címhez fiók, elküldtük a visszaállító linket.";
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        var user = await db.Users.SingleOrDefaultAsync(u => u.Email == normalizedEmail, ct);
+        // Bejelentkezés előtt még nincs cég-kontextus: a felhasználót minden cégben keressük, utána a
+        // kérés az ő cégére áll (a mentés és az e-mail-beállítások ehhez kellenek).
+        var user = await db.Users.IgnoreQueryFilters().SingleOrDefaultAsync(u => u.Email == normalizedEmail, ct);
+        if (user is not null) companyContext.Set(user.CompanyId);
 
         // Ismeretlen e-mail esetén is sikeres választ adunk — ne áruljuk el, mely címekhez tartozik fiók.
         if (user is null || !user.IsActive)
@@ -217,8 +225,9 @@ public class AuthController(
     public async Task<IActionResult> ResetPassword(ResetPasswordRequest request, CancellationToken ct)
     {
         var tokenHash = HashToken(request.Token);
-        var resetToken = await db.PasswordResetTokens.Include(t => t.User)
+        var resetToken = await db.PasswordResetTokens.IgnoreQueryFilters().Include(t => t.User)
             .SingleOrDefaultAsync(t => t.Token == tokenHash, ct);
+        if (resetToken?.User is { } resetUser) companyContext.Set(resetUser.CompanyId);
 
         if (resetToken is null || resetToken.UsedAt is not null || resetToken.ExpiresAt < DateTime.UtcNow || resetToken.User is not { IsActive: true })
         {
