@@ -73,5 +73,10 @@ paranccsal érdemes ellenőrizni.
   változóval nyílik meg (a teszten nyitva, élesben zárva). A rendszerlevelek (belépési kód, meghívó,
   regisztráció megerősítése) a `Platform__EmailCompanyId` cég (alapból az első, üzemeltetői cég)
   Beállításokban megadott e-mail fiókjáról mennek, `App__ProductName` (alapból „Lakáskezelő”) feladónévvel.
+- **Előfizetés (SaaS-díj):** a Platform oldalon (csak az üzemeltető cég adminisztrátorainak) kapcsolható be,
+  ott adhatók meg az árak, az ÁFA, a Barion POSKey / kedvezményezett és a Billingo API-kulcs / számlatömb (a
+  kulcsokat az API nem adja vissza). A Barion a fizetés végén a `/api/public/barion/callback` címet hívja.
+  A teszten Barion **sandbox** kulcs használandó; a Billingo-számla mindig valódi bizonylat, ezért a teszten
+  csak külön teszt-Billingo-fiókkal (vagy kulcs nélkül — ilyenkor a számla „Készül…” marad).
 - **Titkok:** az SMTP-jelszót és a Mailgun API-kulcsot a Beállítások API nem adja vissza a
   böngészőnek (csak felülírni lehet őket).

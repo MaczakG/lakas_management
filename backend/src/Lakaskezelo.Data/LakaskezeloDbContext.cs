@@ -26,6 +26,9 @@ public class LakaskezeloDbContext(DbContextOptions<LakaskezeloDbContext> options
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<AppSettings> AppSettings => Set<AppSettings>();
     public DbSet<ExchangeRate> ExchangeRates => Set<ExchangeRate>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
+    public DbSet<PlatformSettings> PlatformSettings => Set<PlatformSettings>();
 
     // A szűrők ezt olvassák lekérdezésenként (nem a modell építésekor), így minden DbContext-példány a
     // saját kérése cégére szűr.

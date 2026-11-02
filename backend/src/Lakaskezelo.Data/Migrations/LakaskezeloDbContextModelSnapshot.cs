@@ -342,6 +342,79 @@ namespace Lakaskezelo.Data.Migrations
                     b.ToTable("PasswordResetTokens");
                 });
 
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.PlatformSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BarionEnvironment")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("BarionPayeeEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("BarionPosKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("BillingEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("BillingoApiKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("BillingoBlockId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("GraceDays")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("MonthlyNetPricePerProperty")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<int>("TrialDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VatExemption")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal>("VatPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<decimal>("YearlyDiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlatformSettings");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("22222222-2222-4222-8222-222222222222"),
+                            BarionEnvironment = "Test",
+                            BillingEnabled = false,
+                            GraceDays = 7,
+                            MonthlyNetPricePerProperty = 990m,
+                            TrialDays = 14,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            VatPercent = 27m,
+                            YearlyDiscountPercent = 15m
+                        });
+                });
+
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Property", b =>
                 {
                     b.Property<Guid>("Id")
@@ -465,6 +538,186 @@ namespace Lakaskezelo.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("PropertyOwners");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Subscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BarionRecurrenceId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("BarionTraceId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("BillingCity")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("BillingEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("BillingName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("BillingPostCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("BillingStreet")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("BillingTaxNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("BillingoPartnerId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("CancelAtPeriodEnd")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("CardRegisteredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("GraceEndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Interval")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("PaidUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("TrialEndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("TrialReminderSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId")
+                        .IsUnique();
+
+                    b.ToTable("Subscriptions");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.SubscriptionPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BarionPaymentId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("BillingoAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("BillingoDocumentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BillingoError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("BillingoPublicUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<decimal>("GrossAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<int>("Interval")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTime>("PeriodEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("PeriodStart")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PropertyCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RecurrenceId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("UnitNetPrice")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal>("VatAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("VatExemption")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal?>("VatPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BarionPaymentId")
+                        .IsUnique();
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("SubscriptionPayments");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Tenant", b =>
@@ -783,6 +1036,24 @@ namespace Lakaskezelo.Data.Migrations
                     b.Navigation("Owner");
 
                     b.Navigation("Property");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Subscription", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.SubscriptionPayment", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Tenant", b =>

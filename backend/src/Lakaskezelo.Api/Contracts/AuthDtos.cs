@@ -6,7 +6,7 @@ public record LoginRequest(string Email, string Password);
 public record LoginChallengeResponse(Guid ChallengeId);
 public record VerifyTwoFactorRequest(Guid ChallengeId, string Code);
 public record AuthResponse(string AccessToken, DateTime ExpiresAt, UserDto User, string CompanyName);
-public record MeResponse(UserDto User, string CompanyName);
+public record MeResponse(UserDto User, string CompanyName, bool IsPlatformOperator);
 // Pending: meghívott, aki még nem fogadta el a meghívót (vagy meg nem erősített regisztráció).
 public record UserDto(Guid Id, string Email, string FullName, bool IsActive, DateTime CreatedAt, UserRole Role, bool Pending);
 public record ForgotPasswordRequest(string Email);

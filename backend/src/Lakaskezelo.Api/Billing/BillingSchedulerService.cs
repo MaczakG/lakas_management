@@ -60,9 +60,17 @@ public class BillingSchedulerService(IServiceScopeFactory scopeFactory, ILogger<
 
         var generator = scope.ServiceProvider.GetRequiredService<InvoiceGenerationService>();
 
+        var access = scope.ServiceProvider.GetRequiredService<Subscriptions.SubscriptionAccess>();
+
         foreach (var (property, period) in due)
         {
             companyContext.Set(property.CompanyId);
+            // Nem fizető (zárolt) cégnek nem küldünk ki bérlői számlát.
+            if (await access.IsLockedAsync(property.CompanyId, ct))
+            {
+                logger.LogInformation("Skipping invoice for property {PropertyId}: company subscription is locked", property.Id);
+                continue;
+            }
             var alreadyInvoiced = await db.Invoices.AnyAsync(
                 i => i.PropertyId == property.Id && i.PeriodYear == period.Year && i.PeriodMonth == period.Month, ct);
             if (alreadyInvoiced) continue;
