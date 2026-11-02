@@ -6,9 +6,28 @@
 <title>Lakáskezelő — Számla csomagok</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="detail.css">
 <style>
   .year-field{max-width:160px;}
   .failed-note{font-size:12px;color:var(--coral);}
+  /* Lenyíló hónap-sorok: a kattintott sor alatt egy külön sorban jelennek meg a csomag számlái. */
+  .bundle-row{cursor:pointer;}
+  .bundle-row .chev{display:inline-flex;width:16px;height:16px;margin-right:8px;vertical-align:-3px;color:var(--muted);transition:transform .2s ease;}
+  .bundle-row .chev svg{width:16px;height:16px;}
+  .bundle-row.open .chev{transform:rotate(90deg);color:var(--accent);}
+  .bundle-row.open, .bundle-row.open:hover{background:var(--accent-bg);}
+  .bundle-row.open td{border-bottom-color:transparent;}
+  tbody tr.bundle-detail:hover{background:none;}
+  tbody tr.bundle-detail > td{padding:0 !important;border-bottom:none;}
+  tbody tr.bundle-detail.open > td{border-bottom:1px solid var(--line);}
+  tbody tr.bundle-detail:last-child.open > td{border-bottom:none;}
+  .bundle-slide{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease;}
+  .bundle-detail.open .bundle-slide{grid-template-rows:1fr;}
+  .bundle-slide-inner{overflow:hidden;min-height:0;}
+  .bundle-content{margin:4px 20px 18px 44px;border:1px solid var(--line);border-radius:var(--radius-md, 10px);background:var(--surface);overflow-x:auto;}
+  .bundle-content .panel-empty{padding:16px;}
+  @media (prefers-reduced-motion: reduce){ .bundle-slide, .bundle-row .chev{transition:none;} }
+  @media (max-width: 760px){ .bundle-content{margin:4px 12px 14px;} }
 </style>
 </head>
 <body>
@@ -16,6 +35,7 @@
 <div class="app">
   <script src="app.js"></script>
   <script src="nav.js"></script>
+  <script src="record-detail.js"></script>
 
   <main class="main">
     <div class="page-header">
@@ -64,18 +84,56 @@ async function loadBundles() {
   tbody.innerHTML = months.map((m) => {
     const label = `${m.year}. ${MONTH_NAMES[m.month - 1]}`;
     const fileName = `szamlak-${m.year}-${String(m.month).padStart(2, '0')}.zip`;
+    const key = `${m.year}-${m.month}`;
+    // A számla nélküli (csak sikertelen) hónap nem nyitható le — nincs mit mutatni a csomagban.
+    const expandable = m.invoiceCount > 0;
     return `
-      <tr>
-        <td class="cell-main">${label}</td>
+      <tr${expandable ? ` class="bundle-row" data-key="${key}" data-year="${m.year}" data-month="${m.month}" tabindex="0" aria-expanded="false"` : ''}>
+        <td class="cell-main">${expandable ? `<span class="chev">${DETAIL_ICON('chevron-right')}</span>` : ''}${label}</td>
         <td>${m.invoiceCount} db${m.failedCount > 0 ? `<div class="failed-note">+ ${m.failedCount} sikertelen</div>` : ''}</td>
         <td>${formatCurrency(m.totalAmount)}</td>
         <td class="row-actions">${m.invoiceCount > 0
-          ? `<button class="btn btn-primary btn-sm" type="button" onclick="exportBundle(this, ${m.year}, ${m.month}, '${fileName}')">Exportálás (ZIP)</button>`
+          ? `<button class="btn btn-primary btn-sm" type="button" onclick="event.stopPropagation(); exportBundle(this, ${m.year}, ${m.month}, '${fileName}')">Exportálás (ZIP)</button>`
           : ''}</td>
-      </tr>
+      </tr>${expandable ? `
+      <tr class="bundle-detail" data-key="${key}"><td colspan="4"><div class="bundle-slide"><div class="bundle-slide-inner">
+        <div class="bundle-content"><div class="panel-empty">Betöltés...</div></div>
+      </div></div></td></tr>` : ''}
     `;
   }).join('');
 }
+
+// Hónaponként egyszer töltjük be a csomag számláit; újranyitáskor a már letöltött lista látszik.
+const loadedMonths = new Set();
+async function toggleBundle(row) {
+  const detail = row.nextElementSibling;
+  const open = !row.classList.contains('open');
+  row.classList.toggle('open', open);
+  detail.classList.toggle('open', open);
+  row.setAttribute('aria-expanded', String(open));
+  if (!open || loadedMonths.has(row.dataset.key)) return;
+  loadedMonths.add(row.dataset.key);
+  const box = detail.querySelector('.bundle-content');
+  try {
+    const res = await apiFetch(`/api/invoice-bundles/${row.dataset.year}/${row.dataset.month}`);
+    const invoices = await readJson(res);
+    if (!res.ok) throw new Error(errorMessage(res, invoices, 'Nem sikerült betölteni a számlákat.'));
+    box.innerHTML = renderInvoiceTable(invoices, 'Ebben a csomagban nincs számla.', { showPeriod: false });
+  } catch (e) {
+    loadedMonths.delete(row.dataset.key);
+    box.innerHTML = `<div class="panel-empty">${escapeHtml(e.message || 'Nem sikerült betölteni a számlákat.')}</div>`;
+  }
+}
+
+const bundlesBody = document.getElementById('bundles-tbody');
+bundlesBody.addEventListener('click', (e) => {
+  const row = e.target.closest('tr.bundle-row');
+  if (row && !e.target.closest('button, a')) toggleBundle(row);
+});
+bundlesBody.addEventListener('keydown', (e) => {
+  const row = e.target.closest('tr.bundle-row');
+  if (row && e.target === row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleBundle(row); }
+});
 
 // A csomag összeállítása több másodperc is lehet (régi számláknál a PDF újragenerálódik), ezért
 // a gomb addig le van tiltva.
@@ -91,7 +149,7 @@ window.exportBundle = async (button, year, month, fileName) => {
   }
 };
 
-yearInput.addEventListener('input', loadBundles);
+yearInput.addEventListener('input', () => { loadedMonths.clear(); loadBundles(); });
 loadBundles();
 </script>
 </body>
