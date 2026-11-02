@@ -4,6 +4,10 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.02.7** — A Platform admin teljesen különálló: saját fiókok (nem a cégek felhasználói), saját belépés
+  (platform-login.html: jelszó + e-mailes kód, zárolás, jelszó-beállító link, min. 12 karakteres jelszó), saját
+  munkamenet. A platform-token csak a platform-végpontokat éri el, a cégek fiókjai a platformot nem; az
+  alkalmazásból eltűnt a „Platform admin” gomb. Az első fiók a `PLATFORM_ADMIN_EMAIL` címmel jön létre.
 - **2026.11.02.6** — Bérlő- és tulajdonos-adatlap az ingatlan-adatlap mintájára (helyben szerkeszthető
   panelek, összegzés; bérlőnél az ingatlan és a számlái, tulajdonosnál az ingatlanai hányaddal és a számlák),
   a listákból és az ingatlan-adatlapról elérhetően.

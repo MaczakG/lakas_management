@@ -96,6 +96,9 @@ services:
       Email__OnlyToUsers: "true"
       # Önregisztráció (új cég) — a teszten nyitva; élesben csak a SaaS indulásakor kapcsoljuk be.
       Registration__Enabled: "true"
+      # Az első Platform admin fiók e-mail címe (a .env-ből; az első jelszót a platform-login.html-en, e-mailben
+      # kapott linkkel állítja be). Csak akkor jön létre, ha még nincs platform admin.
+      PlatformAdmin__Email: ${PLATFORM_ADMIN_EMAIL:-}
     depends_on:
       postgres-staging:
         condition: service_healthy

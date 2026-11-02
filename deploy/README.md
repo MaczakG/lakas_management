@@ -78,6 +78,9 @@ paranccsal érdemes ellenőrizni.
   kulcsokat az API nem adja vissza). A Barion a fizetés végén a `/api/public/barion/callback` címet hívja.
   A teszten Barion **sandbox** kulcs használandó; a Billingo-számla mindig valódi bizonylat, ezért a teszten
   csak külön teszt-Billingo-fiókkal (vagy kulcs nélkül — ilyenkor a számla „Készül…” marad).
+- **Platform admin:** külön fiókok és külön belépés: `<domain>/platform-login.html`. Az első fiók a `.env`
+  `PLATFORM_ADMIN_EMAIL` címével jön létre (jelszó nélkül); a „Jelszó beállítása” linkkel kap e-mailt az első
+  jelszóhoz. A platform-token csak a `/api/platform` végpontokat éri el.
 - **Titkok:** az SMTP-jelszót és a Mailgun API-kulcsot a Beállítások API nem adja vissza a
   böngészőnek (csak felülírni lehet őket).
 

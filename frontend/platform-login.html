@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Platform admin — Belépés</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-box{width:100%;max-width:400px;}
+  .login-box h1{font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-0.01em;margin-bottom:24px;text-align:center;}
+  .login-box .brand-mark{background:var(--ink);}
+  .link-muted{color:var(--accent-deep);font-weight:600;font-size:13px;}
+  .link-muted:hover{text-decoration:underline;}
+  .form-row-between{display:flex;justify-content:flex-end;margin:2px 0 22px;}
+  .code-input{letter-spacing:8px;font-size:22px;text-align:center;font-weight:700;}
+  .code-links{display:flex;justify-content:space-between;margin-top:14px;}
+</style>
+</head>
+<body>
+<div class="login-box">
+  <div class="login-brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#server"/></svg></span><span class="brand-name">Platform admin</span></div>
+  <h1>Belépés</h1>
+  <div class="form-error" id="err"></div>
+  <div class="form-success" id="ok"></div>
+
+  <form id="login-form">
+    <div class="field"><label for="email">E-mail cím</label><input type="email" id="email" autocomplete="username" required></div>
+    <div class="field"><label for="pass">Jelszó</label><input type="password" id="pass" autocomplete="current-password" required></div>
+    <div class="form-row-between"><a class="link-muted" href="#" id="forgot-link">Jelszó beállítása / elfelejtett jelszó</a></div>
+    <button class="btn btn-primary btn-block" type="submit" id="login-btn">Belépés</button>
+  </form>
+
+  <form id="code-form" hidden>
+    <span class="hint" style="display:block;margin-bottom:18px;">Elküldtük a 6 jegyű belépési kódot az e-mail címedre.</span>
+    <div class="field"><label for="code">Belépési kód</label><input type="text" id="code" class="code-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required></div>
+    <button class="btn btn-primary btn-block" type="submit" id="code-btn">Megerősítés</button>
+    <div class="code-links"><a class="link-muted" href="#" id="back-link">Vissza</a><a class="link-muted" href="#" id="resend-link">Új kód kérése</a></div>
+  </form>
+
+  <form id="forgot-form" hidden>
+    <span class="hint" style="display:block;margin-bottom:18px;">Add meg a Platform admin fiókod e-mail címét: küldünk egy linket, amellyel jelszót állíthatsz be (az első belépéshez is ez kell).</span>
+    <div class="field"><label for="forgot-email">E-mail cím</label><input type="email" id="forgot-email" required></div>
+    <button class="btn btn-primary btn-block" type="submit" id="forgot-btn">Link küldése</button>
+    <div class="code-links"><a class="link-muted" href="#" id="forgot-back">Vissza a belépéshez</a></div>
+  </form>
+</div>
+
+<script src="app.js"></script>
+<script src="platform-session.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let challengeId = null;
+function msg(id, text) { $(id).textContent = text; $(id).classList.toggle('show', !!text); }
+function step(name) {
+  ['login-form', 'code-form', 'forgot-form'].forEach((f) => { $(f).hidden = f !== name; });
+  msg('err', '');
+}
+async function post(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return { res, data: await readJson(res) };
+}
+if (getAuth()) location.href = 'platform.html';
+const prefill = new URLSearchParams(location.search).get('email');
+if (prefill) $('email').value = prefill;
+
+$('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msg('err', ''); msg('ok', '');
+  $('login-btn').disabled = true;
+  try {
+    const { res, data } = await post('/api/auth/platform/login', { email: $('email').value.trim(), password: $('pass').value });
+    if (!res.ok) { msg('err', errorMessage(res, data, 'Nem sikerült belépni.')); return; }
+    challengeId = data.challengeId;
+    $('code').value = '';
+    step('code-form');
+    $('code').focus();
+  } catch { msg('err', 'Nem sikerült elérni a szervert.'); } finally { $('login-btn').disabled = false; }
+});
+
+$('code-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msg('err', '');
+  $('code-btn').disabled = true;
+  try {
+    const { res, data } = await post('/api/auth/platform/verify-2fa', { challengeId, code: $('code').value.trim() });
+    if (!res.ok) { msg('err', errorMessage(res, data, 'Hibás kód.')); return; }
+    storeAuth(data);
+    location.href = 'platform.html';
+  } catch { msg('err', 'Nem sikerült elérni a szervert.'); } finally { $('code-btn').disabled = false; }
+});
+
+$('forgot-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('forgot-btn').disabled = true;
+  try {
+    const { res, data } = await post('/api/auth/platform/forgot-password', { email: $('forgot-email').value.trim() });
+    if (!res.ok) { msg('err', errorMessage(res, data, 'Nem sikerült elküldeni.')); return; }
+    step('login-form');
+    msg('ok', data.message);
+  } catch { msg('err', 'Nem sikerült elérni a szervert.'); } finally { $('forgot-btn').disabled = false; }
+});
+
+$('forgot-link').addEventListener('click', (e) => { e.preventDefault(); $('forgot-email').value = $('email').value; step('forgot-form'); });
+$('forgot-back').addEventListener('click', (e) => { e.preventDefault(); step('login-form'); });
+$('back-link').addEventListener('click', (e) => { e.preventDefault(); step('login-form'); });
+$('resend-link').addEventListener('click', (e) => { e.preventDefault(); step('login-form'); $('login-form').requestSubmit(); });
+</script>
+</body>
+</html>
