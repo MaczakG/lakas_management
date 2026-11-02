@@ -110,6 +110,23 @@ function errorMessage(res, data, fallback) {
   return fallback;
 }
 
+// Teszt-környezetben (a szerver /api/version-je "staging"-et mond) minden oldal tetején egy jól látható
+// sáv jelzi, hogy ez nem az éles rendszer — a böngészőfül címe is "[TESZT]"-tel kezdődik.
+fetch(`${API_BASE}/api/version`).then((r) => r.json()).then((v) => {
+  if (!v.environment || v.environment === 'production') return;
+  const show = () => {
+    if (document.getElementById('env-ribbon')) return;
+    const ribbon = document.createElement('div');
+    ribbon.id = 'env-ribbon';
+    ribbon.className = 'env-ribbon';
+    ribbon.textContent = `TESZT KÖRNYEZET · v${v.version} · kitalált adatok, e-mail csak a felhasználóknak megy`;
+    document.body.prepend(ribbon);
+    document.documentElement.classList.add('has-env-ribbon');
+    if (!document.title.startsWith('[TESZT]')) document.title = `[TESZT] ${document.title}`;
+  };
+  if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
+}).catch(() => {});
+
 // Az oldalfejléc élő számlálója (Yardly-minta): [{ n: 8, label: 'aktív', tone: 'ok' }, ...]
 // → "● 8 aktív  ● 2 hiányzó rezsi". A 0 értékű, tone-nal jelölt (figyelmeztető) tételek kimaradnak.
 function setPageState(parts) {

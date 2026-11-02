@@ -246,7 +246,10 @@ app.MapHealthChecks("/health");
 // Nem védett — a sidebar lábjegyzete (frontend/nav.js) bejelentkezés előtt is lekérheti, és
 // támogatáshoz/hibakereséshez hasznos anélkül is tudni, melyik verzió fut és mikor indult.
 var appStartedAt = DateTime.UtcNow;
-app.MapGet("/api/version", () => Results.Ok(new { version = Lakaskezelo.Api.AppVersion.Current, startedAt = appStartedAt }));
+// environment: "production" az élesen, "staging" a teszt-környezetben (App:EnvironmentName) — a
+// felület ebből tudja, hogy ki kell-e tennie a "TESZT" jelzést.
+var environmentName = app.Configuration["App:EnvironmentName"] ?? "production";
+app.MapGet("/api/version", () => Results.Ok(new { version = Lakaskezelo.Api.AppVersion.Current, startedAt = appStartedAt, environment = environmentName }));
 
 app.MapControllers();
 

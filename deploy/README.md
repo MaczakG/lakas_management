@@ -13,6 +13,34 @@
 - **Mentés:** napi EBS-pillanatkép 7 napig + heti 4 hétig (DLM szabály, a kötet `Backup=lakaskezelo`
   címkéje alapján); élesítés előtt kézi adatbázis-dump a `/home/ubuntu` mappába.
 
+## Ágak, verziók, kiadások
+
+| Ág | Környezet | Cím |
+|---|---|---|
+| `staging` | teszt — kitalált adatok, e-mail csak a felhasználóknak megy | https://lakaskezelo.alts.hu:8443 |
+| `main` | éles | https://lakaskezelo.alts.hu |
+
+- **Munkamenet:** a fejlesztés munkaágon (`claude/...`) történik → PR a `staging`-be → kirakás a tesztre →
+  kipróbálás. Élesre csak a tulajdonos jóváhagyásával kerül: PR `staging` → `main`, majd élesítés.
+- **Verziószám (`AppVersion.Current`):** dátum alapú, `ÉÉÉÉ.HH.NN` (ha egy napon több kiadás van:
+  `ÉÉÉÉ.HH.NN.2`). Minden érdemi változásnál nő; a felület oldalsávjában és a `/api/version`-en látszik, a
+  tesztet borostyán „TESZT KÖRNYEZET” sáv jelzi.
+- **Kiadás:** minden éles kiadás után `vÉÉÉÉ.HH.NN` git-címke a `main`-en, és a `docs/valtozasnaplo.md`-ben a
+  „Csak a teszten” rész átkerül a kiadás alá.
+
+## Teszt-környezet (staging)
+
+- Ugyanazon a szerveren fut, külön konténerekben (`postgres-staging`, `api-staging`, memóriakorláttal), a
+  közös nginx 8443-as portján. A kód a `/home/ubuntu/lakaskezelo/staging/{backend,frontend}` mappában.
+- **Kirakás:** a `staging` ág adott commitjának `backend/` és `frontend/` mappája a `staging/` alá, majd
+  `docker compose up -d --build api-staging` és `docker compose restart nginx`. A `deploy/` fájlok
+  (compose, nginx) a szerveren közösek az éles rendszerrel: a `staging`-ről csak akkor kerülnek ki, ha a
+  változás az éles szolgáltatásokat nem módosítja (pl. a teszt saját blokkjai); egyébként élesítéskor, a
+  `main`-ről. Kiírás előtt `nginx -t` és `docker compose config` ellenőrzés.
+- **Adatok:** a `deploy/staging-seed.sql` kitalált mintaadatai. A felhasználók (jelszó-hash) és az e-mail
+  beállítások az élesről másolódnak, hogy a belépés és a belépési kód ugyanúgy működjön; a Rezsi-emlékeztető
+  címzettje és az S3-tárhely nem. Valós ügyfél- vagy bérlői adat nem kerülhet a tesztre.
+
 ## Élesítés (csak a `main` ágról)
 
 1. **Mentés:** `pg_dumpall` a `/home/ubuntu/db-backup-<időbélyeg>.sql` fájlba, és
