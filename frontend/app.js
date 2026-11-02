@@ -110,6 +110,17 @@ function errorMessage(res, data, fallback) {
   return fallback;
 }
 
+// Az oldalfejléc élő számlálója (Yardly-minta): [{ n: 8, label: 'aktív', tone: 'ok' }, ...]
+// → "● 8 aktív  ● 2 hiányzó rezsi". A 0 értékű, tone-nal jelölt (figyelmeztető) tételek kimaradnak.
+function setPageState(parts) {
+  const el = document.getElementById('page-state');
+  if (!el) return;
+  el.innerHTML = parts
+    .filter((p) => !(p.tone && p.tone !== 'ok' && !p.n))
+    .map((p) => `<span class="s ${p.tone || ''}"><b>${Number(p.n) || 0}</b> ${escapeHtml(p.label)}</span>`)
+    .join('');
+}
+
 // HTML-escape szöveghez ÉS attribútumértékhez is (az idézőjeleket is kódolja) — minden oldal ezt
 // használja, ha API-ból jövő szöveget tesz innerHTML-be vagy egy attribútumba.
 function escapeHtml(s) {

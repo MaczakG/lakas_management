@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lakáskezelő — Bérlők</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,10 +16,11 @@
   <main class="main">
     <div class="page-header">
       <div>
+        <div class="page-eyebrow">Partnerek</div>
         <h1>Bérlők</h1>
-        <p>Az ingatlanokhoz rendelt bérlők nyilvántartása.</p>
+        <div class="page-state" id="page-state"></div>
       </div>
-      <button class="btn btn-primary" id="add-btn">+ Új bérlő</button>
+      <button class="btn btn-primary" id="add-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#plus"/></svg>Új bérlő</button>
     </div>
 
     <div class="toolbar">
@@ -100,6 +99,12 @@ async function loadData() {
   const [tenantsRes, propertiesRes] = await Promise.all([apiFetch('/api/tenants'), apiFetch('/api/properties')]);
   tenants = await tenantsRes.json();
   properties = await propertiesRes.json();
+  const current = tenants.filter((t) => !t.moveOutDate);
+  setPageState([
+    { n: current.length, label: 'jelenlegi bérlő', tone: 'ok' },
+    { n: tenants.length - current.length, label: 'kiköltözött' },
+    { n: current.filter((t) => !t.propertyId).length, label: 'ingatlan nélkül', tone: 'warn' },
+  ]);
 
   const select = document.getElementById('f-property');
   select.innerHTML = '<option value="">— nincs hozzárendelve —</option>' +
