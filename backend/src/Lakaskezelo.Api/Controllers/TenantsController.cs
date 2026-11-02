@@ -22,6 +22,10 @@ public class TenantsController(LakaskezeloDbContext db) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TenantDto>> Create(UpsertTenantRequest request, CancellationToken ct)
     {
+        if (request.PropertyId is { } propertyId && !await db.Properties.AnyAsync(p => p.Id == propertyId, ct))
+        {
+            return BadRequest(new { message = "A megadott ingatlan nem található." });
+        }
         var tenant = new Tenant
         {
             Id = Guid.NewGuid(),
@@ -49,6 +53,10 @@ public class TenantsController(LakaskezeloDbContext db) : ControllerBase
     {
         var tenant = await db.Tenants.Include(t => t.Property).FirstOrDefaultAsync(t => t.Id == id, ct);
         if (tenant is null) return NotFound();
+        if (request.PropertyId is { } propertyId && !await db.Properties.AnyAsync(p => p.Id == propertyId, ct))
+        {
+            return BadRequest(new { message = "A megadott ingatlan nem található." });
+        }
 
         tenant.Name = request.Name.Trim();
         tenant.Email = request.Email;

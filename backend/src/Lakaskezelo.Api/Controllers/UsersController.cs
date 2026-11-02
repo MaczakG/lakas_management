@@ -27,7 +27,8 @@ public class UsersController(LakaskezeloDbContext db, PasswordHasher<User> passw
     public async Task<ActionResult<UserDto>> Create(UpsertUserRequest request, CancellationToken ct)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        if (await db.Users.AnyAsync(u => u.Email == normalizedEmail, ct))
+        // Az e-mail cím az összes cégben egyedi (ezzel lép be) — ezért itt minden cég felhasználóit nézzük.
+        if (await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == normalizedEmail, ct))
         {
             return Conflict(new { message = "Ehhez az e-mail címhez már tartozik felhasználó." });
         }
@@ -59,7 +60,7 @@ public class UsersController(LakaskezeloDbContext db, PasswordHasher<User> passw
         if (user is null) return NotFound();
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        if (await db.Users.AnyAsync(u => u.Email == normalizedEmail && u.Id != id, ct))
+        if (await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == normalizedEmail && u.Id != id, ct))
         {
             return Conflict(new { message = "Ehhez az e-mail címhez már tartozik felhasználó." });
         }

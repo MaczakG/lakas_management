@@ -1,0 +1,26 @@
+# Backend build + tesztek minden PR-nál és a staging/main ágra kerülő commitoknál.
+name: Backend
+
+on:
+  pull_request:
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+  push:
+    branches: [staging, main]
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build
+        run: dotnet build backend/Lakaskezelo.sln -c Release
+      - name: Test
+        run: dotnet test backend/Lakaskezelo.sln -c Release --no-build

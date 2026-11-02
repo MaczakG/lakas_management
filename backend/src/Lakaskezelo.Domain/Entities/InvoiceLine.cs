@@ -1,8 +1,9 @@
 namespace Lakaskezelo.Domain.Entities;
 
-public class InvoiceLine
+public class InvoiceLine : ICompanyOwned
 {
     public Guid Id { get; set; }
+    public Guid CompanyId { get; set; }
     public Guid InvoiceId { get; set; }
     public Invoice? Invoice { get; set; }
     public string Label { get; set; } = string.Empty;

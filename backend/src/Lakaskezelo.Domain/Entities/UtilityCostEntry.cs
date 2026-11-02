@@ -1,9 +1,10 @@
 namespace Lakaskezelo.Domain.Entities;
 
 // Rezsi tétel — egy adott ingatlan adott havi rezsi-sora (pl. Áram, Gáz, Közös költség)
-public class UtilityCostEntry
+public class UtilityCostEntry : ICompanyOwned
 {
     public Guid Id { get; set; }
+    public Guid CompanyId { get; set; }
     public Guid PropertyId { get; set; }
     public Property? Property { get; set; }
     public int Year { get; set; }

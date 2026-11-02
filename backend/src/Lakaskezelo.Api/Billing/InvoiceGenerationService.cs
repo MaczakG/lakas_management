@@ -42,6 +42,8 @@ public class InvoiceGenerationService(
         var invoice = existing ?? new Invoice
         {
             Id = Guid.NewGuid(),
+            // Már most kell (nem csak mentéskor): a PDF tárhely-kulcsa a cégre épül (InvoicePdfStore.StorageKey).
+            CompanyId = property.CompanyId,
             PropertyId = property.Id,
             PeriodYear = year,
             PeriodMonth = month,

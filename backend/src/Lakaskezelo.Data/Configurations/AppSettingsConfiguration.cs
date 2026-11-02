@@ -10,6 +10,13 @@ public class AppSettingsConfiguration : IEntityTypeConfiguration<AppSettings>
     {
         builder.HasKey(s => s.Id);
         // Egy sor, fix Id-val — a service ezt a sort olvassa/hozza létre, ha még nem létezik.
-        builder.HasData(new AppSettings { Id = AppSettings.SingletonId, UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) });
+        // Cégenként legfeljebb egy beállítás-sor.
+        builder.HasIndex(s => s.CompanyId).IsUnique();
+        builder.HasData(new AppSettings
+        {
+            Id = AppSettings.LegacySingletonId,
+            CompanyId = Company.DefaultCompanyId,
+            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        });
     }
 }

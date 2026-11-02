@@ -32,7 +32,7 @@ public class EmailSenderRouter(
         if (configuration.GetValue("Email:OnlyToUsers", false))
         {
             var normalized = to.Trim().ToLowerInvariant();
-            if (!await db.Users.AnyAsync(u => u.Email == normalized, ct))
+            if (!await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == normalized, ct))
             {
                 logger.LogInformation("E-mail suppressed (Email:OnlyToUsers): {Subject}", subject);
                 LastError = null;

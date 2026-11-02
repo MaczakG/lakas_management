@@ -36,9 +36,34 @@ public class UtilityReminderService(IServiceScopeFactory scopeFactory, ILogger<U
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
+    // Cégenként, a cég saját beállításaival (rezsi-kontakt, határnap) — külön scope-ban, hogy a
+    // cégek beállításai/adatai ne keveredjenek.
     private async Task RunOnceAsync(CancellationToken ct)
     {
+        List<Guid> companyIds;
+        using (var listScope = scopeFactory.CreateScope())
+        {
+            companyIds = await listScope.ServiceProvider.GetRequiredService<LakaskezeloDbContext>()
+                .Companies.Select(c => c.Id).ToListAsync(ct);
+        }
+
+        foreach (var companyId in companyIds)
+        {
+            try
+            {
+                await RunForCompanyAsync(companyId, ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Utility reminder failed for company {CompanyId}", companyId);
+            }
+        }
+    }
+
+    private async Task RunForCompanyAsync(Guid companyId, CancellationToken ct)
+    {
         using var scope = scopeFactory.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ICompanyContext>().Set(companyId);
         var db = scope.ServiceProvider.GetRequiredService<LakaskezeloDbContext>();
         var settingsService = scope.ServiceProvider.GetRequiredService<AppSettingsService>();
         var emailSender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
