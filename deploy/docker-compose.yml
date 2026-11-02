@@ -94,6 +94,8 @@ services:
       App__EnvironmentName: staging
       # Csak a felhasználóknak (belépési kód) megy e-mail — számla, emlékeztető nem (EmailSenderRouter).
       Email__OnlyToUsers: "true"
+      # Önregisztráció (új cég) — a teszten nyitva; élesben csak a SaaS indulásakor kapcsoljuk be.
+      Registration__Enabled: "true"
     depends_on:
       postgres-staging:
         condition: service_healthy

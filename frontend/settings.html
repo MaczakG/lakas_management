@@ -179,6 +179,10 @@ function setSecretField(id, isSet) {
 
 async function loadSettings() {
   const res = await apiFetch('/api/settings');
+  if (res.status === 403) {
+    document.querySelector('.main').innerHTML = '<div class="page-header"><div><div class="page-eyebrow">Fiók</div><h1>Beállítások</h1></div></div><p>A Beállításokat csak a cég adminisztrátora módosíthatja.</p>';
+    return;
+  }
   const s = await res.json();
 
   document.getElementById(s.emailProvider === 'Smtp' ? 'ep-smtp' : 'ep-mailgun').checked = true;

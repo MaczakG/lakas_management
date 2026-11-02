@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.Controllers;
 
-[Authorize]
+[Authorize(Roles = UsersController.AdminRole)]
 [ApiController]
 [Route("api/settings")]
 public class SettingsController(

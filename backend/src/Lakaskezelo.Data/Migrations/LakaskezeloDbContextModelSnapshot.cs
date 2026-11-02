@@ -318,6 +318,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("Purpose")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Token")
                         .IsRequired()
                         .HasMaxLength(128)
@@ -567,6 +570,9 @@ namespace Lakaskezelo.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("FailedLoginCount")
                         .HasColumnType("integer");
 
@@ -584,6 +590,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
 
                     b.Property<string>("SecurityStamp")
                         .IsRequired()

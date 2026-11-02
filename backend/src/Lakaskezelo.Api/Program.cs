@@ -13,6 +13,7 @@ using Lakaskezelo.Api.Settings;
 using Lakaskezelo.Api.UtilityReminder;
 using Lakaskezelo.Data;
 using Lakaskezelo.Domain.Entities;
+using Lakaskezelo.Domain.Enums;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -132,16 +133,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
                 // IgnoreQueryFilters: itt még nincs cég-kontextus — épp ebből a sorból tudjuk meg a felhasználó cégét.
                 var db = context.HttpContext.RequestServices.GetRequiredService<LakaskezeloDbContext>();
-                var companyId = await db.Users.IgnoreQueryFilters().AsNoTracking()
-                    .Where(u => u.Id == userId && u.IsActive && u.SecurityStamp == stamp)
-                    .Select(u => (Guid?)u.CompanyId)
+                var current = await db.Users.IgnoreQueryFilters().AsNoTracking()
+                    .Where(u => u.Id == userId && u.IsActive && u.EmailVerifiedAt != null && u.SecurityStamp == stamp)
+                    .Select(u => new { u.CompanyId, u.Role })
                     .FirstOrDefaultAsync(context.HttpContext.RequestAborted);
-                if (companyId is null)
+                if (current is null)
                 {
                     context.Fail("Token has been revoked.");
                     return;
                 }
-                context.HttpContext.RequestServices.GetRequiredService<ICompanyContext>().Set(companyId);
+                context.HttpContext.RequestServices.GetRequiredService<ICompanyContext>().Set(current.CompanyId);
+
+                // A szerepkör nem a tokenből, hanem minden kérésnél az adatbázisból jön — így egy
+                // admin-jog elvétele azonnal érvényes, nem csak a token lejártakor ([Authorize(Roles=...)]).
+                if (principal!.Identity is ClaimsIdentity identity)
+                {
+                    foreach (var stale in identity.FindAll(identity.RoleClaimType).ToList()) identity.RemoveClaim(stale);
+                    identity.AddClaim(new Claim(identity.RoleClaimType, current.Role.ToString()));
+                }
             },
         };
     });
@@ -151,6 +160,7 @@ builder.Services.AddAuthorization();
 // legfeljebb 10 kérést fogadnak — a jelszó és a belépési kód találgatása, valamint az e-mail-küldő
 // végpontokkal való visszaélés ellen. A kliens IP-je az nginx X-Forwarded-For fejlécéből jön (ld.
 // UseForwardedHeaders lent).
+var authRateLimit = Math.Max(1, builder.Configuration.GetValue("Auth:RateLimitPerMinute", 10));
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -161,7 +171,8 @@ builder.Services.AddRateLimiter(options =>
     };
     options.AddPolicy(AuthController.RateLimitPolicy, httpContext => RateLimitPartition.GetFixedWindowLimiter(
         httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+        // Auth:RateLimitPerMinute csak helyi/automata teszthez emelendő; élesben az alapérték (10) marad.
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = authRateLimit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 
 // ---------- Beállítások (DB-backed, nem appsettings) ----------
@@ -171,6 +182,9 @@ builder.Services.AddScoped<AppSettingsService>();
 builder.Services.AddHttpClient<MailgunEmailSender>();
 builder.Services.AddScoped<SmtpEmailSender>();
 builder.Services.AddScoped<IEmailSender, EmailSenderRouter>();
+builder.Services.AddScoped<SystemEmailSender>();
+builder.Services.AddScoped<AccountEmails>();
+builder.Services.AddScoped<UserTokenService>();
 
 // ---------- Számla-PDF tárhely (Amazon S3) ----------
 builder.Services.AddScoped<S3InvoiceStorage>();
@@ -180,6 +194,7 @@ builder.Services.AddScoped<InvoicePdfStore>();
 builder.Services.AddScoped<InvoiceGenerationService>();
 builder.Services.AddHostedService<BillingSchedulerService>();
 builder.Services.AddHostedService<UtilityReminderService>();
+builder.Services.AddHostedService<Lakaskezelo.Api.Accounts.RegistrationCleanupService>();
 
 // ---------- MNB árfolyamok ----------
 builder.Services.AddHttpClient<MnbExchangeRateClient>();
@@ -188,9 +203,9 @@ builder.Services.AddHostedService<ExchangeRateFetchService>();
 
 var app = builder.Build();
 
-// Kezdeti felhasználó seedelése env változóból (InitialUser:Email / InitialUser:Password) — nincs
-// önregisztráció, a Felhasználók oldalon minden további fiókot egy már bejelentkezett felhasználó
-// hoz létre. Idempotens: csak akkor fut, ha a tábla még üres.
+// Kezdeti felhasználó seedelése env változóból (InitialUser:Email / InitialUser:Password) — az első
+// (üzemeltető) cég adminisztrátora. További cégek regisztrációval (Registration:Enabled), további
+// felhasználók meghívással jönnek létre. Idempotens: csak akkor fut, ha a tábla még üres.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<LakaskezeloDbContext>();
@@ -210,7 +225,9 @@ using (var scope = app.Services.CreateScope())
             Email = seedEmail.Trim().ToLowerInvariant(),
             FullName = "Adminisztrátor",
             IsActive = true,
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow,
+            EmailVerifiedAt = DateTime.UtcNow,
             SecurityStamp = SecurityStamp.New(),
         };
         user.PasswordHash = hasher.HashPassword(user, seedPassword);
@@ -259,7 +276,16 @@ var appStartedAt = DateTime.UtcNow;
 // environment: "production" az élesen, "staging" a teszt-környezetben (App:EnvironmentName) — a
 // felület ebből tudja, hogy ki kell-e tennie a "TESZT" jelzést.
 var environmentName = app.Configuration["App:EnvironmentName"] ?? "production";
-app.MapGet("/api/version", () => Results.Ok(new { version = Lakaskezelo.Api.AppVersion.Current, startedAt = appStartedAt, environment = environmentName }));
+// Nyilvános: verzió, környezet, a termék neve és hogy nyitva van-e a regisztráció (a belépési oldal ez
+// alapján mutatja a "Regisztráció" linket).
+app.MapGet("/api/version", () => Results.Ok(new
+{
+    version = Lakaskezelo.Api.AppVersion.Current,
+    startedAt = appStartedAt,
+    environment = environmentName,
+    productName = app.Configuration["App:ProductName"] is { Length: > 0 } productName ? productName : "Lakáskezelő",
+    registrationEnabled = app.Configuration.GetValue("Registration:Enabled", false),
+}));
 
 app.MapControllers();
 

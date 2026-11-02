@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using Lakaskezelo.Api.Settings;
+using Lakaskezelo.Domain.Entities;
 
 namespace Lakaskezelo.Api.Notifications;
 
@@ -21,9 +22,15 @@ public class MailgunEmailSender(HttpClient http, AppSettingsService settingsServ
     private static bool IsConfigured(string? apiKey, string? domain, string? from) =>
         !string.IsNullOrWhiteSpace(apiKey) && !string.IsNullOrWhiteSpace(domain) && !string.IsNullOrWhiteSpace(from);
 
-    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
+    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct) =>
+        await SendWithAsync(await settingsService.GetAsync(ct), null, to, subject, htmlBody, textBody, attachment, ct);
+
+    // Megadott (nem feltétlenül az aktuális cég) beállításaival küld — a rendszerlevelekhez
+    // (SystemEmailSender), amelyek a platform üzemeltetőjének postafiókjából mennek. fromNameOverride:
+    // ha meg van adva, ez lesz a feladó neve (pl. a termék neve a cégnév helyett).
+    public async Task<bool> SendWithAsync(AppSettings settings, string? fromNameOverride, string to, string subject,
+        string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
     {
-        var settings = await settingsService.GetAsync(ct);
         if (!IsConfigured(settings.MailgunApiKey, settings.MailgunDomain, settings.MailgunFromAddress))
         {
             LastError = "Mailgun nincs beállítva (API kulcs / domain / feladó hiányzik a Beállításokban).";
@@ -36,9 +43,10 @@ public class MailgunEmailSender(HttpClient http, AppSettingsService settingsServ
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
                 "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"api:{settings.MailgunApiKey}")));
 
-            var fromHeader = string.IsNullOrWhiteSpace(settings.MailgunFromName)
+            var fromName = fromNameOverride ?? settings.MailgunFromName;
+            var fromHeader = string.IsNullOrWhiteSpace(fromName)
                 ? settings.MailgunFromAddress!
-                : $"{settings.MailgunFromName} <{settings.MailgunFromAddress}>";
+                : $"{fromName} <{settings.MailgunFromAddress}>";
 
             // Mailgun a form mezők mellett a csatolmányt is multipart/form-data-ként várja (az
             // "attachment" mezőben) — a korábbi FormUrlEncodedContent nem tudna bináris fájlt vinni.

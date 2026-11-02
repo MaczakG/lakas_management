@@ -69,5 +69,9 @@ paranccsal érdemes ellenőrizni.
 - **Vészkapcsoló:** ha az e-mail küldés tartósan nem működik, és emiatt senki sem tud belépni, a
   `docker-compose.yml`-ben `Auth__TwoFactorEnabled: "false"`, majd `docker compose up -d api`.
   Utána mielőbb vissza `"true"`-ra.
+- **Regisztráció és rendszerlevelek:** az önregisztráció a `Registration__Enabled: "true"` környezeti
+  változóval nyílik meg (a teszten nyitva, élesben zárva). A rendszerlevelek (belépési kód, meghívó,
+  regisztráció megerősítése) a `Platform__EmailCompanyId` cég (alapból az első, üzemeltetői cég)
+  Beállításokban megadott e-mail fiókjáról mennek, `App__ProductName` (alapból „Lakáskezelő”) feladónévvel.
 - **Titkok:** az SMTP-jelszót és a Mailgun API-kulcsot a Beállítások API nem adja vissza a
   böngészőnek (csak felülírni lehet őket).
