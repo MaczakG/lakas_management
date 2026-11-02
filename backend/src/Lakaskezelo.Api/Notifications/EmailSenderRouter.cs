@@ -62,6 +62,7 @@ public class EmailSenderRouter(
     {
         if (!configuration.GetValue("Email:OnlyToUsers", false)) return false;
         var normalized = to.Trim().ToLowerInvariant();
-        return !await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == normalized, ct);
+        return !await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == normalized, ct)
+            && !await db.PlatformAdmins.AnyAsync(a => a.Email == normalized, ct);
     }
 }

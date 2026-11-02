@@ -271,8 +271,7 @@ public class AuthController(
     {
         var user = await db.Users.FindAsync([User.GetUserId()], ct);
         if (user is null) return NotFound();
-        return Ok(new MeResponse(ToDto(user), await CompanyNameAsync(user.CompanyId, ct),
-            user.Role == UserRole.Admin && platform.IsOperator(user.CompanyId)));
+        return Ok(new MeResponse(ToDto(user), await CompanyNameAsync(user.CompanyId, ct)));
     }
 
     // ---------- Regisztráció (új cég) és meghívó elfogadása ----------
