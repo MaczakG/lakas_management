@@ -76,6 +76,23 @@
         </div>
       </section>
 
+      <section class="section">
+        <div class="section-head"><div><h3>Szolgáltató adatai (ÁSZF, adatkezelés)</h3><p>Ezek jelennek meg az <a class="link" href="aszf.html" target="_blank">ÁSZF</a>-ben és az <a class="link" href="adatkezeles.html" target="_blank">Adatkezelési tájékoztató</a>ban. Lényeges módosításnál add meg az új hatálybalépés napját, és 30 nappal előtte értesítsd az előfizetőket.</p></div></div>
+        <div class="field-row">
+          <div class="field"><label for="o-name">Név (cég / egyéni vállalkozó)</label><input type="text" id="o-name" maxlength="200"></div>
+          <div class="field"><label for="o-tax">Adószám</label><input type="text" id="o-tax" maxlength="20"></div>
+        </div>
+        <div class="field"><label for="o-address">Székhely / cím</label><input type="text" id="o-address" maxlength="300"></div>
+        <div class="field-row">
+          <div class="field"><label for="o-reg">Cégjegyzékszám / nyilvántartási szám</label><input type="text" id="o-reg" maxlength="50"></div>
+          <div class="field"><label for="o-email">Kapcsolattartási e-mail</label><input type="email" id="o-email" maxlength="256"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="o-phone">Telefon (nem kötelező)</label><input type="text" id="o-phone" maxlength="50"></div>
+          <div class="field"><label for="o-version">Jogi dokumentumok hatálybalépése</label><input type="date" id="o-version"></div>
+        </div>
+      </section>
+
       <button class="btn btn-primary" type="submit" id="save-btn">Mentés</button>
     </form>
 
@@ -83,8 +100,18 @@
       <div class="section-head"><div><h3>Cégek</h3></div></div>
       <div class="card-table">
         <table>
-          <thead><tr><th>Cég</th><th>Regisztrált</th><th class="num">Felhasználó</th><th class="num">Aktív ingatlan</th><th>Állapot</th><th>Érvényes</th><th class="num">Befizetve</th></tr></thead>
+          <thead><tr><th>Cég</th><th>Regisztrált</th><th class="num">Felhasználó</th><th class="num">Aktív ingatlan</th><th>Állapot</th><th>Érvényes</th><th class="num">Befizetve</th><th></th></tr></thead>
           <tbody id="companies-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="payments-section" style="margin-top:24px;" hidden>
+      <div class="section-head"><div><h3>Fizetések</h3><p>Az utolsó 200 díjfizetés, minden cégtől.</p></div></div>
+      <div class="card-table">
+        <table>
+          <thead><tr><th>Dátum</th><th>Cég</th><th>Fajta</th><th class="num">Ingatlan</th><th class="num">Összeg</th><th>Státusz</th><th>Számla</th></tr></thead>
+          <tbody id="payments-tbody"></tbody>
         </table>
       </div>
     </section>
@@ -123,6 +150,14 @@ async function load() {
   secret('p-barion-key', s.barionPosKeySet);
   secret('p-billingo-key', s.billingoApiKeySet);
   $('p-billingo-block').value = s.billingoBlockId ?? '';
+  const o = s.operator || {};
+  $('o-name').value = o.name || '';
+  $('o-tax').value = o.taxNumber || '';
+  $('o-address').value = o.address || '';
+  $('o-reg').value = o.registrationNumber || '';
+  $('o-email').value = o.email || '';
+  $('o-phone').value = o.phone || '';
+  $('o-version').value = s.termsVersion || '';
   $('platform-form').hidden = false;
 
   const cres = await apiFetch('/api/platform/companies');
@@ -145,6 +180,27 @@ async function load() {
       <td><span class="status-tag ${tone}">${escapeHtml(label)}</span>${c.interval ? ` <span class="hint">${c.interval === 'Yearly' ? 'éves' : 'havi'}</span>` : ''}</td>
       <td>${c.isOperator ? '—' : day(until)}</td>
       <td class="num">${huf(c.paidTotal)}</td>
+      <td class="row-actions">${c.isOperator ? '' : `<button class="btn btn-ghost btn-sm" type="button" onclick="extendCompany(${jsArg(c.id)}, ${jsArg(c.name)})">+ díjmentes napok</button>`}</td>
+    </tr>`;
+  }).join('');
+
+  const pres = await apiFetch('/api/platform/payments');
+  const payments = await readJson(pres);
+  if (!pres.ok) return;
+  $('payments-section').hidden = payments.length === 0;
+  const PST = { Pending: ['Folyamatban', 'warn'], Succeeded: ['Sikeres', 'ok'], Failed: ['Sikertelen', 'missing'] };
+  $('payments-tbody').innerHTML = payments.map((p) => {
+    const [label, tone] = PST[p.status] || [p.status, ''];
+    const invoice = p.invoiceUrl ? `<a class="link" href="${escapeHtml(p.invoiceUrl)}" target="_blank" rel="noopener">Számla</a>`
+      : p.status === 'Succeeded' ? `<span class="hint" title="${escapeHtml(p.billingoError || '')}">Készül…</span>` : '';
+    return `<tr>
+      <td>${day(p.createdAt)}</td>
+      <td class="cell-main">${escapeHtml(p.companyName)}</td>
+      <td>${p.kind === 'Renewal' ? 'Megújítás' : 'Indítás'} · ${p.interval === 'Yearly' ? 'éves' : 'havi'}</td>
+      <td class="num">${p.propertyCount}</td>
+      <td class="num">${huf(p.grossAmount)}</td>
+      <td><span class="status-tag ${tone}" title="${escapeHtml(p.errorMessage || '')}">${escapeHtml(label)}</span></td>
+      <td>${invoice}</td>
     </tr>`;
   }).join('');
 }
@@ -168,6 +224,15 @@ $('platform-form').addEventListener('submit', async (e) => {
     barionPosKey: $('p-barion-key').value.trim() || null,
     billingoApiKey: $('p-billingo-key').value.trim() || null,
     billingoBlockId: block ? Number(block) : null,
+    operator: {
+      name: $('o-name').value.trim() || null,
+      taxNumber: $('o-tax').value.trim() || null,
+      address: $('o-address').value.trim() || null,
+      registrationNumber: $('o-reg').value.trim() || null,
+      email: $('o-email').value.trim() || null,
+      phone: $('o-phone').value.trim() || null,
+    },
+    termsVersion: $('o-version').value || null,
   };
   if (payload.billingEnabled && !confirm('A díjszedés be lesz kapcsolva: minden cég próbaidővel indul, a lejárta után fizetnie kell. Folytatod?')) return;
   const res = await apiFetch('/api/platform/settings', { method: 'PUT', body: JSON.stringify(payload) });
@@ -176,6 +241,17 @@ $('platform-form').addEventListener('submit', async (e) => {
   show('page-success', 'Elmentve.');
   await load();
 });
+
+window.extendCompany = async (id, name) => {
+  const input = prompt(`Hány díjmentes napot írjunk jóvá: ${name}?\n(Próbaidőben a próbaidőt, fizetőnél a kifizetett időszakot hosszabbítja; zárolt cégnél új próbaidőt indít.)`, '14');
+  if (!input) return;
+  const days = parseInt(input, 10);
+  const res = await apiFetch(`/api/platform/companies/${id}/extend`, { method: 'POST', body: JSON.stringify({ days }) });
+  const body = await readJson(res);
+  if (!res.ok) { show('page-error', errorMessage(res, body, 'Nem sikerült.')); return; }
+  show('page-success', `${name}: ${body.message}`);
+  await load();
+};
 
 load();
 </script>

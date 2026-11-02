@@ -132,6 +132,13 @@ namespace Lakaskezelo.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<DateTime?>("TermsAcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TermsVersion")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Companies");
@@ -378,8 +385,39 @@ namespace Lakaskezelo.Data.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<string>("OperatorAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("OperatorEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("OperatorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OperatorPhone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("OperatorRegistrationNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("OperatorTaxNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<bool>("PricesIncludeVat")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("TermsVersion")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("2026-11-03");
 
                     b.Property<int>("TrialDays")
                         .HasColumnType("integer");
@@ -412,6 +450,7 @@ namespace Lakaskezelo.Data.Migrations
                             GraceDays = 7,
                             MonthlyPricePerProperty = 1990m,
                             PricesIncludeVat = true,
+                            TermsVersion = "2026-11-03",
                             TrialDays = 14,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             VatPercent = 27m,
@@ -669,6 +708,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<decimal>("GrossAmount")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTime?>("ImmediatePerformanceConsentAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Interval")
                         .HasColumnType("integer");

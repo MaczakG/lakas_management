@@ -292,6 +292,7 @@ public class AuthController(
         if (fullName.Length is < 2 or > 200) return BadRequest(new { message = "Add meg a neved (2–200 karakter)." });
         if (!LooksLikeEmail(email)) return BadRequest(new { message = "Érvénytelen e-mail cím." });
         if (PasswordError(request.Password) is { } passwordError) return BadRequest(new { message = passwordError });
+        if (!request.AcceptTerms) return BadRequest(new { message = "A regisztrációhoz el kell fogadnod az ÁSZF-et és az adatkezelési tájékoztatót." });
 
         // Mindkét ágon ugyanez a válasz, és mindkét ágon megy e-mail — a válaszból nem derül ki, hogy
         // a címhez tartozik-e már fiók.
@@ -314,7 +315,12 @@ public class AuthController(
             await DeleteRegistrationAsync(existing, ct);
         }
 
-        var company = new Company { Id = Guid.NewGuid(), Name = companyName, CreatedAt = DateTime.UtcNow };
+        var terms = await platform.GetAsync(ct);
+        var company = new Company
+        {
+            Id = Guid.NewGuid(), Name = companyName, CreatedAt = DateTime.UtcNow,
+            TermsVersion = terms.TermsVersion, TermsAcceptedAt = DateTime.UtcNow,
+        };
         db.Companies.Add(company);
         companyContext.Set(company.Id);
 

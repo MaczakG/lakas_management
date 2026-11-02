@@ -101,6 +101,8 @@ public class SubscriptionController(
     public async Task<ActionResult<CheckoutResponse>> Checkout(CheckoutRequest request, CancellationToken ct)
     {
         if (!Enum.IsDefined(request.Interval)) return BadRequest(new { message = "Érvénytelen gyakoriság." });
+        if (!request.AcceptImmediatePerformance)
+            return BadRequest(new { message = "A fizetéshez fogadd el az ÁSZF-et, és kérd a szolgáltatás azonnali megkezdését." });
         var me = await db.Users.FindAsync([User.GetUserId()], ct);
         var result = await service.StartCheckoutAsync(request.Interval, me?.Email ?? "", ct);
         return result.Success ? Ok(new CheckoutResponse(result.GatewayUrl!)) : BadRequest(new { message = result.Error });
