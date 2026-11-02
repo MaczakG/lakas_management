@@ -24,10 +24,13 @@
   .bundle-slide{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease;}
   .bundle-detail.open .bundle-slide{grid-template-rows:1fr;}
   .bundle-slide-inner{overflow:hidden;min-height:0;}
-  .bundle-content{margin:4px 20px 18px 44px;border:1px solid var(--line);border-radius:var(--radius-md, 10px);background:var(--surface);overflow-x:auto;}
+  /* A lenyíló számlák teljes szélességben, külön keret nélkül, a hónap sora alatt. */
+  .bundle-content{overflow-x:auto;border-top:1px solid var(--line);}
+  .bundle-content table{width:100%;}
+  .bundle-content thead th{background:var(--surface-2);}
+  .bundle-content tbody tr:last-child td{border-bottom:none;}
   .bundle-content .panel-empty{padding:16px;}
   @media (prefers-reduced-motion: reduce){ .bundle-slide, .bundle-row .chev{transition:none;} }
-  @media (max-width: 760px){ .bundle-content{margin:4px 12px 14px;} }
 </style>
 </head>
 <body>
