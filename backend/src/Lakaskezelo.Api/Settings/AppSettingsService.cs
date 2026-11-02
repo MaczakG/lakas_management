@@ -1,41 +1,35 @@
+using System.Collections.Concurrent;
 using Lakaskezelo.Data;
 using Lakaskezelo.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.Settings;
 
-// A Beállítások oldal (e-mail, S3 tárhely, rezsi kontakt, számla-kibocsátó) egyetlen DB-sorban
-// tárolt, futásidőben szerkeszthető konfigurációja — az IOptions<T> minta (Flotta) helyett, mert
-// ezeket az értékeket a felhasználó a felületen módosítja, nem appsettings/env-ben.
+// Az aktuális cég (ICompanyContext) Beállítások oldalon szerkeszthető konfigurációja (e-mail, S3
+// tárhely, rezsi kontakt, számla-kibocsátó) — cégenként egy DB-sor.
 //
-// Egyszerű, rövid életű (pár másodperces) in-memory cache: a scheduler-ek percenként/óránként
-// hívják, nem indokolt minden hívásnál adatbázist ütni, de a Beállítások mentése után a következő
-// GET-nek már a friss értéket kell látnia — ezért Invalidate()-et hív a SettingsController mentés
-// után.
-public class AppSettingsService(LakaskezeloDbContext db)
+// Cégenkénti in-memory cache: az ütemezők percenként/óránként hívják, nem indokolt minden hívásnál
+// adatbázist ütni; a Beállítások mentése után a SettingsController Invalidate()-tel üríti a cég sorát.
+public class AppSettingsService(LakaskezeloDbContext db, ICompanyContext companyContext)
 {
-    private static AppSettings? _cached;
-    private static readonly SemaphoreSlim Lock = new(1, 1);
+    private static readonly ConcurrentDictionary<Guid, AppSettings> Cache = new();
 
-    public async Task<AppSettings> GetAsync(CancellationToken ct = default)
+    public Task<AppSettings> GetAsync(CancellationToken ct = default) =>
+        GetForCompanyAsync(companyContext.CompanyId
+            ?? throw new InvalidOperationException("A beállítások cég-kontextus nélkül nem olvashatók."), ct);
+
+    // Kifejezetten megadott cég beállításai, a kérés cég-kontextusától függetlenül — a rendszerlevelek
+    // (SystemEmailSender) a platform üzemeltetőjének e-mail beállításaival mennek ki.
+    public async Task<AppSettings> GetForCompanyAsync(Guid companyId, CancellationToken ct = default)
     {
-        if (_cached is not null) return _cached;
+        if (Cache.TryGetValue(companyId, out var cached)) return cached;
 
-        await Lock.WaitAsync(ct);
-        try
-        {
-            if (_cached is not null) return _cached;
-
-            var settings = await db.AppSettings.AsNoTracking().SingleOrDefaultAsync(s => s.Id == AppSettings.SingletonId, ct);
-            settings ??= new AppSettings { Id = AppSettings.SingletonId, UpdatedAt = DateTime.UtcNow };
-            _cached = settings;
-            return settings;
-        }
-        finally
-        {
-            Lock.Release();
-        }
+        var settings = await db.AppSettings.IgnoreQueryFilters().AsNoTracking()
+                           .SingleOrDefaultAsync(s => s.CompanyId == companyId, ct)
+            ?? new AppSettings { Id = Guid.NewGuid(), CompanyId = companyId, UpdatedAt = DateTime.UtcNow };
+        Cache[companyId] = settings;
+        return settings;
     }
 
-    public static void Invalidate() => _cached = null;
+    public static void Invalidate(Guid companyId) => Cache.TryRemove(companyId, out _);
 }

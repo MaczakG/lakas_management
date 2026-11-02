@@ -20,44 +20,43 @@
         <h1>Felhasználók</h1>
         <div class="page-state" id="page-state"></div>
       </div>
-      <button class="btn btn-primary" id="add-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#plus"/></svg>Új felhasználó</button>
+      <button class="btn btn-primary" id="add-btn" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#plus"/></svg>Meghívás</button>
     </div>
 
     <div class="card-table">
       <table>
         <thead>
-          <tr><th>Név</th><th>E-mail</th><th>Státusz</th><th>Regisztrálva</th><th></th></tr>
+          <tr><th>Név</th><th>E-mail</th><th>Szerepkör</th><th>Státusz</th><th>Felvéve</th><th></th></tr>
         </thead>
         <tbody id="users-tbody">
-          <tr class="empty-row"><td colspan="5">Betöltés...</td></tr>
+          <tr class="empty-row"><td colspan="6">Betöltés...</td></tr>
         </tbody>
       </table>
     </div>
+    <p class="hint" style="margin-top:14px;">Az <strong>adminisztrátor</strong> kezeli a felhasználókat és a Beállításokat; a <strong>munkatárs</strong> minden napi munkát végezhet (ingatlanok, bérlők, rezsi, számlák).</p>
   </main>
 </div>
 
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
     <div class="modal-head">
-      <div><h2 id="modal-title">Új felhasználó</h2></div>
+      <div><h2 id="modal-title">Felhasználó meghívása</h2></div>
       <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-error" id="modal-error"></div>
       <form id="user-form">
-        <div class="field"><label for="f-name">Név *</label><input type="text" id="f-name" required></div>
-        <div class="field"><label for="f-email">E-mail *</label><input type="email" id="f-email" required></div>
-        <div class="field">
-          <label for="f-password" id="f-password-label">Jelszó *</label>
-          <input type="password" id="f-password" autocomplete="new-password">
-          <span class="hint" id="f-password-hint">Legalább 8 karakter.</span>
-        </div>
-        <label class="checkbox-row"><input type="checkbox" id="f-active" checked> Aktív</label>
+        <div class="field"><label for="f-name">Név *</label><input type="text" id="f-name" minlength="2" maxlength="200" required></div>
+        <div class="field"><label for="f-email">E-mail *</label><input type="email" id="f-email" required>
+          <span class="hint" id="f-email-hint">Erre a címre küldjük a meghívót; a jelszavát a meghívott maga állítja be.</span></div>
+        <div class="field"><label for="f-role">Szerepkör *</label>
+          <select id="f-role"><option value="Member">Munkatárs</option><option value="Admin">Adminisztrátor</option></select></div>
+        <label class="checkbox-row" id="f-active-row"><input type="checkbox" id="f-active" checked> Aktív (be tud lépni)</label>
       </form>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="cancel-btn" type="button">Mégse</button>
-      <button class="btn btn-primary" id="save-btn" type="submit" form="user-form">Mentés</button>
+      <button class="btn btn-primary" id="save-btn" type="submit" form="user-form">Meghívó küldése</button>
     </div>
   </div>
 </div>
@@ -65,6 +64,7 @@
 <script>
 requireAuth();
 
+const ROLE_LABEL = { Admin: 'Adminisztrátor', Member: 'Munkatárs' };
 let users = [];
 let editingId = null;
 
@@ -72,35 +72,51 @@ async function loadUsers() {
   const res = await apiFetch('/api/users');
   users = await res.json();
   setPageState([
-    { n: users.filter((u) => u.isActive).length, label: 'aktív', tone: 'ok' },
+    { n: users.filter((u) => u.isActive && !u.pending).length, label: 'aktív', tone: 'ok' },
+    { n: users.filter((u) => u.pending).length, label: 'meghívott', tone: 'warn' },
     { n: users.filter((u) => !u.isActive).length, label: 'inaktív' },
   ]);
+  document.getElementById('add-btn').hidden = !isAdmin();
   renderUsers();
+}
+
+function statusTag(u) {
+  if (!u.isActive) return '<span class="status-tag missing">Inaktív</span>';
+  if (u.pending) return '<span class="status-tag warn">Meghívva</span>';
+  return '<span class="status-tag ok">Aktív</span>';
 }
 
 function renderUsers() {
   const tbody = document.getElementById('users-tbody');
   if (users.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Nincs találat.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Nincs találat.</td></tr>`;
     return;
   }
+  const admin = isAdmin();
+  const me = getAuth()?.user?.id;
   tbody.innerHTML = users.map((u) => `
     <tr>
-      <td class="cell-main">${escapeHtml(u.fullName)}</td>
+      <td class="cell-main">${escapeHtml(u.fullName)}${u.id === me ? ' <span class="hint">(te)</span>' : ''}</td>
       <td>${escapeHtml(u.email)}</td>
-      <td><span class="status-tag ${u.isActive ? 'ok' : 'missing'}">${u.isActive ? 'Aktív' : 'Inaktív'}</span></td>
+      <td>${escapeHtml(ROLE_LABEL[u.role] || u.role)}</td>
+      <td>${statusTag(u)}</td>
       <td>${formatDate(u.createdAt)}</td>
-      <td class="row-actions">
-        <button class="btn btn-ghost btn-sm" onclick="sendPasswordReset('${u.id}', this)">Jelszó visszaállítás küldése</button>
-        <button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}')">Szerkesztés</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">Törlés</button>
+      <td class="row-actions">${admin ? `
+        ${u.pending
+          ? `<button class="btn btn-ghost btn-sm" onclick="resendInvite(${jsArg(u.id)}, this)">Meghívó újraküldése</button>`
+          : `<button class="btn btn-ghost btn-sm" onclick="sendPasswordReset(${jsArg(u.id)}, this)">Jelszó-visszaállító küldése</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="editUser(${jsArg(u.id)})">Szerkesztés</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUser(${jsArg(u.id)})">Törlés</button>` : ''}
       </td>
     </tr>
   `).join('');
 }
 
-function openModal(title) {
-  document.getElementById('modal-title').textContent = title;
+function openModal(editing) {
+  document.getElementById('modal-title').textContent = editing ? 'Felhasználó szerkesztése' : 'Felhasználó meghívása';
+  document.getElementById('save-btn').textContent = editing ? 'Mentés' : 'Meghívó küldése';
+  document.getElementById('f-email-hint').hidden = editing;
+  document.getElementById('f-active-row').hidden = !editing;
   document.getElementById('modal-error').classList.remove('show');
   document.getElementById('modal-overlay').classList.add('open');
 }
@@ -112,10 +128,8 @@ function closeModal() {
 
 document.getElementById('add-btn').addEventListener('click', () => {
   editingId = null;
-  document.getElementById('f-password').required = true;
-  document.getElementById('f-password-label').textContent = 'Jelszó *';
-  document.getElementById('f-password-hint').textContent = 'Legalább 8 karakter.';
-  openModal('Új felhasználó');
+  document.getElementById('user-form').reset();
+  openModal(false);
 });
 document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('cancel-btn').addEventListener('click', closeModal);
@@ -126,40 +140,42 @@ window.editUser = (id) => {
   editingId = id;
   document.getElementById('f-name').value = u.fullName;
   document.getElementById('f-email').value = u.email;
+  document.getElementById('f-role').value = u.role;
   document.getElementById('f-active').checked = u.isActive;
-  document.getElementById('f-password').value = '';
-  document.getElementById('f-password').required = false;
-  document.getElementById('f-password-label').textContent = 'Új jelszó';
-  document.getElementById('f-password-hint').textContent = 'Csak akkor töltsd ki, ha módosítani szeretnéd.';
-  openModal('Felhasználó szerkesztése');
+  openModal(true);
 };
 
-window.sendPasswordReset = async (id, btn) => {
-  const u = users.find((x) => x.id === id);
-  if (!u) return;
-  if (!confirm(`Elküldjük a jelszó-visszaállító e-mailt a(z) ${u.email} címre?`)) return;
-
-  const originalText = btn.textContent;
+async function withBusy(btn, label, fn) {
+  const original = btn.textContent;
   btn.disabled = true;
-  btn.textContent = 'Küldés...';
-  try {
+  btn.textContent = label;
+  try { await fn(); } finally { btn.disabled = false; btn.textContent = original; }
+}
+
+window.resendInvite = (id, btn) => withBusy(btn, 'Küldés...', async () => {
+  const res = await apiFetch(`/api/users/${id}/resend-invite`, { method: 'POST' });
+  const data = await readJson(res);
+  alert(errorMessage(res, data, res.ok ? 'Elküldve.' : 'Nem sikerült elküldeni.'));
+});
+
+window.sendPasswordReset = (id, btn) => {
+  const u = users.find((x) => x.id === id);
+  if (!u || !confirm(`Elküldjük a jelszó-visszaállító e-mailt a(z) ${u.email} címre?`)) return;
+  return withBusy(btn, 'Küldés...', async () => {
     const res = await apiFetch('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: u.email }) });
-    const data = await res.json().catch(() => ({}));
-    alert(res.ok ? 'Elküldve.' : (data.message || 'Nem sikerült elküldeni.'));
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
-  }
+    const data = await readJson(res);
+    alert(res.ok ? 'Elküldve.' : errorMessage(res, data, 'Nem sikerült elküldeni.'));
+  });
 };
 
 window.deleteUser = async (id) => {
-  if (!confirm('Biztosan törlöd ezt a felhasználót?')) return;
+  const u = users.find((x) => x.id === id);
+  if (!u || !confirm(`Biztosan törlöd: ${u.fullName} (${u.email})?`)) return;
   const res = await apiFetch(`/api/users/${id}`, { method: 'DELETE' });
-  if (res.ok || res.status === 204) {
+  if (res.ok) {
     loadUsers();
   } else {
-    const data = await res.json().catch(() => ({}));
-    alert(data.message || 'Nem sikerült törölni.');
+    alert(errorMessage(res, await readJson(res), 'Nem sikerült törölni.'));
   }
 };
 
@@ -171,23 +187,32 @@ document.getElementById('user-form').addEventListener('submit', async (e) => {
   const payload = {
     fullName: document.getElementById('f-name').value.trim(),
     email: document.getElementById('f-email').value.trim(),
-    isActive: document.getElementById('f-active').checked,
-    password: document.getElementById('f-password').value || null,
+    role: document.getElementById('f-role').value,
   };
+  if (editingId) payload.isActive = document.getElementById('f-active').checked;
 
-  const url = editingId ? `/api/users/${editingId}` : '/api/users';
-  const method = editingId ? 'PUT' : 'POST';
-  const res = await apiFetch(url, { method, body: JSON.stringify(payload) });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    errorEl.textContent = data.message || 'Hiba történt a mentés során.';
-    errorEl.classList.add('show');
-    return;
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  try {
+    const res = editingId
+      ? await apiFetch(`/api/users/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) })
+      : await apiFetch('/api/users/invite', { method: 'POST', body: JSON.stringify(payload) });
+    if (!res.ok) {
+      const message = errorMessage(res, await readJson(res), 'Hiba történt a mentés során.');
+      // 502: a felhasználó létrejött, csak a meghívó e-mail nem ment ki — a listában újraküldhető.
+      if (res.status === 502) {
+        alert(message);
+      } else {
+        errorEl.textContent = message;
+        errorEl.classList.add('show');
+        return;
+      }
+    }
+    closeModal();
+    loadUsers();
+  } finally {
+    btn.disabled = false;
   }
-
-  closeModal();
-  loadUsers();
 });
 
 loadUsers();

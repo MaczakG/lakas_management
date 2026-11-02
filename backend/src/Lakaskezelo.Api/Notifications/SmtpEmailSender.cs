@@ -1,4 +1,5 @@
 using Lakaskezelo.Api.Settings;
+using Lakaskezelo.Domain.Entities;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
@@ -24,9 +25,15 @@ public class SmtpEmailSender(AppSettingsService settingsService, ILogger<SmtpEma
         !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(username)
         && !string.IsNullOrWhiteSpace(password) && !string.IsNullOrWhiteSpace(from);
 
-    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
+    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct) =>
+        await SendWithAsync(await settingsService.GetAsync(ct), null, to, subject, htmlBody, textBody, attachment, ct);
+
+    // Megadott (nem feltétlenül az aktuális cég) beállításaival küld — a rendszerlevelekhez
+    // (SystemEmailSender), amelyek a platform üzemeltetőjének postafiókjából mennek. fromNameOverride:
+    // ha meg van adva, ez lesz a feladó neve (pl. a termék neve a cégnév helyett).
+    public async Task<bool> SendWithAsync(AppSettings settings, string? fromNameOverride, string to, string subject,
+        string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
     {
-        var settings = await settingsService.GetAsync(ct);
         if (!IsConfigured(settings.SmtpHost, settings.SmtpUsername, settings.SmtpPassword, settings.SmtpFromAddress))
         {
             LastError = "SMTP nincs beállítva (szerver / felhasználónév / jelszó / feladó hiányzik a Beállításokban).";
@@ -36,7 +43,7 @@ public class SmtpEmailSender(AppSettingsService settingsService, ILogger<SmtpEma
 
         try
         {
-            var fromName = string.IsNullOrWhiteSpace(settings.SmtpFromName) ? "Lakáskezelő" : settings.SmtpFromName;
+            var fromName = fromNameOverride ?? (string.IsNullOrWhiteSpace(settings.SmtpFromName) ? "Lakáskezelő" : settings.SmtpFromName);
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(fromName, settings.SmtpFromAddress));
             message.To.Add(MailboxAddress.Parse(to));

@@ -3,9 +3,10 @@ using Lakaskezelo.Domain.Enums;
 namespace Lakaskezelo.Domain.Entities;
 
 // Számla
-public class Invoice
+public class Invoice : ICompanyOwned
 {
     public Guid Id { get; set; }
+    public Guid CompanyId { get; set; }
     public Guid PropertyId { get; set; }
     public Property? Property { get; set; }
     public Guid? TenantId { get; set; }

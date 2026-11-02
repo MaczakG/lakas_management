@@ -1,9 +1,10 @@
 namespace Lakaskezelo.Domain.Entities;
 
 // Ingatlan
-public class Property
+public class Property : ICompanyOwned
 {
     public Guid Id { get; set; }
+    public Guid CompanyId { get; set; }
     public string Name { get; set; } = string.Empty; // cím / megnevezés
     public decimal RentAmount { get; set; }
 

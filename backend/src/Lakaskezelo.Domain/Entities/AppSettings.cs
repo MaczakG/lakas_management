@@ -2,14 +2,15 @@ using Lakaskezelo.Domain.Enums;
 
 namespace Lakaskezelo.Domain.Entities;
 
-// Egyetlen sorból álló tábla — a rendszer futásidejű beállításai (Beállítások oldal), nem
-// appsettings/env-ből jönnek, mert a felhasználó a felületen akarja szerkeszteni őket.
-public class AppSettings
+// Cégenként egy sor — a cég futásidejű beállításai (Beállítások oldal), nem appsettings/env-ből
+// jönnek, mert a felhasználó a felületen szerkeszti őket.
+public class AppSettings : ICompanyOwned
 {
-    // Fix Id, mindig ugyanaz az egy sor — nincs több "beállítás-készlet".
-    public static readonly Guid SingletonId = new("11111111-1111-1111-1111-111111111111");
+    // A SaaS előtti egyetlen beállítás-sor azonosítója (az alapértelmezett cégé lett).
+    public static readonly Guid LegacySingletonId = new("11111111-1111-1111-1111-111111111111");
 
-    public Guid Id { get; set; } = SingletonId;
+    public Guid Id { get; set; }
+    public Guid CompanyId { get; set; }
 
     // Melyik szolgáltató küldi ténylegesen a rendszer e-mailjeit — a másik konfigja megmarad,
     // csak nincs használatban (ld. Notifications/EmailSenderRouter).

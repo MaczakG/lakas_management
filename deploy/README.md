@@ -13,6 +13,34 @@
 - **Mentés:** napi EBS-pillanatkép 7 napig + heti 4 hétig (DLM szabály, a kötet `Backup=lakaskezelo`
   címkéje alapján); élesítés előtt kézi adatbázis-dump a `/home/ubuntu` mappába.
 
+## Ágak, verziók, kiadások
+
+| Ág | Környezet | Cím |
+|---|---|---|
+| `staging` | teszt — kitalált adatok, e-mail csak a felhasználóknak megy | https://lakaskezelo.alts.hu:8443 |
+| `main` | éles | https://lakaskezelo.alts.hu |
+
+- **Munkamenet:** a fejlesztés munkaágon (`claude/...`) történik → PR a `staging`-be → kirakás a tesztre →
+  kipróbálás. Élesre csak a tulajdonos jóváhagyásával kerül: PR `staging` → `main`, majd élesítés.
+- **Verziószám (`AppVersion.Current`):** dátum alapú, `ÉÉÉÉ.HH.NN` (ha egy napon több kiadás van:
+  `ÉÉÉÉ.HH.NN.2`). Minden érdemi változásnál nő; a felület oldalsávjában és a `/api/version`-en látszik, a
+  tesztet borostyán „TESZT KÖRNYEZET” sáv jelzi.
+- **Kiadás:** minden éles kiadás után `vÉÉÉÉ.HH.NN` git-címke a `main`-en, és a `docs/valtozasnaplo.md`-ben a
+  „Csak a teszten” rész átkerül a kiadás alá.
+
+## Teszt-környezet (staging)
+
+- Ugyanazon a szerveren fut, külön konténerekben (`postgres-staging`, `api-staging`, memóriakorláttal), a
+  közös nginx 8443-as portján. A kód a `/home/ubuntu/lakaskezelo/staging/{backend,frontend}` mappában.
+- **Kirakás:** a `staging` ág adott commitjának `backend/` és `frontend/` mappája a `staging/` alá, majd
+  `docker compose up -d --build api-staging` és `docker compose restart nginx`. A `deploy/` fájlok
+  (compose, nginx) a szerveren közösek az éles rendszerrel: a `staging`-ről csak akkor kerülnek ki, ha a
+  változás az éles szolgáltatásokat nem módosítja (pl. a teszt saját blokkjai); egyébként élesítéskor, a
+  `main`-ről. Kiírás előtt `nginx -t` és `docker compose config` ellenőrzés.
+- **Adatok:** a `deploy/staging-seed.sql` kitalált mintaadatai. A felhasználók (jelszó-hash) és az e-mail
+  beállítások az élesről másolódnak, hogy a belépés és a belépési kód ugyanúgy működjön; a Rezsi-emlékeztető
+  címzettje és az S3-tárhely nem. Valós ügyfél- vagy bérlői adat nem kerülhet a tesztre.
+
 ## Élesítés (csak a `main` ágról)
 
 1. **Mentés:** `pg_dumpall` a `/home/ubuntu/db-backup-<időbélyeg>.sql` fájlba, és
@@ -41,5 +69,31 @@ paranccsal érdemes ellenőrizni.
 - **Vészkapcsoló:** ha az e-mail küldés tartósan nem működik, és emiatt senki sem tud belépni, a
   `docker-compose.yml`-ben `Auth__TwoFactorEnabled: "false"`, majd `docker compose up -d api`.
   Utána mielőbb vissza `"true"`-ra.
+- **Regisztráció és rendszerlevelek:** az önregisztráció a `Registration__Enabled: "true"` környezeti
+  változóval nyílik meg (a teszten nyitva, élesben zárva). A rendszerlevelek (belépési kód, meghívó,
+  regisztráció megerősítése) a `Platform__EmailCompanyId` cég (alapból az első, üzemeltetői cég)
+  Beállításokban megadott e-mail fiókjáról mennek, `App__ProductName` (alapból „Lakáskezelő”) feladónévvel.
+- **Előfizetés (SaaS-díj):** a Platform oldalon (csak az üzemeltető cég adminisztrátorainak) kapcsolható be,
+  ott adhatók meg az árak, az ÁFA, a Barion POSKey / kedvezményezett és a Billingo API-kulcs / számlatömb (a
+  kulcsokat az API nem adja vissza). A Barion a fizetés végén a `/api/public/barion/callback` címet hívja.
+  A teszten Barion **sandbox** kulcs használandó; a Billingo-számla mindig valódi bizonylat, ezért a teszten
+  csak külön teszt-Billingo-fiókkal (vagy kulcs nélkül — ilyenkor a számla „Készül…” marad).
 - **Titkok:** az SMTP-jelszót és a Mailgun API-kulcsot a Beállítások API nem adja vissza a
   böngészőnek (csak felülírni lehet őket).
+
+## SaaS indulás — ellenőrzőlista
+
+1. **Név és domain:** az `App__ProductName` (a rendszerlevelek feladóneve, az ÁSZF) és a felületen a
+   „Lakáskezelő” felirat; új domainnél DNS A-rekord az Elastic IP-re, `nginx.conf` `server_name` + Let's
+   Encrypt tanúsítvány, `Frontend__BaseUrl` és `Cors__AllowedOrigins__0` a compose-ban.
+2. **Szolgáltató adatai:** Platform oldal → „Szolgáltató adatai” (név, cím, adószám, nyilvántartási szám,
+   e-mail) és a jogi dokumentumok hatálybalépése. Az ÁSZF-et és az adatkezelési tájékoztatót jogász nézze át.
+3. **Barion (éles):** éles üzlet, a token-fizetés (ismétlődő fizetés) engedélyeztetése a Barionnal; Platform
+   oldal → Barion: környezet „Éles”, POSKey, kedvezményezett e-mail. A Barion fizetési callback címe:
+   `<domain>/api/public/barion/callback`.
+4. **Billingo:** API-kulcs és számlatömb a Platform oldalon (a számlák valódi bizonylatok).
+5. **Rendszerlevelek:** az üzemeltető cég Beállításaiban megadott e-mail fiók küldi őket (belépési kód,
+   meghívó, megerősítés, fizetési értesítők) — legyen megbízható (SPF/DKIM a feladó domainjén).
+6. **Bekapcsolás:** élesítés után Platform oldal → „Előfizetési díj bekapcsolva”, majd a compose-ban az
+   éles `api` szolgáltatásnál `Registration__Enabled: "true"` és `docker compose up -d api`.
+

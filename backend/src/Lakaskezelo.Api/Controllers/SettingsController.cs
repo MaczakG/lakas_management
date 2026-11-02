@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.Controllers;
 
-[Authorize]
+[Authorize(Roles = UsersController.AdminRole)]
 [ApiController]
 [Route("api/settings")]
 public class SettingsController(
@@ -26,10 +26,12 @@ public class SettingsController(
     [HttpPut]
     public async Task<ActionResult<AppSettingsDto>> Update(AppSettingsDto dto, CancellationToken ct)
     {
-        var settings = await db.AppSettings.SingleOrDefaultAsync(s => s.Id == Domain.Entities.AppSettings.SingletonId, ct);
+        // A globális szűrő miatt ez a bejelentkezett felhasználó cégének sora; ha még nincs, létrehozzuk
+        // (a CompanyId-t mentéskor a DbContext tölti ki a cég-kontextusból).
+        var settings = await db.AppSettings.SingleOrDefaultAsync(ct);
         if (settings is null)
         {
-            settings = new Domain.Entities.AppSettings { Id = Domain.Entities.AppSettings.SingletonId };
+            settings = new Domain.Entities.AppSettings { Id = Guid.NewGuid() };
             db.AppSettings.Add(settings);
         }
 
@@ -58,7 +60,7 @@ public class SettingsController(
         settings.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
-        AppSettingsService.Invalidate();
+        AppSettingsService.Invalidate(settings.CompanyId);
 
         return Ok(ToDto(settings));
     }
