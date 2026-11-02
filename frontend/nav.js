@@ -35,13 +35,13 @@
       ${item('users.html', 'user-check', 'Felhasználók')}
       ${item('subscription.html', 'circle-dollar-sign', 'Előfizetés', 'billing')}
       ${item('settings.html', 'lock', 'Beállítások', 'admin')}
-      ${item('platform.html', 'server', 'Platform', 'operator')}
     </nav>
 
     <div class="sidebar-footer">
       <div class="avatar" id="avatar">··</div>
       <div class="who"><span id="who-name">—</span><small id="who-company"></small></div>
     </div>
+    <a class="btn btn-secondary btn-sm logout-btn" href="platform.html" data-only="operator" hidden>${icon('server')}Platform admin</a>
     <button class="btn btn-secondary btn-sm logout-btn" type="button" id="logout-link">${icon('log-out')}Kilépés</button>
     <span class="sidebar-version"><span id="version-tag"></span> · <a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelés</a></span>
   </aside>`);

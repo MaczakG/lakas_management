@@ -48,6 +48,8 @@ public class AppSettings : ICompanyOwned
     public string? IssuerAddress { get; set; }
     public string? IssuerTaxId { get; set; }
     public string? IssuerBankAccount { get; set; }
+    // A bérlőknek küldött levelek válaszcíme (Reply-To) — a bérlő válasza a bérbeadóhoz menjen, ne az üzemeltetőhöz.
+    public string? IssuerEmail { get; set; }
 
     // ---------- Számla e-mail szövege (üresen az InvoiceGenerationService beépített alapértéke érvényes) ----------
     public string? InvoiceEmailSubject { get; set; }

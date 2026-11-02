@@ -6,14 +6,15 @@ using Lakaskezelo.Api.Settings;
 
 namespace Lakaskezelo.Api.Storage;
 
-// A számla-PDF-ek tárhelye (Amazon S3). A bucket neve és régiója a Beállítások oldalon állítható
-// (AppSettings); a hozzáférést élesben az EC2-höz rendelt IAM-szerep adja, kulcsot nem tárolunk.
+// A számla-PDF-ek tárhelye (Amazon S3) — platform-szintű: a bucket neve és régiója a Platform admin
+// felületen állítható (az üzemeltető AppSettings sora), a cégek PDF-jei a companies/{cégId}/ előtag
+// alatt vannak. A hozzáférést élesben az EC2-höz rendelt IAM-szerep adja, kulcsot nem tárolunk.
 public class S3InvoiceStorage(AppSettingsService settingsService)
 {
     private const string DefaultRegion = "eu-central-1";
 
     public async Task<bool> IsConfiguredAsync(CancellationToken ct = default) =>
-        !string.IsNullOrWhiteSpace((await settingsService.GetAsync(ct)).S3BucketName);
+        !string.IsNullOrWhiteSpace((await settingsService.GetPlatformAsync(ct)).S3BucketName);
 
     public async Task UploadAsync(string key, byte[] content, string contentType, CancellationToken ct = default)
     {
@@ -74,10 +75,10 @@ public class S3InvoiceStorage(AppSettingsService settingsService)
 
     private async Task<(AmazonS3Client Client, string Bucket)> CreateClientAsync(CancellationToken ct)
     {
-        var settings = await settingsService.GetAsync(ct);
+        var settings = await settingsService.GetPlatformAsync(ct);
         if (string.IsNullOrWhiteSpace(settings.S3BucketName))
         {
-            throw new InvalidOperationException("Nincs megadva S3 bucket a Beállítások oldalon.");
+            throw new InvalidOperationException("Nincs megadva S3 bucket (Platform admin → E-mail és tárhely).");
         }
         var region = string.IsNullOrWhiteSpace(settings.S3Region) ? DefaultRegion : settings.S3Region.Trim();
         return (new AmazonS3Client(RegionEndpoint.GetBySystemName(region)), settings.S3BucketName.Trim());

@@ -1,4 +1,7 @@
 using Lakaskezelo.Api.Contracts;
+using Lakaskezelo.Api.Notifications;
+using Lakaskezelo.Api.Settings;
+using Lakaskezelo.Api.Storage;
 using Lakaskezelo.Api.Subscriptions;
 using Lakaskezelo.Data;
 using Lakaskezelo.Domain.Entities;
@@ -14,7 +17,9 @@ namespace Lakaskezelo.Api.Controllers;
 [PlatformOperator]
 [ApiController]
 [Route("api/platform")]
-public class PlatformController(LakaskezeloDbContext db, PlatformSettingsService platform, ICompanyContext companyContext) : ControllerBase
+public class PlatformController(
+    LakaskezeloDbContext db, PlatformSettingsService platform, ICompanyContext companyContext, AppSettingsService settingsService,
+    S3InvoiceStorage storage, MailgunEmailSender mailgunSender, SmtpEmailSender smtpSender) : ControllerBase
 {
     [HttpGet("settings")]
     public async Task<ActionResult<PlatformSettingsDto>> GetSettings(CancellationToken ct)
@@ -156,4 +161,74 @@ public class PlatformController(LakaskezeloDbContext db, PlatformSettingsService
         return Ok(payments.Select(p => new PlatformPaymentDto(p.Id, names.GetValueOrDefault(p.CompanyId, "?"), p.Kind, p.Status, p.Interval,
             p.PropertyCount, p.GrossAmount, p.CreatedAt, p.ErrorMessage, p.BillingoPublicUrl, p.BillingoError)).ToList());
     }
+
+    // ---------- E-mail küldés és számla-tárhely (az üzemeltető cég AppSettings sorában) ----------
+
+    [HttpGet("delivery")]
+    public async Task<ActionResult<PlatformDeliveryDto>> GetDelivery(CancellationToken ct) =>
+        Ok(ToDeliveryDto(await settingsService.GetPlatformAsync(ct)));
+
+    [HttpPut("delivery")]
+    public async Task<ActionResult<PlatformDeliveryDto>> UpdateDelivery(PlatformDeliveryDto dto, CancellationToken ct)
+    {
+        if (!Enum.IsDefined(dto.EmailProvider)) return BadRequest(new { message = "Érvénytelen e-mail szolgáltató." });
+        var platformCompanyId = settingsService.PlatformCompanyId;
+        var settings = await db.AppSettings.IgnoreQueryFilters().SingleOrDefaultAsync(s => s.CompanyId == platformCompanyId, ct);
+        if (settings is null)
+        {
+            settings = new AppSettings { Id = Guid.NewGuid(), CompanyId = platformCompanyId };
+            db.AppSettings.Add(settings);
+        }
+        static string? Clean(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+
+        settings.EmailProvider = dto.EmailProvider;
+        if (!string.IsNullOrWhiteSpace(dto.MailgunApiKey)) settings.MailgunApiKey = dto.MailgunApiKey.Trim();
+        settings.MailgunDomain = Clean(dto.MailgunDomain);
+        settings.MailgunFromAddress = Clean(dto.MailgunFromAddress);
+        settings.MailgunFromName = Clean(dto.MailgunFromName);
+        settings.MailgunApiBaseUrl = Clean(dto.MailgunApiBaseUrl);
+        settings.SmtpHost = Clean(dto.SmtpHost);
+        settings.SmtpPort = dto.SmtpPort;
+        settings.SmtpUsername = Clean(dto.SmtpUsername);
+        if (!string.IsNullOrWhiteSpace(dto.SmtpPassword)) settings.SmtpPassword = dto.SmtpPassword;
+        settings.SmtpFromAddress = Clean(dto.SmtpFromAddress);
+        settings.SmtpFromName = Clean(dto.SmtpFromName);
+        settings.S3BucketName = Clean(dto.S3BucketName);
+        settings.S3Region = Clean(dto.S3Region);
+        settings.UpdatedAt = DateTime.UtcNow;
+
+        // A sor az üzemeltető cégé — a mentés annak kontextusában fut (a DbContext ellenőrzi).
+        companyContext.Set(platformCompanyId);
+        await db.SaveChangesAsync(ct);
+        AppSettingsService.Invalidate(platformCompanyId);
+        return Ok(ToDeliveryDto(settings));
+    }
+
+    [HttpPost("test-email")]
+    public async Task<ActionResult<TestSmtpResponse>> TestEmail(TestEmailRequest request, [FromQuery] string provider, CancellationToken ct)
+    {
+        var html = EmailTemplate.Render("Teszt e-mail", "Teszt e-mail", "<p style=\"margin:0;\">Ez egy teszt e-mail a Platform admin felületről.</p>");
+        const string text = "Ez egy teszt e-mail a Platform admin felületről.";
+        if (string.Equals(provider, "smtp", StringComparison.OrdinalIgnoreCase))
+        {
+            var ok = await smtpSender.SendAsync(request.To, "Teszt e-mail (SMTP)", html, text, null, ct);
+            return Ok(new TestSmtpResponse(ok, ok ? null : smtpSender.LastError));
+        }
+        var sent = await mailgunSender.SendAsync(request.To, "Teszt e-mail (Mailgun)", html, text, null, ct);
+        return Ok(new TestSmtpResponse(sent, sent ? null : mailgunSender.LastError));
+    }
+
+    [HttpPost("test-storage")]
+    public async Task<ActionResult<TestStorageResponse>> TestStorage(CancellationToken ct)
+    {
+        var (success, error) = await storage.TestConnectionAsync(ct);
+        return Ok(new TestStorageResponse(success, error));
+    }
+
+    private static PlatformDeliveryDto ToDeliveryDto(AppSettings s) => new(
+        s.EmailProvider,
+        null, s.MailgunDomain, s.MailgunFromAddress, s.MailgunFromName, s.MailgunApiBaseUrl,
+        s.SmtpHost, s.SmtpPort, s.SmtpUsername, null, s.SmtpFromAddress, s.SmtpFromName,
+        s.S3BucketName, s.S3Region,
+        MailgunApiKeySet: !string.IsNullOrEmpty(s.MailgunApiKey), SmtpPasswordSet: !string.IsNullOrEmpty(s.SmtpPassword));
 }
