@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lakaskezelo.Data.Migrations
 {
     [DbContext(typeof(LakaskezeloDbContext))]
-    [Migration("20261102205229_Subscriptions")]
+    [Migration("20261102210657_Subscriptions")]
     partial class Subscriptions
     {
         /// <inheritdoc />
@@ -410,7 +410,7 @@ namespace Lakaskezelo.Data.Migrations
                             BarionEnvironment = "Test",
                             BillingEnabled = false,
                             GraceDays = 7,
-                            MonthlyNetPricePerProperty = 990m,
+                            MonthlyNetPricePerProperty = 1990m,
                             TrialDays = 14,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             VatPercent = 27m,

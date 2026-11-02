@@ -12,7 +12,7 @@ public class PlatformSettings
     // Főkapcsoló: amíg ki van kapcsolva, senki nem fizet és semmi nem zárolódik.
     public bool BillingEnabled { get; set; }
 
-    public decimal MonthlyNetPricePerProperty { get; set; } = 990m;
+    public decimal MonthlyNetPricePerProperty { get; set; } = 1990m;
     public decimal YearlyDiscountPercent { get; set; } = 15m;
     public int TrialDays { get; set; } = 14;
     public int GraceDays { get; set; } = 7;

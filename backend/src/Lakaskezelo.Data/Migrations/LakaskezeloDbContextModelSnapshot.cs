@@ -407,7 +407,7 @@ namespace Lakaskezelo.Data.Migrations
                             BarionEnvironment = "Test",
                             BillingEnabled = false,
                             GraceDays = 7,
-                            MonthlyNetPricePerProperty = 990m,
+                            MonthlyNetPricePerProperty = 1990m,
                             TrialDays = 14,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             VatPercent = 27m,

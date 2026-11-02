@@ -115,7 +115,7 @@ namespace Lakaskezelo.Data.Migrations
             migrationBuilder.InsertData(
                 table: "PlatformSettings",
                 columns: new[] { "Id", "BarionEnvironment", "BarionPayeeEmail", "BarionPosKey", "BillingEnabled", "BillingoApiKey", "BillingoBlockId", "GraceDays", "MonthlyNetPricePerProperty", "TrialDays", "UpdatedAt", "VatExemption", "VatPercent", "YearlyDiscountPercent" },
-                values: new object[] { new Guid("22222222-2222-4222-8222-222222222222"), "Test", null, null, false, null, null, 7, 990m, 14, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, 27m, 15m });
+                values: new object[] { new Guid("22222222-2222-4222-8222-222222222222"), "Test", null, null, false, null, null, 7, 1990m, 14, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, 27m, 15m });
 
             migrationBuilder.CreateIndex(
                 name: "IX_SubscriptionPayments_BarionPaymentId",
