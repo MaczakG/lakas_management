@@ -46,6 +46,8 @@ services:
       # Kétlépcsős (e-mailes kódos) belépés. Csak vészhelyzetben állítsd "false"-ra (pl. ha az
       # e-mail küldés tartósan nem működik, és emiatt senki sem tud belépni), utána azonnal vissza.
       Auth__TwoFactorEnabled: "true"
+      # Az első Platform admin fiók e-mail címe (a .env-ből), ld. az api-staging szolgáltatásnál.
+      PlatformAdmin__Email: ${PLATFORM_ADMIN_EMAIL:-}
     depends_on:
       postgres:
         condition: service_healthy
