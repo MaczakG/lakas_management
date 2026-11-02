@@ -1,0 +1,115 @@
+/* ============================================================
+   Adatlapok — property-detail.html.
+   A Yardly jármű-adatlapjának elrendezése: fejléc morzsamenüvel, címmel és állapottal, alatta a rövid
+   panelek oszlopokba rendezve (masonry), legalul a teljes szélességű, füles rekordlista. A panelek
+   értékei helyben szerkeszthetők: sima szövegnek látszanak, rámutatáskor/fókuszban mezővé válnak,
+   és a változás magától mentődik (ld. property-detail.js).
+   ============================================================ */
+.detail-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:14px 24px;margin-bottom:20px;}
+.detail-head-text{min-width:0;}
+.crumbs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px;padding:0;list-style:none;font-size:12.5px;font-weight:500;color:var(--muted);}
+.crumbs li+li::before{content:'/';margin-right:6px;color:var(--line-strong);}
+.crumbs a{color:var(--ink-soft);}
+.crumbs a:hover{color:var(--ink);text-decoration:underline;}
+.title-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;}
+.title-row h1{font-family:var(--font-display);font-weight:600;font-size:27px;letter-spacing:-0.025em;color:var(--ink);}
+.detail-sub{color:var(--ink-soft);font-size:13.5px;font-weight:500;margin-top:4px;}
+.detail-hint{color:var(--muted);font-size:12.5px;font-weight:500;margin-top:6px;}
+.detail-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+
+/* Masonry: a JS a paneleket sorrendben mindig a legrövidebb oszlopba osztja, így a rövid és hosszú
+   panelek hézag nélkül illeszkednek. Szkript nélkül sima rácsként jelennek meg. */
+.masonry{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;align-items:start;margin-bottom:14px;}
+.masonry.is-laid-out{grid-template-columns:repeat(var(--cols),minmax(0,1fr));}
+.masonry-col{display:grid;gap:14px;align-content:start;min-width:0;}
+
+/* Az oldal egy magasságú: fent a panelek, alatta a füles lista tölti ki az ablakot (min. 420px). */
+.detail-page{display:flex;flex-direction:column;min-height:100%;}
+.record-tabs{flex:1 1 0;min-height:420px;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);min-width:0;}
+.record-tabbar{display:flex;align-items:flex-end;gap:12px;padding:6px 12px 0 8px;border-bottom:1px solid var(--line);}
+.record-tablist{display:flex;flex-wrap:wrap;gap:2px;flex:1;min-width:0;}
+.record-tab{display:inline-flex;align-items:center;gap:7px;padding:10px 12px 9px;border:none;border-bottom:2px solid transparent;background:none;
+  font-family:var(--font-body);font-size:13px;font-weight:600;color:var(--ink-soft);white-space:nowrap;cursor:pointer;}
+.record-tab:hover{color:var(--ink);}
+.record-tab.active{color:var(--accent-deep);border-bottom-color:var(--accent);}
+.record-tab svg{width:15px;height:15px;flex-shrink:0;}
+.record-tab-actions{display:flex;align-items:center;gap:8px;padding-bottom:7px;flex-shrink:0;}
+.record-tab-actions .btn{height:32px;padding:0 12px;font-size:12.5px;}
+.record-tab-actions .btn svg{width:14px;height:14px;}
+.record-tab-actions [hidden]{display:none !important;}
+.record-tab-body{flex:1;min-height:0;overflow:auto;position:relative;}
+.record-tab-pane{min-height:100%;display:flex;flex-direction:column;}
+.record-tab-pane[hidden]{display:none;}
+.record-tab-pane > .panel-table{flex:1;}
+.record-tab-pane thead th{position:sticky;top:0;z-index:1;background:var(--surface);}
+.record-tab-pane .panel-empty{flex:1;display:flex;align-items:center;justify-content:center;min-height:200px;}
+@media (max-width:760px){.record-tabbar{flex-direction:column;align-items:stretch;}.record-tablist{flex-wrap:nowrap;overflow-x:auto;}.record-tab-actions{padding:0 0 8px 4px;}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);min-width:0;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:8px 12px 8px 16px;border-bottom:1px solid var(--line);}
+.panel-title{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:14.5px;font-weight:600;letter-spacing:-0.01em;color:var(--ink);}
+.panel-title svg{width:16px;height:16px;color:var(--muted);flex-shrink:0;}
+.panel-count:empty{display:none;}
+.panel-count{font-family:var(--font-body);font-size:11.5px;font-weight:700;color:var(--muted);background:var(--surface-2);border-radius:var(--radius-pill);padding:1px 8px;}
+.panel-head .btn{height:32px;padding:0 12px;font-size:12.5px;}
+.panel-head .btn svg{width:14px;height:14px;}
+.panel-body{padding:8px 16px 12px;}
+.panel-empty{padding:20px 16px;color:var(--muted);font-size:13px;font-weight:500;text-align:center;}
+.panel-table{overflow-x:auto;}
+.panel-table table{width:100%;border-collapse:collapse;}
+.panel-table thead th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);
+  padding:10px 12px 8px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface);}
+.panel-table thead th:first-child,.panel-table tbody td:first-child{padding-left:16px;}
+.panel-table thead th:last-child,.panel-table tbody td:last-child{padding-right:12px;}
+.panel-table tbody td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink-soft);vertical-align:middle;}
+.panel-table tbody tr:last-child td{border-bottom:none;}
+.panel-table .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+.icon-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-soft);transition:background .15s ease,border-color .15s ease,color .15s ease;}
+.icon-btn:hover{background:var(--surface-sunken);border-color:var(--line-strong);color:var(--ink);}
+.icon-btn.danger:hover{background:var(--coral-bg);border-color:var(--coral-border);color:var(--coral);}
+.icon-btn svg{width:14px;height:14px;}
+
+/* Címke–érték sorok. */
+.props{display:grid;margin:0;}
+.prop{display:grid;grid-template-columns:minmax(110px,40%) minmax(0,1fr);gap:12px;align-items:center;min-height:38px;padding:3px 0;border-top:1px solid var(--surface-2);}
+.prop:first-child{border-top:0;}
+.prop dt{color:var(--ink-soft);font-size:13px;font-weight:500;}
+.prop dd{margin:0;min-width:0;font-size:13.5px;font-weight:600;color:var(--ink);overflow-wrap:anywhere;}
+.prop dd .dim{color:var(--muted);font-weight:500;}
+.prop dd .status-tag{font-size:10.5px;padding:1px 8px;}
+.prop.wide{grid-template-columns:1fr;gap:4px;padding:8px 0;}
+/* A teljes szélességű mezőnél (megjegyzés) a panel címe már megnevezi — a címke csak a felolvasónak kell. */
+.prop.wide dt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+
+/* Helyben szerkeszthető érték. A mező 9px-szel balra lóg, hogy a szövege egy vonalba essen az
+   ugyanebben az oszlopban lévő csak olvasható értékekkel. */
+.ifield{display:flex;align-items:center;gap:6px;min-width:0;}
+.ifield .ictl{flex:1;min-width:0;}
+.ifield .iinput{display:block;width:calc(100% + 9px);height:32px;margin-left:-9px;padding:0 8px;border:1px solid transparent;border-radius:var(--radius-sm);
+  background:transparent;font-family:var(--font-body);font-size:13.5px;font-weight:600;color:var(--ink);cursor:text;box-shadow:none;
+  transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;}
+.ifield select.iinput{cursor:pointer;padding-right:28px;background-position:right 8px center;background-color:transparent;}
+.ifield textarea.iinput{height:auto;min-height:84px;padding:6px 8px;line-height:1.5;resize:vertical;}
+.ifield .iinput::placeholder{color:var(--muted);font-weight:500;}
+.ifield .iinput:hover{border-color:var(--line);background-color:#fff;}
+.ifield .iinput:focus{border-color:var(--accent);outline:none;background-color:#fff;box-shadow:0 0 0 3px var(--accent-ring);}
+.ifield .iinput[aria-invalid="true"]{border-color:var(--coral);background-color:#fff;}
+.ifield .iinput[type=number]{-moz-appearance:textfield;}
+.ifield .iinput[type=number]::-webkit-outer-spin-button,.ifield .iinput[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.ifield .suffix{color:var(--muted);font-size:12.5px;font-weight:500;white-space:nowrap;}
+.ifield .istate{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;}
+.ifield .istate.ok{color:var(--green);}
+.ifield .istate.err{color:var(--coral);}
+
+.owner-list{display:grid;}
+.owner-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--surface-2);font-size:13.5px;}
+.owner-line:first-child{border-top:0;}
+.owner-line b{font-weight:600;color:var(--ink);}
+.share-chip{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--accent-deep);background:var(--accent-bg);border:1px solid var(--accent-border);
+  border-radius:var(--radius-pill);padding:1px 9px;}
+
+.owner-row{display:grid;grid-template-columns:1fr 90px 36px;gap:10px;margin-bottom:10px;align-items:center;}
+.owner-row .field{margin:0;}

@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lakáskezelő — Felhasználók</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,10 +16,11 @@
   <main class="main">
     <div class="page-header">
       <div>
+        <div class="page-eyebrow">Fiók</div>
         <h1>Felhasználók</h1>
-        <p>Minden felhasználó ugyanazokat a funkciókat éri el — nincs jogosultsági szintezés.</p>
+        <div class="page-state" id="page-state"></div>
       </div>
-      <button class="btn btn-primary" id="add-btn">+ Új felhasználó</button>
+      <button class="btn btn-primary" id="add-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#plus"/></svg>Új felhasználó</button>
     </div>
 
     <div class="card-table">
@@ -72,6 +71,10 @@ let editingId = null;
 async function loadUsers() {
   const res = await apiFetch('/api/users');
   users = await res.json();
+  setPageState([
+    { n: users.filter((u) => u.isActive).length, label: 'aktív', tone: 'ok' },
+    { n: users.filter((u) => !u.isActive).length, label: 'inaktív' },
+  ]);
   renderUsers();
 }
 

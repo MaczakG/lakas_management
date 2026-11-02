@@ -4,14 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lakáskezelő — Számlázás</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <style>
-  .status-tag.Sent{background:var(--green-bg);color:var(--green);border-color:var(--green-border);}
-  .status-tag.Generated{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border);}
-  .status-tag.Failed{background:var(--coral-bg);color:var(--coral);border-color:var(--coral-border);}
   .error-note{font-size:12px;color:var(--coral);margin-top:2px;}
 </style>
 </head>
@@ -24,10 +19,11 @@
   <main class="main">
     <div class="page-header">
       <div>
+        <div class="page-eyebrow">Pénzügy</div>
         <h1>Számlázás</h1>
-        <p>A rendszer automatikusan generálja és küldi a számlákat az ingatlanoknál beállított időpontban.</p>
+        <div class="page-state" id="page-state"></div>
       </div>
-      <button class="btn btn-primary" id="generate-btn">+ Számla generálása most</button>
+      <button class="btn btn-primary" id="generate-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#plus"/></svg>Számla generálása most</button>
     </div>
 
     <div class="toolbar">
@@ -90,6 +86,11 @@ const statusLabels = { Sent: 'Elküldve', Generated: 'Legenerálva', Failed: 'Si
 async function loadInvoices() {
   const res = await apiFetch('/api/invoices');
   invoices = await res.json();
+  setPageState([
+    { n: invoices.filter((i) => i.status === 'Sent').length, label: 'kiküldve', tone: 'ok' },
+    { n: invoices.filter((i) => i.status === 'Generated').length, label: 'nem küldött', tone: 'warn' },
+    { n: invoices.filter((i) => i.status === 'Failed').length, label: 'sikertelen', tone: 'crit' },
+  ]);
   renderInvoices();
 }
 

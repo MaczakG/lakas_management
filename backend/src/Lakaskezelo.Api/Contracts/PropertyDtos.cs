@@ -11,7 +11,15 @@ public record PropertyListItemDto(
 public record PropertyDetailDto(
     Guid Id, string Name, decimal RentAmount, string? InvoicePrefix,
     int BillingDayOfMonth, int BillingHour, int BillingMinute, bool IsActive,
-    List<PropertyOwnerDto> Owners, List<TenantDto> Tenants);
+    List<PropertyOwnerDto> Owners, List<TenantDto> Tenants,
+    PropertySheetDto Sheet, DateTime NextBillingAt);
+
+// Az ingatlan adatlapja (property-detail.html) — mind opcionális.
+public record PropertySheetDto(
+    string? PropertyType, string? PostalCode, string? City, string? Street, string? FloorDoor, string? Hrsz,
+    decimal? FloorArea, decimal? Rooms, int? BuildYear,
+    string? ElectricityMeter, string? GasMeter, string? WaterMeter,
+    decimal? Deposit, string? Notes);
 
 public record PropertyOwnerDto(Guid OwnerId, string OwnerName, string? Share);
 
@@ -20,7 +28,8 @@ public record PropertyOwnerInput(Guid OwnerId, string? Share);
 public record UpsertPropertyRequest(
     string Name, decimal RentAmount, string? InvoicePrefix,
     int BillingDayOfMonth, int BillingHour, int BillingMinute, bool IsActive,
-    List<PropertyOwnerInput> Owners);
+    List<PropertyOwnerInput> Owners,
+    PropertySheetDto? Sheet = null); // null: az adatlap változatlan marad (pl. az "Új ingatlan" dialógus)
 
 public record UtilityCostEntryDto(Guid Id, int Year, int Month, string Label, decimal Amount, DateTime CreatedAt, bool IsLocked);
 public record UpsertUtilityCostEntryRequest(int Year, int Month, string Label, decimal Amount);

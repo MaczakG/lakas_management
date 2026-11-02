@@ -56,6 +56,7 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
     public async Task<ActionResult<PropertyDetailDto>> Create(UpsertPropertyRequest request, CancellationToken ct)
     {
         if (ValidateShares(request.Owners) is { } shareError) return BadRequest(new { message = shareError });
+        if (ValidateSheet(request.Sheet) is { } sheetError) return BadRequest(new { message = sheetError });
 
         var property = new Property { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow };
         Apply(property, request);
@@ -69,6 +70,7 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
     public async Task<ActionResult<PropertyDetailDto>> Update(Guid id, UpsertPropertyRequest request, CancellationToken ct)
     {
         if (ValidateShares(request.Owners) is { } shareError) return BadRequest(new { message = shareError });
+        if (ValidateSheet(request.Sheet) is { } sheetError) return BadRequest(new { message = sheetError });
 
         var property = await db.Properties.Include(p => p.PropertyOwners).FirstOrDefaultAsync(p => p.Id == id, ct);
         if (property is null) return NotFound();
@@ -176,6 +178,37 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
         property.BillingHour = Math.Clamp(request.BillingHour, 0, 23);
         property.BillingMinute = Math.Clamp(request.BillingMinute, 0, 59);
         property.IsActive = request.IsActive;
+
+        if (request.Sheet is { } s)
+        {
+            property.PropertyType = Clean(s.PropertyType);
+            property.PostalCode = Clean(s.PostalCode);
+            property.City = Clean(s.City);
+            property.Street = Clean(s.Street);
+            property.FloorDoor = Clean(s.FloorDoor);
+            property.Hrsz = Clean(s.Hrsz);
+            property.FloorArea = s.FloorArea;
+            property.Rooms = s.Rooms;
+            property.BuildYear = s.BuildYear;
+            property.ElectricityMeter = Clean(s.ElectricityMeter);
+            property.GasMeter = Clean(s.GasMeter);
+            property.WaterMeter = Clean(s.WaterMeter);
+            property.Deposit = s.Deposit;
+            property.Notes = Clean(s.Notes);
+        }
+    }
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string? ValidateSheet(PropertySheetDto? s)
+    {
+        if (s is null) return null;
+        if (s.FloorArea is < 0 or > 100_000) return "Az alapterület 0 és 100 000 m² között lehet.";
+        if (s.Rooms is < 0 or > 100) return "A szobák száma 0 és 100 között lehet.";
+        if (s.BuildYear is { } y && (y < 1500 || y > DateTime.UtcNow.Year + 5)) return "Érvénytelen építési év.";
+        if (s.Deposit is < 0) return "A kaució nem lehet negatív.";
+        if ((s.Notes?.Length ?? 0) > 4000) return "A megjegyzés legfeljebb 4000 karakter lehet.";
+        return null;
     }
 
     // Csak a ténylegesen eltávolított/hozzáadott (PropertyId, OwnerId) párokat érinti — nem az
@@ -243,7 +276,11 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
         property.Id, property.Name, property.RentAmount, property.InvoicePrefix,
         property.BillingDayOfMonth, property.BillingHour, property.BillingMinute, property.IsActive,
         [.. property.PropertyOwners.Select(po => new PropertyOwnerDto(po.OwnerId, po.Owner!.Name, po.Share))],
-        [.. property.Tenants.Select(t => new TenantDto(t.Id, t.Name, t.Email, t.Phone, t.Address, t.TaxId, t.PropertyId, property.Name, t.MoveInDate, t.MoveOutDate, t.Notes, t.RentCurrency))]);
+        [.. property.Tenants.Select(t => new TenantDto(t.Id, t.Name, t.Email, t.Phone, t.Address, t.TaxId, t.PropertyId, property.Name, t.MoveInDate, t.MoveOutDate, t.Notes, t.RentCurrency))],
+        new PropertySheetDto(property.PropertyType, property.PostalCode, property.City, property.Street, property.FloorDoor, property.Hrsz,
+            property.FloorArea, property.Rooms, property.BuildYear, property.ElectricityMeter, property.GasMeter, property.WaterMeter,
+            property.Deposit, property.Notes),
+        BillingCalendar.NextBillingAt(BudapestClock.Now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute));
 
     private static UtilityCostEntryDto ToDto(UtilityCostEntry entry, bool isLocked) => new(entry.Id, entry.Year, entry.Month, entry.Label, entry.Amount, entry.CreatedAt, isLocked);
 }
