@@ -5,7 +5,8 @@
 // Az ikonok a Lucide-sprite-ból jönnek (assets/icons/icons.svg).
 (function () {
   const icon = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#${id}"/></svg>`;
-  const item = (href, ico, label, adminOnly) => `<a class="nav-item" href="${href}"${adminOnly ? ' data-admin-only' : ''}><span class="ico">${icon(ico)}</span>${label}</a>`;
+  // only: 'admin' (adminisztrátor), 'billing' (fizető cég adminisztrátora), 'operator' (platform üzemeltető)
+  const item = (href, ico, label, only) => `<a class="nav-item" href="${href}"${only ? ` data-only="${only}" hidden` : ''}><span class="ico">${icon(ico)}</span>${label}</a>`;
 
   document.write(`
   <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Menü">${icon('menu')}</button>
@@ -32,7 +33,9 @@
 
       <div class="nav-label">Fiók</div>
       ${item('users.html', 'user-check', 'Felhasználók')}
-      ${item('settings.html', 'lock', 'Beállítások', true)}
+      ${item('subscription.html', 'circle-dollar-sign', 'Előfizetés', 'billing')}
+      ${item('settings.html', 'lock', 'Beállítások', 'admin')}
+      ${item('platform.html', 'server', 'Platform', 'operator')}
     </nav>
 
     <div class="sidebar-footer">
@@ -46,6 +49,7 @@
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.
   const page = location.pathname.split('/').pop() || 'properties.html';
   const activePage = { 'property-detail.html': 'properties.html' }[page] || page;
+  window.__currentPage = page;
   document.querySelectorAll('.sidebar .nav-item[href]').forEach((a) => {
     if (a.getAttribute('href') === activePage) a.classList.add('active');
   });
@@ -66,7 +70,12 @@
     document.getElementById('who-name').title = auth.user.email;
     document.getElementById('who-company').textContent = auth.companyName || auth.user.email;
     document.getElementById('avatar').textContent = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
-    document.querySelectorAll('.sidebar [data-admin-only]').forEach((el) => { el.hidden = !isAdmin(); });
+    const visible = {
+      admin: isAdmin(),
+      billing: isAdmin() && !auth.isPlatformOperator && auth.billingEnabled,
+      operator: !!auth.isPlatformOperator,
+    };
+    document.querySelectorAll('.sidebar [data-only]').forEach((el) => { el.hidden = !visible[el.dataset.only]; });
   };
   renderWho();
 
@@ -76,9 +85,55 @@
     apiFetch('/api/auth/me').then((r) => (r.ok ? r.json() : null)).then((me) => {
       const auth = getAuth();
       if (!me || !auth) return;
-      storeAuth({ ...auth, user: me.user, companyName: me.companyName });
+      storeAuth({ ...auth, user: me.user, companyName: me.companyName, isPlatformOperator: me.isPlatformOperator });
       renderWho();
     }).catch(() => {});
+
+    // Előfizetés: figyelmeztető sáv (próbaidő vége közel, sikertelen fizetés, lemondva, csak olvasható).
+    apiFetch('/api/subscription/status').then((r) => (r.ok ? r.json() : null)).then((st) => {
+      const auth = getAuth();
+      if (!st || !auth) return;
+      storeAuth({ ...auth, billingEnabled: st.billingEnabled });
+      renderWho();
+      if (!st.billingEnabled || st.isOperator) return;
+      showSubscriptionBanner(st);
+    }).catch(() => {});
+  }
+
+  function showSubscriptionBanner(st) {
+    const fmt = (d) => new Date(d).toLocaleDateString('hu-HU');
+    const daysLeft = (d) => Math.max(0, Math.ceil((new Date(d) - Date.now()) / 86400000));
+    let tone = 'info';
+    let text = null;
+    if (st.locked) {
+      tone = 'danger';
+      text = 'A fiók csak olvasható, mert nincs érvényes előfizetés. Az adataid megvannak — előfizetés után újra szerkesztheted őket.';
+    } else if (st.status === 'PastDue') {
+      tone = 'warn';
+      text = `Nem sikerült megújítani az előfizetést. ${st.graceEndsAt ? fmt(st.graceEndsAt) + '-ig' : 'Néhány napig'} még használható — fizess új kártyával.`;
+    } else if (st.status === 'Trial') {
+      const n = daysLeft(st.trialEndsAt);
+      tone = n <= 3 ? 'warn' : 'info';
+      text = `Ingyenes próbaidő: még ${n} nap (${fmt(st.trialEndsAt)}-ig).`;
+    } else if (st.status === 'Active' && st.cancelAtPeriodEnd && st.paidUntil) {
+      tone = 'warn';
+      text = `Lemondtad az előfizetést: ${fmt(st.paidUntil)}-ig használható.`;
+    }
+    if (!text) return;
+    const main = document.querySelector('.main');
+    if (!main || document.getElementById('sub-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'sub-banner';
+    banner.className = `sub-banner ${tone}`;
+    banner.innerHTML = `${icon(tone === 'info' ? 'hourglass' : 'triangle-alert')}<span></span>`;
+    banner.querySelector('span').textContent = text;
+    if (isAdmin() && window.__currentPage !== 'subscription.html') {
+      const link = document.createElement('a');
+      link.href = 'subscription.html';
+      link.textContent = 'Előfizetés →';
+      banner.appendChild(link);
+    }
+    main.prepend(banner);
   }
 
   // Melyik verzió fut éppen — nem hitelesített végpont, támogatáshoz/hibakereséshez hasznos.

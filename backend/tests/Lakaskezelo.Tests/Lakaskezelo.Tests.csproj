@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Lakaskezelo.Data\Lakaskezelo.Data.csproj" />
+    <ProjectReference Include="..\..\src\Lakaskezelo.Api\Lakaskezelo.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

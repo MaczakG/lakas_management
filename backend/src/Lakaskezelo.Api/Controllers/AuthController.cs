@@ -25,6 +25,7 @@ public class AuthController(
     UserTokenService userTokens,
     IConfiguration configuration,
     ICompanyContext companyContext,
+    Subscriptions.PlatformSettingsService platform,
     ILogger<AuthController> logger) : ControllerBase
 {
     // A bejelentkezési végpontok IP-címenkénti korlátja (ld. Program.cs AddRateLimiter).
@@ -270,7 +271,8 @@ public class AuthController(
     {
         var user = await db.Users.FindAsync([User.GetUserId()], ct);
         if (user is null) return NotFound();
-        return Ok(new MeResponse(ToDto(user), await CompanyNameAsync(user.CompanyId, ct)));
+        return Ok(new MeResponse(ToDto(user), await CompanyNameAsync(user.CompanyId, ct),
+            user.Role == UserRole.Admin && platform.IsOperator(user.CompanyId)));
     }
 
     // ---------- Regisztráció (új cég) és meghívó elfogadása ----------

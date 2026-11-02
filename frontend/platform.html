@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Platform</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .platform-form{max-width:720px;}
+  .platform-form .section{margin-bottom:20px;}
+  .switch-row{display:flex;align-items:flex-start;gap:12px;}
+  .switch-row input{margin-top:3px;width:18px;height:18px;}
+  .switch-row strong{display:block;color:var(--ink);font-size:14px;}
+  .switch-row span{font-size:12.5px;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Üzemeltetés</div>
+        <h1>Platform</h1>
+        <div class="page-state" id="page-state"></div>
+      </div>
+    </div>
+
+    <div class="form-error" id="page-error"></div>
+    <div class="form-success" id="page-success"></div>
+
+    <form id="platform-form" class="platform-form" hidden>
+      <section class="section">
+        <div class="section-head"><div><h3>Díjszedés</h3><p>Amíg ki van kapcsolva, minden cég ingyen használja a rendszert, és semmi nem zárolódik.</p></div></div>
+        <label class="switch-row"><input type="checkbox" id="p-enabled">
+          <div><strong>Előfizetési díj bekapcsolva</strong><span>Bekapcsoláskor minden (nem üzemeltető) cég próbaidővel indul, utána kártyával fizet.</span></div></label>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><h3>Árak</h3><p>Az új díjak a következő fizetéstől érvényesek.</p></div></div>
+        <div class="field-row">
+          <div class="field"><label for="p-price">Havi díj / aktív ingatlan (Ft)</label><input type="number" id="p-price" min="0" step="1" required>
+            <label class="checkbox-row" style="margin-top:4px;"><input type="checkbox" id="p-gross"> Bruttó ár (tartalmazza az ÁFÁ-t)</label></div>
+          <div class="field"><label for="p-discount">Éves fizetés kedvezménye (%)</label><input type="number" id="p-discount" min="0" max="90" step="0.5" required></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="p-trial">Próbaidő (nap)</label><input type="number" id="p-trial" min="0" max="365" required></div>
+          <div class="field"><label for="p-grace">Türelmi idő sikertelen fizetésnél (nap)</label><input type="number" id="p-grace" min="0" max="60" required></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="p-vat">ÁFA-kulcs (%)</label><input type="number" id="p-vat" min="0" max="100" step="0.01" required></div>
+          <div class="field"><label for="p-exempt">ÁFA-mentesség kódja</label><input type="text" id="p-exempt" maxlength="10" placeholder="pl. AAM (alanyi adómentes)">
+            <span class="hint">Ha meg van adva, ÁFA nélkül számlázunk, és a kulcs nem számít.</span></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><h3>Barion (kártyás fizetés)</h3><p>A Barion fiók „Üzletek” menüjében található. A token-fizetést (ismétlődő fizetés) a Barionnak engedélyeznie kell az üzlethez.</p></div></div>
+        <div class="field-row">
+          <div class="field"><label for="p-barion-env">Környezet</label>
+            <select id="p-barion-env"><option value="Test">Teszt (sandbox)</option><option value="Prod">Éles</option></select></div>
+          <div class="field"><label for="p-barion-payee">Kedvezményezett Barion e-mail</label><input type="email" id="p-barion-payee" maxlength="256"></div>
+        </div>
+        <div class="field"><label for="p-barion-key">POSKey</label><input type="password" id="p-barion-key" autocomplete="off"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><h3>Billingo (számla)</h3><p>Billingo → Beállítások → API. A számlatömb azonosítója a Billingo „Bizonylattömbök” menüjében látszik. Figyelem: a Billingo-számlák valódi (NAV-hoz beküldött) bizonylatok.</p></div></div>
+        <div class="field-row">
+          <div class="field"><label for="p-billingo-key">API kulcs</label><input type="password" id="p-billingo-key" autocomplete="off"></div>
+          <div class="field"><label for="p-billingo-block">Számlatömb azonosító</label><input type="number" id="p-billingo-block" min="1" step="1"></div>
+        </div>
+      </section>
+
+      <button class="btn btn-primary" type="submit" id="save-btn">Mentés</button>
+    </form>
+
+    <section class="section" id="companies-section" style="margin-top:24px;" hidden>
+      <div class="section-head"><div><h3>Cégek</h3></div></div>
+      <div class="card-table">
+        <table>
+          <thead><tr><th>Cég</th><th>Regisztrált</th><th class="num">Felhasználó</th><th class="num">Aktív ingatlan</th><th>Állapot</th><th>Érvényes</th><th class="num">Befizetve</th></tr></thead>
+          <tbody id="companies-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+requireAuth();
+
+const STATUS = { Trial: ['Próbaidő', 'warn'], Active: ['Aktív', 'ok'], PastDue: ['Fizetés sikertelen', 'warn'], Locked: ['Csak olvasható', 'missing'] };
+const huf = (n) => `${Math.round(n).toLocaleString('hu-HU')} Ft`;
+const day = (d) => (d ? new Date(d).toLocaleDateString('hu-HU') : '—');
+const $ = (id) => document.getElementById(id);
+
+function show(id, text) { $(id).textContent = text; $(id).classList.toggle('show', !!text); }
+
+function secret(id, isSet) {
+  $(id).value = '';
+  $(id).placeholder = isSet ? '•••••••• (beállítva — üresen hagyva nem változik)' : 'nincs beállítva';
+}
+
+async function load() {
+  const res = await apiFetch('/api/platform/settings');
+  const s = await readJson(res);
+  if (!res.ok) { show('page-error', errorMessage(res, s, 'Nem sikerült betölteni.')); return; }
+  $('p-enabled').checked = s.billingEnabled;
+  $('p-price').value = s.monthlyPricePerProperty;
+  $('p-gross').checked = s.pricesIncludeVat;
+  $('p-discount').value = s.yearlyDiscountPercent;
+  $('p-trial').value = s.trialDays;
+  $('p-grace').value = s.graceDays;
+  $('p-vat').value = s.vatPercent;
+  $('p-exempt').value = s.vatExemption || '';
+  $('p-barion-env').value = s.barionEnvironment;
+  $('p-barion-payee').value = s.barionPayeeEmail || '';
+  secret('p-barion-key', s.barionPosKeySet);
+  secret('p-billingo-key', s.billingoApiKeySet);
+  $('p-billingo-block').value = s.billingoBlockId ?? '';
+  $('platform-form').hidden = false;
+
+  const cres = await apiFetch('/api/platform/companies');
+  const companies = await readJson(cres);
+  if (!cres.ok) return;
+  $('companies-section').hidden = false;
+  setPageState([
+    { n: companies.length, label: 'cég' },
+    { n: companies.filter((c) => c.status === 'Active').length, label: 'fizető', tone: 'ok' },
+    { n: companies.filter((c) => c.status === 'Trial').length, label: 'próbaidős', tone: 'warn' },
+  ]);
+  $('companies-tbody').innerHTML = companies.map((c) => {
+    const [label, tone] = c.isOperator ? ['Üzemeltető', 'ok'] : (STATUS[c.status] || ['—', '']);
+    const until = c.status === 'Trial' ? c.trialEndsAt : c.paidUntil;
+    return `<tr>
+      <td class="cell-main">${escapeHtml(c.name)}</td>
+      <td>${day(c.createdAt)}</td>
+      <td class="num">${c.users}</td>
+      <td class="num">${c.activeProperties}</td>
+      <td><span class="status-tag ${tone}">${escapeHtml(label)}</span>${c.interval ? ` <span class="hint">${c.interval === 'Yearly' ? 'éves' : 'havi'}</span>` : ''}</td>
+      <td>${c.isOperator ? '—' : day(until)}</td>
+      <td class="num">${huf(c.paidTotal)}</td>
+    </tr>`;
+  }).join('');
+}
+
+$('platform-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  show('page-error', ''); show('page-success', '');
+  const num = (id) => Number($(id).value);
+  const block = $('p-billingo-block').value;
+  const payload = {
+    billingEnabled: $('p-enabled').checked,
+    monthlyPricePerProperty: num('p-price'),
+    pricesIncludeVat: $('p-gross').checked,
+    yearlyDiscountPercent: num('p-discount'),
+    trialDays: num('p-trial'),
+    graceDays: num('p-grace'),
+    vatPercent: num('p-vat'),
+    vatExemption: $('p-exempt').value.trim() || null,
+    barionEnvironment: $('p-barion-env').value,
+    barionPayeeEmail: $('p-barion-payee').value.trim() || null,
+    barionPosKey: $('p-barion-key').value.trim() || null,
+    billingoApiKey: $('p-billingo-key').value.trim() || null,
+    billingoBlockId: block ? Number(block) : null,
+  };
+  if (payload.billingEnabled && !confirm('A díjszedés be lesz kapcsolva: minden cég próbaidővel indul, a lejárta után fizetnie kell. Folytatod?')) return;
+  const res = await apiFetch('/api/platform/settings', { method: 'PUT', body: JSON.stringify(payload) });
+  const body = await readJson(res);
+  if (!res.ok) { show('page-error', errorMessage(res, body, 'Nem sikerült menteni.')); return; }
+  show('page-success', 'Elmentve.');
+  await load();
+});
+
+load();
+</script>
+</body>
+</html>

@@ -70,6 +70,8 @@ public class UtilityReminderService(IServiceScopeFactory scopeFactory, ILogger<U
 
         var settings = await settingsService.GetAsync(ct);
         if (string.IsNullOrWhiteSpace(settings.UtilityContactEmail)) return;
+        // Nem fizető (zárolt) cégnek nem küldünk emlékeztetőt.
+        if (await scope.ServiceProvider.GetRequiredService<Subscriptions.SubscriptionAccess>().IsLockedAsync(companyId, ct)) return;
 
         var now = BudapestClock.Now;
         if (now.Day < settings.UtilityDeadlineDay) return;

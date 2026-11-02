@@ -17,5 +17,6 @@ public static class BudapestClock
         }
     }
 
+    public static TimeZoneInfo Zone => TimeZone;
     public static DateTime Now => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone);
 }

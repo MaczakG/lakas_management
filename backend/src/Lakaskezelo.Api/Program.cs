@@ -186,6 +186,15 @@ builder.Services.AddScoped<SystemEmailSender>();
 builder.Services.AddScoped<AccountEmails>();
 builder.Services.AddScoped<UserTokenService>();
 
+// ---------- Előfizetés (SaaS-díj): Barion kártyás fizetés + Billingo-számla ----------
+builder.Services.AddScoped<Lakaskezelo.Api.Subscriptions.PlatformSettingsService>();
+builder.Services.AddScoped<Lakaskezelo.Api.Subscriptions.SubscriptionAccess>();
+builder.Services.AddScoped<Lakaskezelo.Api.Subscriptions.SubscriptionEmails>();
+builder.Services.AddScoped<Lakaskezelo.Api.Subscriptions.SubscriptionService>();
+builder.Services.AddHttpClient<Lakaskezelo.Api.Subscriptions.BarionClient>(c => c.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHttpClient<Lakaskezelo.Api.Subscriptions.BillingoClient>(c => c.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHostedService<Lakaskezelo.Api.Subscriptions.SubscriptionScanner>();
+
 // ---------- Számla-PDF tárhely (Amazon S3) ----------
 builder.Services.AddScoped<S3InvoiceStorage>();
 builder.Services.AddScoped<InvoicePdfStore>();
@@ -267,6 +276,8 @@ app.UseCors("Frontend");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+// Nem fizető (zárolt) cégnél a módosító kérések 402-t kapnak — a hitelesítés után, mert a cég a tokenből jön.
+app.UseMiddleware<Lakaskezelo.Api.Subscriptions.SubscriptionWriteGuard>();
 
 app.MapHealthChecks("/health");
 

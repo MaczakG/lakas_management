@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Előfizetés</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .sub-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start;}
+  .sub-grid .section{margin-bottom:0;}
+  .stack{display:flex;flex-direction:column;gap:20px;}
+  .status-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--ink-soft);}
+  .status-line strong{color:var(--ink);}
+  .plans{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+  .plan{position:relative;display:block;border:1.5px solid var(--line-strong);border-radius:var(--radius-md);padding:16px;cursor:pointer;background:var(--surface);}
+  .plan input{position:absolute;opacity:0;pointer-events:none;}
+  .plan:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 3px var(--green-bg);}
+  .plan:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px;}
+  .plan .plan-name{font-weight:700;font-size:14px;color:var(--ink);display:flex;justify-content:space-between;gap:8px;}
+  .plan .plan-save{font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:var(--radius-pill);padding:2px 8px;}
+  .plan .plan-price{font-family:var(--font-display);font-size:24px;font-weight:600;letter-spacing:-0.02em;margin-top:8px;color:var(--ink);}
+  .plan .plan-sub{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px;}
+  .calc{font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;line-height:1.5;}
+  .pay-row{display:flex;flex-direction:column;gap:10px;}
+  .barion-banner{max-width:100%;height:auto;max-height:44px;align-self:flex-start;margin-top:6px;}
+  .muted-note{font-size:12.5px;color:var(--muted);font-weight:500;}
+  .msg{margin-bottom:16px;}
+  @media (max-width: 1000px){ .sub-grid{grid-template-columns:1fr;} }
+  @media (max-width: 560px){ .plans{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Fiók</div>
+        <h1>Előfizetés</h1>
+        <div class="page-state" id="page-state"></div>
+      </div>
+    </div>
+
+    <div class="form-error msg" id="page-error"></div>
+    <div class="form-success msg" id="page-success"></div>
+
+    <div class="sub-grid" id="sub-grid" hidden>
+      <div class="stack">
+        <section class="section">
+          <div class="section-head"><div><h3>Állapot</h3><p id="status-desc"></p></div></div>
+          <div class="status-line" id="status-line"></div>
+        </section>
+
+        <section class="section" id="plan-section">
+          <div class="section-head"><div><h3 id="plan-title">Díjcsomag</h3><p>A díj az aktív ingatlanok számától függ (legalább 1). Az inaktív ingatlanokért nem fizetsz.</p></div></div>
+          <div class="plans">
+            <label class="plan"><input type="radio" name="interval" value="Monthly" checked>
+              <span class="plan-name">Havi</span>
+              <div class="plan-price" id="price-monthly">—</div>
+              <div class="plan-sub" id="sub-monthly"></div>
+            </label>
+            <label class="plan"><input type="radio" name="interval" value="Yearly">
+              <span class="plan-name">Éves <span class="plan-save" id="save-yearly"></span></span>
+              <div class="plan-price" id="price-yearly">—</div>
+              <div class="plan-sub" id="sub-yearly"></div>
+            </label>
+          </div>
+          <div class="calc" id="calc"></div>
+
+          <div class="pay-row" id="pay-row">
+            <button class="btn btn-primary" type="button" id="pay-btn">Fizetés bankkártyával</button>
+            <span class="muted-note" id="pay-note"></span>
+            <img class="barion-banner" src="assets/barion-banner.svg" alt="Biztonságos fizetés: Barion — elfogadott kártyák: Mastercard, Maestro, Visa, American Express">
+          </div>
+
+          <div id="manage-row" hidden>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-secondary" type="button" id="interval-btn">Gyakoriság mentése</button>
+              <button class="btn btn-secondary" type="button" id="cancel-btn">Lemondás</button>
+            </div>
+            <p class="muted-note" style="margin-top:10px;" id="manage-note"></p>
+          </div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="section">
+          <div class="section-head"><div><h3>Számlázási adatok</h3><p>Erre a névre és címre állítjuk ki a díjról szóló számlát (Billingo). Adószám nélkül magánszemélyként számlázunk.</p></div></div>
+          <form id="billing-form">
+            <div class="field"><label for="b-name">Név *</label><input type="text" id="b-name" maxlength="200" required></div>
+            <div class="field"><label for="b-tax">Adószám</label><input type="text" id="b-tax" maxlength="13" placeholder="12345678-1-12"></div>
+            <div class="field-row">
+              <div class="field"><label for="b-post">Irányítószám *</label><input type="text" id="b-post" inputmode="numeric" maxlength="4" required></div>
+              <div class="field"><label for="b-city">Település *</label><input type="text" id="b-city" maxlength="100" required></div>
+            </div>
+            <div class="field"><label for="b-street">Utca, házszám *</label><input type="text" id="b-street" maxlength="200" required></div>
+            <div class="field"><label for="b-email">Számlaértesítő e-mail</label><input type="email" id="b-email" maxlength="256" placeholder="ha üres: az adminisztrátor címe"></div>
+            <button class="btn btn-secondary" type="submit" id="billing-save">Számlázási adatok mentése</button>
+          </form>
+        </section>
+      </div>
+    </div>
+
+    <section class="section" id="payments-section" style="margin-top:20px;" hidden>
+      <div class="section-head"><div><h3>Fizetések és számlák</h3></div></div>
+      <div class="card-table">
+        <table>
+          <thead><tr><th>Dátum</th><th>Időszak</th><th>Ingatlan</th><th class="num">Összeg</th><th>Státusz</th><th>Számla</th></tr></thead>
+          <tbody id="payments-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+requireAuth();
+
+const STATUS = {
+  Trial: ['Próbaidő', 'warn'], Active: ['Aktív', 'ok'], PastDue: ['Fizetés sikertelen', 'warn'], Locked: ['Csak olvasható', 'missing'],
+};
+const PAYMENT_STATUS = { Pending: ['Folyamatban', 'warn'], Succeeded: ['Sikeres', 'ok'], Failed: ['Sikertelen', 'missing'] };
+const huf = (n) => `${Math.round(n).toLocaleString('hu-HU')} Ft`;
+const day = (d) => (d ? new Date(d).toLocaleDateString('hu-HU') : '—');
+let data = null;
+
+function show(id, text) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.classList.toggle('show', !!text);
+}
+
+function selectedInterval() {
+  return document.querySelector('input[name="interval"]:checked').value;
+}
+
+function vatText(q) {
+  if (q.vatExemption) return 'ÁFA nélkül (alanyi adómentes)';
+  return q.unitPriceIncludesVat ? `bruttó, benne ${huf(q.vatAmount)} ÁFA (${q.vatPercent}%)` : `nettó ${huf(q.netAmount)} + ${q.vatPercent}% ÁFA`;
+}
+
+function render() {
+  const st = data.state;
+  const [label, tone] = STATUS[st.locked ? 'Locked' : st.status] || [st.status, ''];
+  const parts = [`<span class="status-tag ${tone}">${escapeHtml(label)}</span>`];
+  if (st.status === 'Trial') parts.push(`<span>Ingyenes próbaidő: <strong>${day(st.trialEndsAt)}-ig</strong></span>`);
+  if (st.paidUntil) parts.push(`<span>Kifizetve: <strong>${day(st.paidUntil)}-ig</strong></span>`);
+  if (st.status === 'PastDue' && st.graceEndsAt) parts.push(`<span>Türelmi idő: <strong>${day(st.graceEndsAt)}-ig</strong></span>`);
+  if (data.cardRegistered) parts.push(`<span>${st.cancelAtPeriodEnd ? 'Lemondva — nem újítjuk meg' : `Automatikus megújítás (${data.interval === 'Yearly' ? 'éves' : 'havi'})`}</span>`);
+  document.getElementById('status-line').innerHTML = parts.join('<span aria-hidden="true">·</span>');
+  document.getElementById('status-desc').textContent = st.locked
+    ? 'Az adataid megvannak és megtekinthetők, de módosítani és számlát kiküldeni csak előfizetés után lehet.'
+    : 'A díjat bankkártyával, a Barion biztonságos fizetőoldalán fizeted; a megújítás automatikus, bármikor lemondható.';
+
+  const m = data.monthlyQuote, y = data.yearlyQuote;
+  document.getElementById('price-monthly').textContent = huf(m.grossAmount);
+  document.getElementById('sub-monthly').textContent = `havonta · ${vatText(m)}`;
+  document.getElementById('price-yearly').textContent = huf(y.grossAmount);
+  document.getElementById('sub-yearly').textContent = `évente · ${vatText(y)}`;
+  document.getElementById('save-yearly').textContent = data.yearlyDiscountPercent > 0 ? `−${data.yearlyDiscountPercent}%` : '';
+  document.getElementById('save-yearly').hidden = !(data.yearlyDiscountPercent > 0);
+  document.getElementById('calc').textContent =
+    `${data.activeProperties} aktív ingatlan${data.activeProperties < 1 ? ' (legalább 1 ingatlan díját számoljuk)' : ''} × ${huf(data.monthlyPricePerProperty)}${data.pricesIncludeVat ? '' : ' + ÁFA'} / hó.`;
+
+  const canPay = !(st.status === 'Active' && data.cardRegistered && !st.locked);
+  document.getElementById('pay-row').hidden = !canPay;
+  document.getElementById('manage-row').hidden = canPay;
+  document.getElementById('plan-title').textContent = canPay ? 'Előfizetés indítása' : 'Díjcsomag';
+  if (canPay) {
+    const missingDetails = !data.billingDetails.name || !data.billingDetails.postCode || !data.billingDetails.city || !data.billingDetails.street;
+    const btn = document.getElementById('pay-btn');
+    btn.disabled = !data.paymentReady || missingDetails;
+    document.getElementById('pay-note').textContent = !data.paymentReady
+      ? 'A kártyás fizetés még nincs bekapcsolva — hamarosan elérhető.'
+      : missingDetails ? 'Előbb add meg és mentsd a számlázási adatokat.'
+      : st.status === 'Trial' ? `A próbaidő megmarad: a fizetett időszak ${day(st.trialEndsAt)}-án indul. A kártyádat a megújításokhoz elmentjük (Barion).`
+      : 'A fizetett időszak most indul. A kártyádat a megújításokhoz elmentjük (Barion).';
+  } else {
+    document.querySelector(`input[name="interval"][value="${data.interval}"]`).checked = true;
+    document.getElementById('cancel-btn').textContent = st.cancelAtPeriodEnd ? 'Lemondás visszavonása' : 'Lemondás';
+    document.getElementById('manage-note').textContent = st.cancelAtPeriodEnd
+      ? `Lemondtad: ${day(st.paidUntil)}-ig használható, utána nem terhelünk.`
+      : `Következő terhelés: ${day(st.paidUntil)} — az akkor aktív ingatlanok száma alapján. A gyakoriság váltása a következő terheléstől érvényes.`;
+  }
+
+  const bd = data.billingDetails;
+  document.getElementById('b-name').value = bd.name || '';
+  document.getElementById('b-tax').value = bd.taxNumber || '';
+  document.getElementById('b-post').value = bd.postCode || '';
+  document.getElementById('b-city').value = bd.city || '';
+  document.getElementById('b-street').value = bd.street || '';
+  document.getElementById('b-email').value = bd.email || '';
+
+  const tbody = document.getElementById('payments-tbody');
+  document.getElementById('payments-section').hidden = data.payments.length === 0;
+  tbody.innerHTML = data.payments.map((p) => {
+    const [pl, pt] = PAYMENT_STATUS[p.status] || [p.status, ''];
+    const invoice = p.invoiceUrl
+      ? `<a class="link" href="${escapeHtml(p.invoiceUrl)}" target="_blank" rel="noopener">Letöltés</a>`
+      : p.invoicePending ? '<span class="hint">Készül…</span>' : '<span class="hint">—</span>';
+    return `<tr>
+      <td>${day(p.createdAt)}</td>
+      <td>${day(p.periodStart)} – ${day(new Date(new Date(p.periodEnd).getTime() - 86400000))}</td>
+      <td>${p.propertyCount}</td>
+      <td class="num">${huf(p.grossAmount)}</td>
+      <td><span class="status-tag ${pt}" title="${escapeHtml(p.errorMessage || '')}">${escapeHtml(pl)}</span></td>
+      <td>${invoice}</td>
+    </tr>`;
+  }).join('');
+
+  setPageState([
+    { n: data.activeProperties, label: 'aktív ingatlan', tone: 'ok' },
+  ]);
+  document.getElementById('sub-grid').hidden = false;
+}
+
+async function load() {
+  const res = await apiFetch('/api/subscription');
+  if (res.status === 403) {
+    show('page-error', 'Az előfizetést a cég adminisztrátora kezeli.');
+    return;
+  }
+  data = await readJson(res);
+  if (!res.ok) {
+    show('page-error', errorMessage(res, data, 'Nem sikerült betölteni az előfizetést.'));
+    return;
+  }
+  render();
+}
+
+// Visszatérés a Barion fizetőoldaláról: ?paymentId=... — a fizetés állapotát a szerver a Bariontól kérdezi le.
+async function syncReturn() {
+  const params = new URLSearchParams(location.search);
+  const paymentId = params.get('paymentId');
+  if (!paymentId) return;
+  history.replaceState(null, '', location.pathname);
+  const res = await apiFetch('/api/subscription/sync', { method: 'POST', body: JSON.stringify({ paymentId }) });
+  const p = await readJson(res);
+  if (!res.ok) { show('page-error', errorMessage(res, p, 'Nem sikerült ellenőrizni a fizetést.')); return; }
+  if (p.status === 'Succeeded') show('page-success', `Sikeres fizetés: ${huf(p.grossAmount)}. Köszönjük! A számlát e-mailben is elküldjük.`);
+  else if (p.status === 'Failed') show('page-error', `A fizetés nem sikerült${p.errorMessage ? ': ' + p.errorMessage : '.'} Próbáld újra, vagy használj másik kártyát.`);
+  else show('page-success', 'A fizetés feldolgozása folyamatban — néhány perc múlva frissítsd az oldalt.');
+}
+
+document.getElementById('pay-btn').addEventListener('click', async () => {
+  show('page-error', '');
+  const btn = document.getElementById('pay-btn');
+  btn.disabled = true;
+  btn.textContent = 'Átirányítás a Barionra...';
+  try {
+    const res = await apiFetch('/api/subscription/checkout', { method: 'POST', body: JSON.stringify({ interval: selectedInterval() }) });
+    const body = await readJson(res);
+    if (!res.ok || !body.gatewayUrl) { show('page-error', errorMessage(res, body, 'Nem sikerült elindítani a fizetést.')); return; }
+    location.href = body.gatewayUrl;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Fizetés bankkártyával';
+  }
+});
+
+async function savePlan(cancelAtPeriodEnd) {
+  const res = await apiFetch('/api/subscription/plan', { method: 'PUT', body: JSON.stringify({ interval: selectedInterval(), cancelAtPeriodEnd }) });
+  const body = await readJson(res);
+  if (!res.ok) { show('page-error', errorMessage(res, body, 'Nem sikerült menteni.')); return; }
+  show('page-success', body.message);
+  await load();
+}
+document.getElementById('interval-btn').addEventListener('click', () => savePlan(data.state.cancelAtPeriodEnd));
+document.getElementById('cancel-btn').addEventListener('click', () => {
+  const cancelling = !data.state.cancelAtPeriodEnd;
+  if (cancelling && !confirm(`Biztosan lemondod? ${day(data.state.paidUntil)}-ig használható marad, utána csak olvasható lesz.`)) return;
+  savePlan(cancelling);
+});
+
+document.getElementById('billing-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  show('page-error', ''); show('page-success', '');
+  const val = (id) => document.getElementById(id).value.trim() || null;
+  const res = await apiFetch('/api/subscription/billing-details', {
+    method: 'PUT',
+    body: JSON.stringify({ name: val('b-name'), taxNumber: val('b-tax'), postCode: val('b-post'), city: val('b-city'), street: val('b-street'), email: val('b-email') }),
+  });
+  const body = await readJson(res);
+  if (!res.ok) { show('page-error', errorMessage(res, body, 'Nem sikerült menteni.')); return; }
+  show('page-success', body.message);
+  await load();
+});
+
+syncReturn().finally(load);
+</script>
+</body>
+</html>
