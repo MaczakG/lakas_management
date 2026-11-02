@@ -4,6 +4,9 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.02.6** — Bérlő- és tulajdonos-adatlap az ingatlan-adatlap mintájára (helyben szerkeszthető
+  panelek, összegzés; bérlőnél az ingatlan és a számlái, tulajdonosnál az ingatlanai hányaddal és a számlák),
+  a listákból és az ingatlan-adatlapról elérhetően.
 - **Beállítások / Platform admin** — A cégek Beállítások oldalán csak a rezsi-emlékeztető, a számlakibocsátó
   adatai (új: válaszcím) és a számla e-mail szövege maradt. Az e-mail küldés (Mailgun/SMTP) és a számla-tárhely
   (S3) platform-szintű lett: a cégek levelei a platform fiókján mennek, a cég nevével feladóként és a cég
