@@ -14,13 +14,18 @@ public class AppSettingsService(LakaskezeloDbContext db, ICompanyContext company
 {
     private static readonly ConcurrentDictionary<Guid, AppSettings> Cache = new();
 
-    public async Task<AppSettings> GetAsync(CancellationToken ct = default)
+    public Task<AppSettings> GetAsync(CancellationToken ct = default) =>
+        GetForCompanyAsync(companyContext.CompanyId
+            ?? throw new InvalidOperationException("A beállítások cég-kontextus nélkül nem olvashatók."), ct);
+
+    // Kifejezetten megadott cég beállításai, a kérés cég-kontextusától függetlenül — a rendszerlevelek
+    // (SystemEmailSender) a platform üzemeltetőjének e-mail beállításaival mennek ki.
+    public async Task<AppSettings> GetForCompanyAsync(Guid companyId, CancellationToken ct = default)
     {
-        var companyId = companyContext.CompanyId
-            ?? throw new InvalidOperationException("A beállítások cég-kontextus nélkül nem olvashatók.");
         if (Cache.TryGetValue(companyId, out var cached)) return cached;
 
-        var settings = await db.AppSettings.AsNoTracking().SingleOrDefaultAsync(ct)
+        var settings = await db.AppSettings.IgnoreQueryFilters().AsNoTracking()
+                           .SingleOrDefaultAsync(s => s.CompanyId == companyId, ct)
             ?? new AppSettings { Id = Guid.NewGuid(), CompanyId = companyId, UpdatedAt = DateTime.UtcNow };
         Cache[companyId] = settings;
         return settings;

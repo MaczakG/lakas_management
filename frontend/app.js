@@ -39,6 +39,11 @@ function requireAuth() {
   return auth;
 }
 
+// Cégen belüli adminisztrátor-e (a szerver úgyis ellenőrzi — ez csak a felület elrejtéséhez kell).
+function isAdmin() {
+  return getAuth()?.user?.role === 'Admin';
+}
+
 function logout() {
   clearAuth();
   location.href = 'login.html';
@@ -112,7 +117,11 @@ function errorMessage(res, data, fallback) {
 
 // Teszt-környezetben (a szerver /api/version-je "staging"-et mond) minden oldal tetején egy jól látható
 // sáv jelzi, hogy ez nem az éles rendszer — a böngészőfül címe is "[TESZT]"-tel kezdődik.
-fetch(`${API_BASE}/api/version`).then((r) => r.json()).then((v) => {
+// A nyilvános /api/version (verzió, környezet, termék neve, nyitva van-e a regisztráció) — egyszer
+// kérjük le, minden oldal ezt a promise-t használja.
+const APP_INFO = fetch(`${API_BASE}/api/version`).then((r) => r.json()).catch(() => ({}));
+
+APP_INFO.then((v) => {
   if (!v.environment || v.environment === 'production') return;
   const show = () => {
     if (document.getElementById('env-ribbon')) return;

@@ -5,6 +5,7 @@ using Lakaskezelo.Api.Contracts;
 using Lakaskezelo.Api.Notifications;
 using Lakaskezelo.Data;
 using Lakaskezelo.Domain.Entities;
+using Lakaskezelo.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +20,9 @@ public class AuthController(
     LakaskezeloDbContext db,
     PasswordHasher<User> passwordHasher,
     JwtTokenService tokenService,
-    IEmailSender emailSender,
+    SystemEmailSender emailSender,
+    AccountEmails accountEmails,
+    UserTokenService userTokens,
     IConfiguration configuration,
     ICompanyContext companyContext,
     ILogger<AuthController> logger) : ControllerBase
@@ -28,6 +31,8 @@ public class AuthController(
     public const string RateLimitPolicy = "auth";
 
     private static readonly TimeSpan ResetTokenLifetime = TimeSpan.FromHours(1);
+    private static readonly TimeSpan VerificationTokenLifetime = TimeSpan.FromHours(48);
+    private static readonly TimeSpan VerificationEmailCooldown = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan TwoFactorCodeLifetime = TimeSpan.FromMinutes(10);
     private const int MaxTwoFactorAttempts = 5;
 
@@ -63,7 +68,8 @@ public class AuthController(
         var user = await db.Users.IgnoreQueryFilters().SingleOrDefaultAsync(u => u.Email == normalizedEmail, ct);
         if (user is not null) companyContext.Set(user.CompanyId);
 
-        if (user is null || !user.IsActive)
+        // Meghívott, de a meghívót még el nem fogadó felhasználónak nincs jelszava.
+        if (user is null || !user.IsActive || string.IsNullOrEmpty(user.PasswordHash))
         {
             passwordHasher.VerifyHashedPassword(new User(), DummyPasswordHash, request.Password);
             return Unauthorized(new { message = InvalidCredentialsMessage });
@@ -83,12 +89,32 @@ public class AuthController(
             user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
         }
 
+        // Helyes jelszó, de a regisztrációt még nem erősítette meg: újraküldjük a linket (percenként
+        // legfeljebb egyszer). Csak helyes jelszó után derül ki, így nem árulja el, mely címek léteznek.
+        if (user.EmailVerifiedAt is null)
+        {
+            if (!await userTokens.IssuedRecentlyAsync(user.Id, UserTokenPurpose.EmailVerification, VerificationEmailCooldown, ct))
+            {
+                var verifyToken = await userTokens.IssueAsync(user, UserTokenPurpose.EmailVerification, VerificationTokenLifetime, ct);
+                await db.SaveChangesAsync(ct);
+                var companyName = await CompanyNameAsync(user.CompanyId, ct);
+                if (!await accountEmails.SendVerificationAsync(user.Email, companyName, verifyToken, ct))
+                {
+                    logger.LogError("Verification e-mail could not be re-sent to user {UserId}: {Error}", user.Id, accountEmails.LastError);
+                }
+            }
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Az e-mail címed még nincs megerősítve. Elküldtük (újra) a megerősítő linket — kattints rá, és utána jelentkezz be.",
+            });
+        }
+
         if (!TwoFactorEnabled)
         {
             ResetFailedAttempts(user);
             await db.SaveChangesAsync(ct);
             var (token, expiresAt) = tokenService.CreateAccessToken(user);
-            return Ok(new AuthResponse(token, expiresAt, ToDto(user)));
+            return Ok(new AuthResponse(token, expiresAt, ToDto(user), await CompanyNameAsync(user.CompanyId, ct)));
         }
 
         // A jelszó rendben — de a bejelentkezés csak egy e-mailben kiküldött 6 jegyű kóddal
@@ -119,7 +145,7 @@ public class AuthController(
                 """);
         var textBody = $"Belépési kódod: {code} (10 percig érvényes). Ha nem te próbáltál bejelentkezni, változtasd meg a jelszavadat.";
 
-        var sent = await emailSender.SendAsync(user.Email, EmailTemplate.UniqueSubject("Belépési kód"), htmlBody, textBody, null, ct);
+        var sent = await emailSender.SendAsync(user.Email, EmailTemplate.UniqueSubject("Belépési kód"), htmlBody, textBody, ct);
         if (!sent)
         {
             logger.LogError("Sign-in code e-mail could not be sent to user {UserId}: {Error}", user.Id, emailSender.LastError);
@@ -138,7 +164,7 @@ public class AuthController(
         if (challenge?.User is { } challengeUser) companyContext.Set(challengeUser.CompanyId);
 
         if (challenge is null || challenge.UsedAt is not null || challenge.ExpiresAt < DateTime.UtcNow
-            || challenge.AttemptCount >= MaxTwoFactorAttempts || challenge.User is not { IsActive: true })
+            || challenge.AttemptCount >= MaxTwoFactorAttempts || challenge.User is not { IsActive: true, EmailVerifiedAt: not null })
         {
             return BadRequest(new { message = InvalidChallengeMessage });
         }
@@ -159,7 +185,7 @@ public class AuthController(
         await db.SaveChangesAsync(ct);
 
         var (token, expiresAt) = tokenService.CreateAccessToken(user);
-        return Ok(new AuthResponse(token, expiresAt, ToDto(user)));
+        return Ok(new AuthResponse(token, expiresAt, ToDto(user), await CompanyNameAsync(user.CompanyId, ct)));
     }
 
     [EnableRateLimiting(RateLimitPolicy)]
@@ -179,25 +205,12 @@ public class AuthController(
             return Ok(new { message = genericMessage });
         }
 
-        var cooldownStart = DateTime.UtcNow.Subtract(ResetEmailCooldown);
-        if (await db.PasswordResetTokens.AnyAsync(t => t.UserId == user.Id && t.CreatedAt > cooldownStart, ct))
+        if (await userTokens.IssuedRecentlyAsync(user.Id, UserTokenPurpose.PasswordReset, ResetEmailCooldown, ct))
         {
             return Ok(new { message = genericMessage });
         }
 
-        var stale = await db.PasswordResetTokens.Where(t => t.UserId == user.Id && t.UsedAt == null).ToListAsync(ct);
-        db.PasswordResetTokens.RemoveRange(stale);
-
-        var plainToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        var resetToken = new PasswordResetToken
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            Token = HashToken(plainToken),
-            ExpiresAt = DateTime.UtcNow.Add(ResetTokenLifetime),
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.PasswordResetTokens.Add(resetToken);
+        var plainToken = await userTokens.IssueAsync(user, UserTokenPurpose.PasswordReset, ResetTokenLifetime, ct);
         await db.SaveChangesAsync(ct);
 
         var frontendBaseUrl = configuration["Frontend:BaseUrl"] ?? "";
@@ -210,7 +223,7 @@ public class AuthController(
             cta: ("Új jelszó beállítása", resetUrl));
         var textBody = $"Jelszó visszaállítása: {resetUrl} (1 órán belül érvényes)";
 
-        var sent = await emailSender.SendAsync(user.Email, EmailTemplate.UniqueSubject("Jelszó visszaállítása"), htmlBody, textBody, null, ct);
+        var sent = await emailSender.SendAsync(user.Email, EmailTemplate.UniqueSubject("Jelszó visszaállítása"), htmlBody, textBody, ct);
         if (!sent)
         {
             logger.LogError("Password reset e-mail could not be sent to user {UserId}: {Error}", user.Id, emailSender.LastError);
@@ -224,23 +237,21 @@ public class AuthController(
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(ResetPasswordRequest request, CancellationToken ct)
     {
-        var tokenHash = HashToken(request.Token);
-        var resetToken = await db.PasswordResetTokens.IgnoreQueryFilters().Include(t => t.User)
-            .SingleOrDefaultAsync(t => t.Token == tokenHash, ct);
+        var resetToken = await userTokens.FindValidAsync(request.Token, UserTokenPurpose.PasswordReset, ct);
         if (resetToken?.User is { } resetUser) companyContext.Set(resetUser.CompanyId);
 
-        if (resetToken is null || resetToken.UsedAt is not null || resetToken.ExpiresAt < DateTime.UtcNow || resetToken.User is not { IsActive: true })
+        if (resetToken?.User is null)
         {
             return BadRequest(new { message = "A link érvénytelen vagy lejárt. Kérj új visszaállító linket." });
         }
-        if (request.NewPassword.Length < 8)
-        {
-            return BadRequest(new { message = "A jelszónak legalább 8 karakter hosszúnak kell lennie." });
-        }
+        if (PasswordError(request.NewPassword) is { } passwordError) return BadRequest(new { message = passwordError });
 
         var user = resetToken.User;
         user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
         resetToken.UsedAt = DateTime.UtcNow;
+        // A link a postafiókba ment, így a cím birtoklását is igazolja (pl. meghívott, aki a meghívó
+        // helyett az elfelejtett jelszóval állít be jelszót).
+        user.EmailVerifiedAt ??= DateTime.UtcNow;
 
         // Az új jelszóval minden korábbi munkamenet és függő belépési kód érvényét veszti, és a
         // (postafiók birtoklásával igazolt) felhasználó zárolása is feloldódik.
@@ -255,12 +266,159 @@ public class AuthController(
 
     [Authorize]
     [HttpGet("me")]
-    public async Task<ActionResult<UserDto>> Me(CancellationToken ct)
+    public async Task<ActionResult<MeResponse>> Me(CancellationToken ct)
     {
         var user = await db.Users.FindAsync([User.GetUserId()], ct);
         if (user is null) return NotFound();
-        return Ok(ToDto(user));
+        return Ok(new MeResponse(ToDto(user), await CompanyNameAsync(user.CompanyId, ct)));
     }
+
+    // ---------- Regisztráció (új cég) és meghívó elfogadása ----------
+
+    private bool RegistrationEnabled => configuration.GetValue("Registration:Enabled", false);
+
+    [EnableRateLimiting(RateLimitPolicy)]
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(RegisterRequest request, CancellationToken ct)
+    {
+        if (!RegistrationEnabled) return NotFound(new { message = "A regisztráció jelenleg nem elérhető." });
+
+        var companyName = request.CompanyName?.Trim() ?? "";
+        var fullName = request.FullName?.Trim() ?? "";
+        var email = request.Email?.Trim().ToLowerInvariant() ?? "";
+        if (companyName.Length is < 2 or > 200) return BadRequest(new { message = "Add meg a cég (vagy a saját) nevét (2–200 karakter)." });
+        if (fullName.Length is < 2 or > 200) return BadRequest(new { message = "Add meg a neved (2–200 karakter)." });
+        if (!LooksLikeEmail(email)) return BadRequest(new { message = "Érvénytelen e-mail cím." });
+        if (PasswordError(request.Password) is { } passwordError) return BadRequest(new { message = passwordError });
+
+        // Mindkét ágon ugyanez a válasz, és mindkét ágon megy e-mail — a válaszból nem derül ki, hogy
+        // a címhez tartozik-e már fiók.
+        var okMessage = new { message = $"Elküldtük a megerősítő e-mailt a(z) {email} címre. Kattints a benne lévő linkre, utána bejelentkezhetsz." };
+
+        var existing = await db.Users.IgnoreQueryFilters().SingleOrDefaultAsync(u => u.Email == email, ct);
+        if (existing is not null)
+        {
+            if (!await IsAbandonedRegistrationAsync(existing, ct))
+            {
+                if (!await accountEmails.SendAlreadyRegisteredAsync(email, ct))
+                {
+                    logger.LogWarning("Already-registered notice could not be sent: {Error}", accountEmails.LastError);
+                }
+                return Ok(okMessage);
+            }
+
+            // Korábbi, soha meg nem erősített regisztráció ugyanerre a címre — eldobjuk, és újat kezdünk
+            // (különben bárki "lefoglalhatna" egy idegen címet egy meg nem erősített regisztrációval).
+            await DeleteRegistrationAsync(existing, ct);
+        }
+
+        var company = new Company { Id = Guid.NewGuid(), Name = companyName, CreatedAt = DateTime.UtcNow };
+        db.Companies.Add(company);
+        companyContext.Set(company.Id);
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            FullName = fullName,
+            IsActive = true,
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow,
+            SecurityStamp = SecurityStamp.New(),
+        };
+        user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+        db.Users.Add(user);
+        await db.SaveChangesAsync(ct);
+
+        var token = await userTokens.IssueAsync(user, UserTokenPurpose.EmailVerification, VerificationTokenLifetime, ct);
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("New company {CompanyId} registered", company.Id);
+
+        if (!await accountEmails.SendVerificationAsync(email, companyName, token, ct))
+        {
+            logger.LogError("Verification e-mail could not be sent for company {CompanyId}: {Error}", company.Id, accountEmails.LastError);
+            return StatusCode(502, new { message = "A fiók elkészült, de a megerősítő e-mailt nem sikerült elküldeni. Próbálj meg bejelentkezni — ilyenkor újraküldjük." });
+        }
+        return Ok(okMessage);
+    }
+
+    [EnableRateLimiting(RateLimitPolicy)]
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail(TokenRequest request, CancellationToken ct)
+    {
+        var token = await userTokens.FindValidAsync(request.Token, UserTokenPurpose.EmailVerification, ct);
+        if (token?.User is not { } user)
+        {
+            return BadRequest(new { message = "A link érvénytelen vagy lejárt. Jelentkezz be a jelszavaddal — ha a cím még nincs megerősítve, új linket küldünk." });
+        }
+        companyContext.Set(user.CompanyId);
+        token.UsedAt = DateTime.UtcNow;
+        user.EmailVerifiedAt ??= DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return Ok(new { message = "Az e-mail címed megerősítve. Most már bejelentkezhetsz.", email = user.Email });
+    }
+
+    // A meghívó oldal ezzel mutatja meg, melyik cégbe és milyen címmel szól a meghívó.
+    [EnableRateLimiting(RateLimitPolicy)]
+    [HttpPost("invite-info")]
+    public async Task<ActionResult<InviteInfoResponse>> InviteInfo(TokenRequest request, CancellationToken ct)
+    {
+        var token = await userTokens.FindValidAsync(request.Token, UserTokenPurpose.Invitation, ct);
+        if (token?.User is not { } user) return BadRequest(new { message = InvalidInviteMessage });
+        return Ok(new InviteInfoResponse(user.Email, user.FullName, await CompanyNameAsync(user.CompanyId, ct)));
+    }
+
+    [EnableRateLimiting(RateLimitPolicy)]
+    [HttpPost("accept-invite")]
+    public async Task<IActionResult> AcceptInvite(AcceptInviteRequest request, CancellationToken ct)
+    {
+        var token = await userTokens.FindValidAsync(request.Token, UserTokenPurpose.Invitation, ct);
+        if (token?.User is not { } user) return BadRequest(new { message = InvalidInviteMessage });
+        if (PasswordError(request.Password) is { } passwordError) return BadRequest(new { message = passwordError });
+        var fullName = request.FullName?.Trim();
+        if (fullName is { Length: > 200 }) return BadRequest(new { message = "A név legfeljebb 200 karakter lehet." });
+
+        companyContext.Set(user.CompanyId);
+        if (!string.IsNullOrEmpty(fullName)) user.FullName = fullName;
+        user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+        user.EmailVerifiedAt ??= DateTime.UtcNow;
+        SecurityStamp.Rotate(user);
+        ResetFailedAttempts(user);
+        token.UsedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return Ok(new { message = "Kész! Most már bejelentkezhetsz.", email = user.Email });
+    }
+
+    private const string InvalidInviteMessage = "A meghívó érvénytelen vagy lejárt. Kérj új meghívót a cég adminisztrátorától.";
+
+    // Soha meg nem erősített, saját cégét regisztráló fiók (a cégében egyedül van) — se adat, se belépés
+    // nem tartozhat hozzá, így biztonságosan eldobható. Meghívott (más cégbe tartozó) fiókra nem igaz.
+    private async Task<bool> IsAbandonedRegistrationAsync(User user, CancellationToken ct) =>
+        user.EmailVerifiedAt is null && user.Role == UserRole.Admin && user.CompanyId != Company.DefaultCompanyId
+        && await db.Users.IgnoreQueryFilters().CountAsync(u => u.CompanyId == user.CompanyId, ct) == 1;
+
+    private async Task DeleteRegistrationAsync(User user, CancellationToken ct)
+    {
+        companyContext.Set(user.CompanyId);
+        var company = await db.Companies.SingleAsync(c => c.Id == user.CompanyId, ct);
+        db.Users.Remove(user);
+        await db.SaveChangesAsync(ct);
+        db.Companies.Remove(company);
+        await db.SaveChangesAsync(ct);
+        companyContext.Set(null);
+    }
+
+    private async Task<string> CompanyNameAsync(Guid companyId, CancellationToken ct) =>
+        await db.Companies.Where(c => c.Id == companyId).Select(c => c.Name).SingleOrDefaultAsync(ct) ?? "";
+
+    internal static string? PasswordError(string? password) =>
+        string.IsNullOrEmpty(password) || password.Length < 8 ? "A jelszónak legalább 8 karakter hosszúnak kell lennie."
+        : password.Length > 200 ? "A jelszó legfeljebb 200 karakter lehet."
+        : null;
+
+    internal static bool LooksLikeEmail(string email) =>
+        email.Length is >= 3 and <= 256 && email.IndexOf('@') is > 0 and var at && at < email.Length - 1
+        && !email.Any(char.IsWhiteSpace) && System.Net.Mail.MailAddress.TryCreate(email, out _);
 
     private static bool IsLockedOut(User user) => user.LockoutEndsAt is { } until && until > DateTime.UtcNow;
 
@@ -315,7 +473,7 @@ public class AuthController(
                 """);
         var textBody = $"A fiókodba többször hibásan próbáltak bejelentkezni, ezért {LockoutDuration.TotalMinutes:0} percre zároltuk. Ha nem te voltál, változtasd meg a jelszavadat.";
 
-        var sent = await emailSender.SendAsync(user.Email, EmailTemplate.UniqueSubject("Sikertelen belépési kísérletek"), htmlBody, textBody, null, ct);
+        var sent = await emailSender.SendAsync(user.Email, EmailTemplate.UniqueSubject("Sikertelen belépési kísérletek"), htmlBody, textBody, ct);
         if (!sent)
         {
             logger.LogWarning("Lockout notice could not be sent to user {UserId}: {Error}", user.Id, emailSender.LastError);
@@ -325,7 +483,8 @@ public class AuthController(
     private static bool CodeMatches(string expectedHash, string code) =>
         CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(expectedHash), Encoding.ASCII.GetBytes(HashToken(code.Trim())));
 
-    private static string HashToken(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+    private static string HashToken(string token) => UserTokenService.Hash(token);
 
-    private static UserDto ToDto(User user) => new(user.Id, user.Email, user.FullName, user.IsActive, user.CreatedAt);
+    internal static UserDto ToDto(User user) =>
+        new(user.Id, user.Email, user.FullName, user.IsActive, user.CreatedAt, user.Role, user.EmailVerifiedAt is null);
 }

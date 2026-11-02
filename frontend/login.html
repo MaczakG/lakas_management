@@ -42,6 +42,7 @@
     </div>
 
     <button class="btn btn-primary btn-block" type="submit" id="login-submit">Bejelentkezés</button>
+    <p class="auth-alt" id="register-alt" hidden>Még nincs fiókod? <a href="register.html">Regisztráció</a></p>
   </form>
 
   <form id="code-step">
@@ -60,6 +61,11 @@
 
 <script src="app.js"></script>
 <script>
+  // Regisztráció link csak ha nyitva van; e-mail cím előtöltése (megerősítés / meghívó után).
+  APP_INFO.then((v) => { document.getElementById('register-alt').hidden = !v.registrationEnabled; });
+  const prefillEmail = new URLSearchParams(location.search).get('email');
+  if (prefillEmail) document.getElementById('login-email').value = prefillEmail;
+
 let challengeId = null;
 
 function showStep(step) {

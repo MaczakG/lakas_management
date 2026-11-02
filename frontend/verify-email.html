@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — E-mail megerősítése</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-box{width:100%;max-width:400px;}
+  .login-box h1{font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-0.01em;margin-bottom:10px;text-align:center;}
+  .login-box .lead{text-align:center;color:var(--ink-soft);font-size:14px;margin-bottom:24px;}
+</style>
+</head>
+<body>
+
+<div class="login-box">
+  <div class="login-brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#house"/></svg></span><span class="brand-name">Lakáskezelő</span></div>
+  <h1>E-mail cím megerősítése</h1>
+  <p class="lead" id="lead">Egy pillanat...</p>
+
+  <div class="form-error" id="form-error"></div>
+  <div class="form-success" id="form-success"></div>
+  <a class="btn btn-primary btn-block" href="login.html" id="login-btn" hidden>Tovább a bejelentkezéshez</a>
+</div>
+
+<script src="app.js"></script>
+<script>
+  function showMsg(id, text) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.classList.add('show');
+  }
+  function hideMsgs() {
+    document.querySelectorAll('.form-error, .form-success').forEach((el) => el.classList.remove('show'));
+  }
+  async function postJson(path, body) {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return { res, data: await readJson(res) };
+  }
+
+  (async () => {
+    const token = new URLSearchParams(location.search).get('token');
+    const lead = document.getElementById('lead');
+    const loginBtn = document.getElementById('login-btn');
+    loginBtn.hidden = false;
+    if (!token) {
+      lead.hidden = true;
+      showMsg('form-error', 'Hiányzó vagy érvénytelen link.');
+      return;
+    }
+    try {
+      const { res, data } = await postJson('/api/auth/verify-email', { token });
+      lead.hidden = true;
+      if (!res.ok) {
+        showMsg('form-error', errorMessage(res, data, 'A link érvénytelen vagy lejárt.'));
+        return;
+      }
+      showMsg('form-success', data.message);
+      if (data.email) loginBtn.href = `login.html?email=${encodeURIComponent(data.email)}`;
+    } catch {
+      lead.hidden = true;
+      showMsg('form-error', 'Nem sikerült elérni a szervert.');
+    }
+  })();
+</script>
+</body>
+</html>

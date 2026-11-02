@@ -29,20 +29,25 @@ public class EmailSenderRouter(
 
     public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
     {
-        if (configuration.GetValue("Email:OnlyToUsers", false))
+        if (await IsSuppressedAsync(db, configuration, to, ct))
         {
-            var normalized = to.Trim().ToLowerInvariant();
-            if (!await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == normalized, ct))
-            {
-                logger.LogInformation("E-mail suppressed (Email:OnlyToUsers): {Subject}", subject);
-                LastError = null;
-                return true;
-            }
+            logger.LogInformation("E-mail suppressed (Email:OnlyToUsers): {Subject}", subject);
+            LastError = null;
+            return true;
         }
 
         var sender = await ResolveAsync(ct);
         var result = await sender.SendAsync(to, subject, htmlBody, textBody, attachment, ct);
         LastError = sender.LastError;
         return result;
+    }
+
+    // Teszt-környezetben csak a rendszer felhasználóinak (köztük a még meg nem erősített regisztrálóknak
+    // és meghívottaknak) megy levél.
+    internal static async Task<bool> IsSuppressedAsync(LakaskezeloDbContext db, IConfiguration configuration, string to, CancellationToken ct)
+    {
+        if (!configuration.GetValue("Email:OnlyToUsers", false)) return false;
+        var normalized = to.Trim().ToLowerInvariant();
+        return !await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == normalized, ct);
     }
 }
