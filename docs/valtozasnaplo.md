@@ -4,10 +4,14 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
-- **2026.11.02.8** — Számla csomagok: a hónap sorára kattintva alatta lenyílik a csomag számláinak listája
-  (sorszám, ingatlan, bérlő, kiállítás, összeg, állapot, PDF-letöltés); újabb kattintásra visszazáródik.
+(nincs)
 
 ## Élesben
+
+### v2026.11.02.8 — 2026. 11. 02.
+
+- **2026.11.02.8** — Számla csomagok: a hónap sorára kattintva alatta lenyílik a csomag számláinak listája
+  (sorszám, ingatlan, bérlő, kiállítás, összeg, állapot, PDF-letöltés); újabb kattintásra visszazáródik.
 
 ### v2026.11.02.7 — 2026. 11. 02.
 
