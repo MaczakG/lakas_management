@@ -4,6 +4,12 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+(nincs)
+
+## Élesben
+
+### v2026.11.02.5 — 2026. 11. 02.
+
 - **2026.11.02.5** — SaaS 4. lépés: ÁSZF (adatfeldolgozási feltételekkel) és adatkezelési tájékoztató, a
   szolgáltató adataival és a díjakkal automatikusan kitöltve (Platform oldal). Regisztrációnál kötelező az
   elfogadásuk (a változat és az időpont a cégnél tárolódik), fizetésnél a fogyasztói azonnali-teljesítés kérése.
@@ -28,7 +34,7 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
   panelek, számlák/rezsi/bérlők fülek), új adatlap-mezők (cím, típus, hrsz, alapterület, mérőórák, kaució…).
   Saját betűkészlet (Google Fonts nélkül). Teszt-környezet: „TESZT” sáv, e-mail csak a felhasználóknak.
 
-## Élesben
+### Korábban
 
 - **2026.10.30** — A számla csak munkanapon megy ki (hétvégére/ünnepre eső nap → következő munkanap).
 - **2026.10.02** — .NET 10; kötelező e-mailes kétlépcsős belépés, fiókzárolás, visszavonható munkamenetek,

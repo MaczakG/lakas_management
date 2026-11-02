@@ -25,7 +25,7 @@
 - **Verziószám (`AppVersion.Current`):** dátum alapú, `ÉÉÉÉ.HH.NN` (ha egy napon több kiadás van:
   `ÉÉÉÉ.HH.NN.2`). Minden érdemi változásnál nő; a felület oldalsávjában és a `/api/version`-en látszik, a
   tesztet borostyán „TESZT KÖRNYEZET” sáv jelzi.
-- **Kiadás:** minden éles kiadás után `vÉÉÉÉ.HH.NN` git-címke a `main`-en, és a `docs/valtozasnaplo.md`-ben a
+- **Kiadás:** minden éles kiadás után (ha a környezet engedi) `vÉÉÉÉ.HH.NN` git-címke a `main`-en, és a `docs/valtozasnaplo.md`-ben a
   „Csak a teszten” rész átkerül a kiadás alá.
 
 ## Teszt-környezet (staging)
