@@ -7,6 +7,9 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 - **2026.11.03.14** — Az ikonok a Phosphor Icons készletből jönnek (MIT licenc: ingyenes, a felületen semmit nem kell
   feltüntetni). A Flaticon ikonok és a „Uicons by Flaticon” forrásmegjelölés mindenhonnan kikerültek (menü lábléce,
   platform menü). A legördülő nyíl, a kiválasztott elem pipája és az állapotcímkék ikonjai is lecserélődtek.
+  A rezsi emlékeztető e-mail is a következő számla időszakát nézi (nem az aktuális hónapot): ingatlanonként a
+  számlázás előtti utolsó határnapon (Beállítások → Rezsi emlékeztető, pl. 25 → dec. 1-i számlázásnál nov. 25.)
+  szól, ha arra az időszakra még nincs rezsi; a levélben ingatlanonként az időszak és a számlázás ideje is szerepel.
 - **2026.11.03.13** — Archiválás helyett sztornózás: a kiállított számla nem törölhető és nem archiválható, csak
   külön sztornó bizonylat készíthető hozzá (a számla sorában vagy adatlapján a Sztornózás gombbal). A sztornó
   bizonylat az eredeti sorait negatív összeggel tartalmazza, saját sorszámmal (pl. FUT-2026-011-S), az eredetire

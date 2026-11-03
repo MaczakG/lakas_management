@@ -61,6 +61,15 @@ public static class BillingCalendar
         }
     }
 
+    // A rezsi emlékeztető napja: a számlázás napja előtti (vagy azzal egyező) utolsó olyan nap, amelynek a hónapon
+    // belüli sorszáma a beállított határnap. Pl. dec. 1-i számlázás, határnap 25 → nov. 25.; dec. 5., határnap 3 → dec. 3.
+    public static DateOnly ReminderDate(DateOnly billingDate, int deadlineDay)
+    {
+        var day = Math.Clamp(deadlineDay, 1, 28);
+        var candidate = new DateOnly(billingDate.Year, billingDate.Month, day);
+        return candidate <= billingDate ? candidate : candidate.AddMonths(-1);
+    }
+
     // Húsvétvasárnap a Gergely-naptárban (anonim gregorián algoritmus, Meeus/Jones/Butcher).
     private static DateOnly EasterSunday(int year)
     {
