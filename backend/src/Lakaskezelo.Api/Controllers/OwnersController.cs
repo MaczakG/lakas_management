@@ -10,7 +10,7 @@ namespace Lakaskezelo.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/owners")]
-public class OwnersController(LakaskezeloDbContext db) : ControllerBase
+public class OwnersController(LakaskezeloDbContext db, Lakaskezelo.Api.Documents.DocumentStorage documents) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<OwnerDto>>> List(CancellationToken ct)
@@ -99,6 +99,8 @@ public class OwnersController(LakaskezeloDbContext db) : ControllerBase
     {
         var owner = await db.Owners.FindAsync([id], ct);
         if (owner is null) return NotFound();
+        // A csak ehhez kapcsolódó dokumentumok vele együtt törlődnek (a tárhelyről is).
+        await documents.DeleteExclusiveAsync(d => d.OwnerId == id && d.PropertyId == null && d.TenantId == null, ct);
         db.Owners.Remove(owner);
         await db.SaveChangesAsync(ct);
         return NoContent();

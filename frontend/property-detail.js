@@ -482,6 +482,27 @@ document.getElementById('save-owners-btn').addEventListener('click', async () =>
   layoutMasonry();
 });
 
+// ---------- dokumentumok ----------
+
+// A fül egyszer épül fel (az első betöltéskor); a bérlő-választóban az ingatlan bérlői, a jelenlegi elöl.
+let documentsMounted = false;
+function mountPropertyDocuments() {
+  if (documentsMounted) return;
+  documentsMounted = true;
+  mountDocuments({
+    scope: { propertyId },
+    container: '#documents-body',
+    count: '#count-documents',
+    links: async (doc) => {
+      const current = currentTenant();
+      const tenants = [...property.tenants].sort((a, b) => (a === current ? -1 : b === current ? 1 : (b.moveInDate || '').localeCompare(a.moveInDate || '')));
+      const options = tenants.map((t) => ({ value: t.id, label: t === current ? `${t.name} (jelenlegi)` : t.name }));
+      if (doc?.tenantId && !options.some((o) => o.value === doc.tenantId)) options.push({ value: doc.tenantId, label: doc.tenantName });
+      return [{ key: 'tenantId', label: 'Bérlőhöz is tartozik', options, value: '', hint: 'Pl. bérleti szerződésnél: így a bérlő adatlapján is megjelenik.' }];
+    },
+  });
+}
+
 // ---------- betöltés ----------
 
 async function loadUtility() {
@@ -516,7 +537,8 @@ async function load() {
 
   let tab = 'invoices';
   try { tab = localStorage.getItem('propertyDetailTab') || tab; } catch { /* nem baj */ }
-  activateTab(['invoices', 'utility', 'tenants'].includes(tab) ? tab : 'invoices');
+  activateTab(['invoices', 'utility', 'tenants', 'documents'].includes(tab) ? tab : 'invoices');
+  mountPropertyDocuments();
 }
 
 load();

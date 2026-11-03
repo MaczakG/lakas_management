@@ -4,6 +4,13 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.10** — Dokumentumok az ingatlan, bérlő és tulajdonos adatlapján (új „Dokumentumok” fül): szerződés,
+  szkennelt rezsi számla, jegyzőkönyv, fotó vagy bármilyen PDF, kép, Word, Excel, szöveg (fájlonként legfeljebb 15 MB).
+  Feltöltés gombbal vagy behúzással, egyszerre több fájl, folyamatjelzővel; a kategóriát a fájlnévből javasolja.
+  Egy dokumentum több adatlaphoz is kapcsolható (pl. a bérleti szerződés az ingatlannál és a bérlőnél is látszik).
+  Előnézet saját ablakban: PDF oldalanként nagyítással, kép, szöveg; lapozás a dokumentumok között. Átnevezés,
+  kategória, megjegyzés módosítása, törlés. A fájlok az S3 tárhelyre kerülnek, ha az be van állítva, különben az
+  adatbázisba (migráció: Documents, DocumentContents). A feltöltött fájl típusát a tartalma alapján is ellenőrizzük.
 - **2026.11.03.9** — A kiállított számlák nem törölhetők, csak archiválhatók (a bizonylat és a PDF megmarad, de nem
   számít bele az összesítőkbe, a havi csomagba és a Vezérlőpultba; a táblákban „Archivált” címkével, halványan
   látszik). Archiválás után az időszak rezsi tételei újra szerkeszthetők, és új számla készíthető rá „/2”, „/3”
