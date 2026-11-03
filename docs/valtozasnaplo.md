@@ -4,6 +4,15 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.20** — Egyenleg-sáv a bérlő adatlapján, a fejléc alatt.
+  - Nagy számmal mutatja az egyenleget, színnel jelölve: tartozás (piros), túlfizetés (zöld), rendezett.
+  - Mellette:
+    - a kiállított és a befizetett összeg;
+    - a lejárt hátralék (a fizetési határidőn túli, ki nem fizetett bizonylatokból, legfeljebb a teljes tartozás);
+    - az utolsó befizetés dátuma és összege.
+  - Gyorsgombok: „Befizetés rögzítése” és „Folyószámla”, ez utóbbi az Egyenleg fülre ugrik.
+  - Telefonon az adatok egymás alá kerülnek, a négy adat két oszlopban.
+  - Az Összegzés panelről az Egyenleg sor kikerült, mert a sáv mutatja.
 - **2026.11.03.19** — Fizetés rögzítése a bizonylatra dátummal és összeggel, részletekben is.
   - A „Fizetés rögzítése” ablak (pipa gomb a bizonylattáblákban, gomb az adatlapon) kéri:
     - a dátumot (alapból ma);

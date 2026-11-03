@@ -102,7 +102,46 @@ function renderProperty() {
   ].join('');
 }
 
+// Egyenleg-sáv a fejléc alatt: egyenleg (tartozás / túlfizetés / rendezett), kiállítva, befizetve, lejárt hátralék,
+// utolsó befizetés; gyorsgombok a befizetés rögzítéséhez és a folyószámlához.
+function renderBalanceBand() {
+  const band = document.getElementById('balance-band');
+  const balance = Number(ledger ? ledger.balance : tenant.balance) || 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = invoices.filter((i) => invoiceIsActive(i) && i.status !== 'Failed' && i.dueDate < today && invoiceRemaining(i) > 0);
+  // A bizonylathoz nem kötött befizetések is csökkentik: a lejárt hátralék legfeljebb a teljes tartozás.
+  const overdueSum = Math.min(overdue.reduce((s, i) => s + invoiceRemaining(i), 0), Math.max(balance, 0));
+  const lastPayment = ledger?.entries.find((e) => e.kind === 'payment');
+  const state = balance > 0 ? 'due' : balance < 0 ? 'over' : 'settled';
+  const stateText = { due: 'tartozás', over: 'túlfizetés', settled: 'rendezett' }[state];
+  const stat = (label, value, cls = '') => `<div class="bb-stat${cls ? ` ${cls}` : ''}"><span>${escapeHtml(label)}</span><b>${value}</b></div>`;
+  band.className = `balance-band is-${state}`;
+  band.innerHTML = `
+    <div class="bb-main">
+      <span class="bb-label">Egyenleg</span>
+      <span class="bb-value">${formatCurrency(Math.abs(balance))}</span>
+      <span class="bb-state">${stateText}</span>
+    </div>
+    <div class="bb-stats">
+      ${stat('Kiállítva', formatCurrency(ledger ? ledger.chargedTotal : 0))}
+      ${stat('Befizetve', formatCurrency(ledger ? ledger.paidTotal : 0))}
+      ${stat('Lejárt hátralék', overdueSum > 0 ? `${formatCurrency(overdueSum)} <small>${overdue.length} lejárt bizonylatból</small>` : '–', overdueSum > 0 ? 'is-alert' : '')}
+      ${stat('Utolsó befizetés', lastPayment ? `${formatDate(lastPayment.date)} <small>${formatCurrency(-lastPayment.amount)}</small>` : '–')}
+    </div>
+    <div class="bb-actions">
+      <button class="btn btn-secondary btn-sm" type="button" data-bb="ledger">Folyószámla</button>
+      <button class="btn btn-primary btn-sm" type="button" data-bb="pay">${DETAIL_ICON('plus')}Befizetés rögzítése</button>
+    </div>`;
+  band.hidden = false;
+  band.querySelector('[data-bb="pay"]').addEventListener('click', openPayment);
+  band.querySelector('[data-bb="ledger"]').addEventListener('click', () => {
+    document.querySelector('.record-tab[data-tab="balance"]').click();
+    document.querySelector('.record-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
 function renderSummary() {
+  renderBalanceBand();
   const year = new Date().getFullYear();
   const issued = invoices.filter((i) => i.status !== 'Failed' && (!i.cancelledAt && !i.cancelsInvoiceId));
   const total = issued.reduce((s, i) => s + Number(i.amountTotal), 0);
@@ -111,7 +150,6 @@ function renderSummary() {
   const failed = invoices.length - issued.length;
   document.getElementById('summary').innerHTML = [
     detailRow('Bérlet kezdete', tenant.moveInDate ? formatDate(tenant.moveInDate) : '<span class="dim">–</span>'),
-    detailRow('Egyenleg', balanceHtml(ledger ? ledger.balance : tenant.balance)),
     detailRow('Kiállítva összesen', formatCurrency(total)),
     detailRow(`Kiállítva ${year}-ben`, formatCurrency(thisYear)),
     detailRow('Bizonylatok', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
