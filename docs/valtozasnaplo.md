@@ -4,7 +4,19 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
-Jelenleg nincs ilyen változás.
+- **2026.11.03.21** — A felvett, de még bizonylatra nem került rezsitétel is tartozásként jelenik meg a bérlő
+  egyenlegében.
+  - **Kinél:** az ingatlan jelenlegi bérlőjénél, mert ő kapja meg a következő bizonylaton.
+  - **Folyószámla:** külön sor „Rezsi: Víz (2026. november)” megnevezéssel és „még nincs bizonylaton” jelöléssel.
+  - **Összesítők:**
+    - folyószámla: „Rezsi, még nincs bizonylaton”;
+    - egyenleg-sáv: „Rezsi, bizonylatra vár”.
+
+    A Bérlők lista egyenlege is tartalmazza.
+  - **Bizonylatra kerüléskor:** a tétel kikerül ebből a sorból, és a bizonylat terhel helyette, tehát nincs dupla
+    terhelés. Sztornó után a tétel újra itt jelenik meg.
+  - **Kivételek:** a régi, kizárt tételek és a 36 hónapnál régebbiek nem számítanak bele.
+  - **Lejárt hátralék:** a bizonylatra váró rezsi nem lehet lejárt, ezért nem számít bele.
 
 ## Élesben
 

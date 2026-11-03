@@ -110,7 +110,9 @@ function renderBalanceBand() {
   const today = new Date().toISOString().slice(0, 10);
   const overdue = invoices.filter((i) => invoiceIsActive(i) && i.status !== 'Failed' && i.dueDate < today && invoiceRemaining(i) > 0);
   // A bizonylathoz nem kötött befizetések is csökkentik: a lejárt hátralék legfeljebb a teljes tartozás.
-  const overdueSum = Math.min(overdue.reduce((s, i) => s + invoiceRemaining(i), 0), Math.max(balance, 0));
+  // A még bizonylatra nem került rezsi nem lehet lejárt, ezért az a felső határból kimarad.
+  const billedBalance = balance - (Number(ledger?.unbilledTotal) || 0);
+  const overdueSum = Math.min(overdue.reduce((s, i) => s + invoiceRemaining(i), 0), Math.max(billedBalance, 0));
   const lastPayment = ledger?.entries.find((e) => e.kind === 'payment');
   const state = balance > 0 ? 'due' : balance < 0 ? 'over' : 'settled';
   const stateText = { due: 'tartozás', over: 'túlfizetés', settled: 'rendezett' }[state];
@@ -124,6 +126,7 @@ function renderBalanceBand() {
     </div>
     <div class="bb-stats">
       ${stat('Kiállítva', formatCurrency(ledger ? ledger.chargedTotal : 0))}
+      ${ledger && Number(ledger.unbilledTotal) > 0 ? stat('Rezsi, bizonylatra vár', formatCurrency(ledger.unbilledTotal)) : ''}
       ${stat('Befizetve', formatCurrency(ledger ? ledger.paidTotal : 0))}
       ${stat('Lejárt hátralék', overdueSum > 0 ? `${formatCurrency(overdueSum)} <small>${overdue.length} lejárt bizonylatból</small>` : '–', overdueSum > 0 ? 'is-alert' : '')}
       ${stat('Utolsó befizetés', lastPayment ? `${formatDate(lastPayment.date)} <small>${formatCurrency(-lastPayment.amount)}</small>` : '–')}
@@ -183,6 +186,7 @@ function renderLedger() {
   }
   body.innerHTML = `<div class="ledger-totals">
       <div><span>Kiállítva</span><b>${formatCurrency(ledger.chargedTotal)}</b></div>
+      ${Number(ledger.unbilledTotal) > 0 ? `<div><span>Rezsi, még nincs bizonylaton</span><b>${formatCurrency(ledger.unbilledTotal)}</b></div>` : ''}
       <div><span>Befizetve</span><b>${formatCurrency(ledger.paidTotal)}</b></div>
       <div><span>Egyenleg</span><b>${balanceHtml(ledger.balance)}</b></div>
     </div>
@@ -191,10 +195,12 @@ function renderLedger() {
     <tbody>${ledger.entries.map((e) => `
       <tr${e.isCancelled ? ' class="is-archived"' : ''}>
         <td>${formatDate(e.date)}</td>
-        <td>${e.kind === 'invoice'
+        <td>${e.kind === 'utility'
+          ? `${escapeHtml(e.label)} <span class="status-tag warn" title="A következő bizonylatra kerül">még nincs bizonylaton</span>`
+          : e.kind === 'invoice'
           ? `<a class="mono link" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}&from=${encodeURIComponent(`tenant:${tenantId}`)}">${escapeHtml(e.invoiceNumber)}</a> <span class="dim">${escapeHtml(e.label)}</span>${e.isCancelled ? ' <span class="status-tag cancelled">Sztornózott</span>' : ''}`
           : `${escapeHtml(e.label)}${e.invoiceId ? ` <a class="mono link" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}&from=${encodeURIComponent(`tenant:${tenantId}`)}">${escapeHtml(e.invoiceNumber || '')}</a>` : ''}${e.note ? ` <span class="dim">${escapeHtml(e.note)}</span>` : ''}`}</td>
-        <td class="num">${e.kind === 'invoice' ? formatCurrency(e.amount) : ''}</td>
+        <td class="num">${e.kind !== 'payment' ? formatCurrency(e.amount) : ''}</td>
         <td class="num">${e.kind === 'payment' ? formatCurrency(-e.amount) : ''}</td>
         <td class="num">${formatCurrency(e.balance)}</td>
         <td class="num">${e.kind === 'payment' ? `<button class="icon-btn" type="button" title="${e.invoiceId ? 'Befizetés törlése (a bizonylat fizetett jelölése is megszűnik)' : 'Befizetés törlése'}" aria-label="Befizetés törlése" data-del-payment="${escapeHtml(e.id)}">${DETAIL_ICON('trash')}</button>` : ''}</td>
