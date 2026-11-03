@@ -139,7 +139,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         return Ok(ToDto(entry, isLocked: false));
     }
 
-    private const string LockedMessage = "Erre az időszakra már van számla, ezért a rezsi tételek nem módosíthatók. Ha javítani kell, sztornózd a számlát, utána a tételek szerkeszthetők.";
+    private const string LockedMessage = "Erre az időszakra már van bizonylat, ezért a rezsi tételek nem módosíthatók. Ha javítani kell, sztornózd a bizonylatot, utána a tételek szerkeszthetők.";
 
     // Meglévő tétel javítása (megnevezés, összeg) — csak ha az időszakra nincs aktív (nem archivált) számla.
     [HttpPut("{id:guid}/utility-costs/{entryId:guid}")]

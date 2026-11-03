@@ -14,7 +14,7 @@
   <aside class="sidebar">
     <a class="brand" href="dashboard.html">
       <span class="brand-mark">${icon('house')}</span>
-      <span class="brand-name">Lakáskezelő<small>Bérbeadás és számlázás</small></span>
+      <span class="brand-name">Lakáskezelő<small>Bérbeadás és bizonylatok</small></span>
     </a>
 
     <nav class="nav-scroll">
@@ -29,7 +29,7 @@
       ${item('tenants.html', 'users', 'Bérlők')}
 
       <div class="nav-label">Pénzügy</div>
-      ${item('invoice-bundles.html', 'file-invoice', 'Számlák')}
+      ${item('invoice-bundles.html', 'file-invoice', 'Bizonylatok')}
       ${item('exchange-rates.html', 'arrow-left-right', 'Árfolyamok')}
 
       <div class="nav-label">Fiók</div>
@@ -49,7 +49,7 @@
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.
   const page = location.pathname.split('/').pop() || 'dashboard.html';
   // A dokumentum adatlapja ahhoz a menüponthoz tartozik, ahonnan megnyitották (?from=property:…).
-  // A számla adatlapja is (?from=…; alapból a Számlák menüpont).
+  // A bizonylat adatlapja is (?from=…; alapból a Bizonylatok menüpont).
   const from = (new URLSearchParams(location.search).get('from') || '').split(':')[0];
   const fromPage = { property: 'properties.html', tenant: 'tenants.html', owner: 'owners.html', bundles: 'invoice-bundles.html' }[from];
   const activePage = { 'property-detail.html': 'properties.html', 'tenant-detail.html': 'tenants.html', 'owner-detail.html': 'owners.html',

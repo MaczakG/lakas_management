@@ -1,5 +1,5 @@
-// Számla készítése és a számla-műveletek (ingatlan-adatlap, Számla csomagok, bérlő/tulajdonos adatlap):
-// „Számla készítése” ablak, generálás folyamatjelzővel, újrapróbálás és törlés.
+// Bizonylat készítése és a bizonylat-műveletek (ingatlan-adatlap, Bizonylat csomagok, bérlő/tulajdonos adatlap):
+// „Bizonylat készítése” ablak, generálás folyamatjelzővel, újrapróbálás és törlés.
 // A szerver (POST /api/invoices/generate/stream) soronként jelzi a lépéseket (application/x-ndjson):
 // {"type":"plan","steps":[…]}, {"type":"step","step":"pdf"}, …, {"type":"done","invoice":{…}} | {"type":"error",…}.
 // A sáv a valós lépésekhez igazodik; egy lépésen belül lassan kúszik, hogy látszódjon, hogy dolgozik.
@@ -47,7 +47,7 @@
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gp-title">
-      <div class="modal-head"><div><h2 id="gp-title">Számla generálása</h2><p id="gp-sub"></p></div></div>
+      <div class="modal-head"><div><h2 id="gp-title">Bizonylat generálása</h2><p id="gp-sub"></p></div></div>
       <div class="modal-body">
         <div class="gp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-labelledby="gp-title"><div class="gp-fill" id="gp-fill"></div></div>
         <div class="gp-pct"><span id="gp-state">Indítás…</span><span id="gp-pct">0%</span></div>
@@ -105,7 +105,7 @@
     close.focus();
   }
 
-  // Visszaadja a kész számlát (InvoiceDto), vagy null-t, ha a generálás nem jutott el a mentésig.
+  // Visszaadja a kész bizonylatot (InvoiceDto), vagy null-t, ha a generálás nem jutott el a mentésig.
   window.generateInvoiceWithProgress = function ({ propertyId, year, month, propertyName }) {
     plan = DEFAULT_PLAN;
     current = -1;
@@ -144,9 +144,9 @@
             else if (msg.type === 'done') {
               ended = true;
               invoice = msg.invoice;
-              if (invoice.status === 'Failed') finish('error', 'A számla nem készült el.', invoice.errorMessage || '');
+              if (invoice.status === 'Failed') finish('error', 'A bizonylat nem készült el.', invoice.errorMessage || '');
               else if (invoice.status === 'Sent') finish('ok', `${invoice.number}: elkészült, és elküldtük a bérlőnek.`, `Összeg: ${formatCurrency(invoice.amountTotal)}`);
-              else finish('warn', `${invoice.number}: elkészült, de e-mailben nem ment ki.`, 'A bérlőnek nincs e-mail címe, vagy a küldés nem sikerült. A PDF a számlák listájából letölthető.');
+              else finish('warn', `${invoice.number}: elkészült, de e-mailben nem ment ki.`, 'A bérlőnek nincs e-mail címe, vagy a küldés nem sikerült. A PDF a bizonylatok listájából letölthető.');
             } else if (msg.type === 'error') { ended = true; finish('error', msg.message || 'Hiba történt a generálás során.'); }
           };
           for (;;) {
@@ -160,7 +160,7 @@
             }
             if (done) break;
           }
-          if (!ended) finish('error', 'A kapcsolat megszakadt a generálás közben.', 'Frissítsd az oldalt, és nézd meg a számla állapotát.');
+          if (!ended) finish('error', 'A kapcsolat megszakadt a generálás közben.', 'Frissítsd az oldalt, és nézd meg a bizonylat állapotát.');
         } catch (e) {
           finish('error', 'Hiba történt a generálás során.', e.message || '');
         }
@@ -169,8 +169,8 @@
   };
 })();
 
-// ---------- Számla készítése ablak ----------
-// propertyId megadásakor az ingatlan rögzített (adatlap), különben választható (Számla csomagok).
+// ---------- Bizonylat készítése ablak ----------
+// propertyId megadásakor az ingatlan rögzített (adatlap), különben választható (Bizonylat csomagok).
 // Alapból a következő kiküldés időszaka (annak a rezsije kerül rá). onDone: a generálás után hívódik.
 (function () {
   const overlay = document.createElement('div');
@@ -178,7 +178,7 @@
   overlay.innerHTML = `
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ic-title">
       <div class="modal-head">
-        <div><h2 id="ic-title">Számla készítése</h2><p id="ic-sub">Válaszd ki az időszakot. A számlára az időszak rezsi tételei kerülnek.</p></div>
+        <div><h2 id="ic-title">Bizonylat készítése</h2><p id="ic-sub">Válaszd ki az időszakot. A bizonylatra az időszak rezsi tételei kerülnek.</p></div>
         <button class="modal-close" type="button" data-ic-close aria-label="Bezárás"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
       </div>
       <div class="modal-body">
@@ -194,7 +194,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" type="button" data-ic-close>Mégse</button>
-        <button class="btn btn-primary" type="submit" form="ic-form" id="ic-submit">Számla készítése</button>
+        <button class="btn btn-primary" type="submit" form="ic-form" id="ic-submit">Bizonylat készítése</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -214,7 +214,7 @@
     $('ic-year').value = p?.nextPeriodYear ?? now.getFullYear();
     $('ic-month').value = String(p?.nextPeriodMonth ?? now.getMonth() + 1);
     $('ic-hint').textContent = p
-      ? `A következő automatikus kiküldés: ${String(p.nextBillingAt).slice(0, 10).replace(/-/g, '. ')}, ez a ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}i számla.${p.isActive ? '' : ' Az ingatlan inaktív.'}`
+      ? `A következő automatikus kiküldés: ${String(p.nextBillingAt).slice(0, 10).replace(/-/g, '. ')}, ez a ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}i bizonylat.${p.isActive ? '' : ' Az ingatlan inaktív.'}`
       : '';
   }
   $('ic-property').addEventListener('change', applyDefaults);
@@ -228,10 +228,10 @@
     $('ic-property').innerHTML = list.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
     $('ic-property-field').hidden = !!propertyId;
     $('ic-sub').textContent = propertyId && list[0]
-      ? `${list[0].name}: válaszd ki az időszakot. A számlára az időszak rezsi tételei kerülnek.`
-      : 'Válaszd ki az ingatlant és az időszakot. A számlára az időszak rezsi tételei kerülnek.';
+      ? `${list[0].name}: válaszd ki az időszakot. A bizonylatra az időszak rezsi tételei kerülnek.`
+      : 'Válaszd ki az ingatlant és az időszakot. A bizonylatra az időszak rezsi tételei kerülnek.';
     if (!list.length) {
-      await uiAlert('Nincs aktív ingatlan, amihez számla készülhetne.', { title: 'Számla készítése' });
+      await uiAlert('Nincs aktív ingatlan, amihez bizonylat készülhetne.', { title: 'Bizonylat készítése' });
       return;
     }
     applyDefaults();
@@ -250,15 +250,15 @@
       $('ic-error').classList.add('show');
       return;
     }
-    // Ha az időszakra már van számla, a generálás azt frissíti (ugyanazzal a sorszámmal) — ezt előbb jóvá kell hagyni.
+    // Ha az időszakra már van bizonylat, a generálás azt frissíti (ugyanazzal a sorszámmal) — ezt előbb jóvá kell hagyni.
     const invRes = await apiFetch(`/api/properties/${propertyId}/invoices`);
     const existing = invRes.ok ? (await invRes.json()).find((i) => i.periodYear === year && i.periodMonth === month && invoiceIsActive(i)) : null;
     if (existing && existing.status !== 'Failed') {
       const sent = existing.status === 'Sent';
       const ok = await uiConfirm(
-        `Erre az időszakra már van ${sent ? 'kiküldött' : 'legenerált'} számla: ${existing.number} (${formatCurrency(existing.amountTotal)}).\n\n`
+        `Erre az időszakra már van ${sent ? 'kiküldött' : 'legenerált'} bizonylat: ${existing.number} (${formatCurrency(existing.amountTotal)}).\n\n`
         + `Újrakészítéskor ugyanezzel a sorszámmal, a mostani adatokkal készül el${sent ? ', és a bérlő e-mailben újra megkapja' : ''}.`,
-        { title: 'Számla újrakészítése', confirmText: 'Újrakészítés', danger: sent });
+        { title: 'Bizonylat újrakészítése', confirmText: 'Újrakészítés', danger: sent });
       if (!ok) return;
     }
     close();
@@ -268,41 +268,41 @@
   });
 })();
 
-// ---------- Számla-műveletek a számlatáblákban (onclick-ből hívva) ----------
+// ---------- Bizonylat-műveletek a bizonylattáblákban (onclick-ből hívva) ----------
 window.invoiceRetry = async (propertyId, year, month, propertyName) => {
   await generateInvoiceWithProgress({ propertyId, year, month, propertyName });
   document.dispatchEvent(new CustomEvent('invoices-changed'));
 };
 
-// Aktív számla: nem sztornó bizonylat, és nem is sztornózták (ilyenből egy van időszakonként; ez zárja a rezsit).
+// Aktív bizonylat: nem sztornó bizonylat, és nem is sztornózták (ilyenből egy van időszakonként; ez zárja a rezsit).
 window.invoiceIsActive = (i) => !i.cancelledAt && !i.cancelsInvoiceId;
 
 // A kiállított bizonylat nem törölhető és nem archiválható, csak sztornózható: ilyenkor külön sztornó bizonylat
 // készül (negatív összegekkel, az eredetire hivatkozva). Mindkettő megmarad és a havi csomagba is bekerül; az időszak
-// rezsi tételei újra szerkeszthetők, és új számla készíthető rá.
+// rezsi tételei újra szerkeszthetők, és új bizonylat készíthető rá.
 window.invoiceCancel = async (id, number, sent) => {
   const ok = await uiConfirm(
-    `A(z) ${number} számla sztornózásakor:\n\n`
+    `A(z) ${number} bizonylat sztornózásakor:\n\n`
     + `• külön sztornó bizonylat készül (${number}-S) negatív összegekkel, az eredetire hivatkozva;\n`
     + '• az eredeti „sztornózott” jelölést kap, mindkettő bekerül a havi csomagba;\n'
     + (sent ? '• a bérlő e-mailben megkapja a sztornó bizonylatot;\n' : '')
-    + '• az időszak rezsi tételei újra szerkeszthetők, és új számla készíthető rá.\n\n'
+    + '• az időszak rezsi tételei újra szerkeszthetők, és új bizonylat készíthető rá.\n\n'
     + 'A sztornózás nem vonható vissza.',
-    { title: 'Számla sztornózása', confirmText: 'Sztornózás', danger: true });
+    { title: 'Bizonylat sztornózása', confirmText: 'Sztornózás', danger: true });
   if (!ok) return false;
   const res = await apiFetch(`/api/invoices/${id}/cancel`, { method: 'POST' });
   if (!res.ok) {
-    await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült sztornózni a számlát.'), { title: 'Sztornózás sikertelen' });
+    await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült sztornózni a bizonylatot.'), { title: 'Sztornózás sikertelen' });
     return false;
   }
   document.dispatchEvent(new CustomEvent('invoices-changed'));
   return true;
 };
 
-// A számla adatlapjának címe; a from paraméterrel tér vissza oda, ahonnan megnyitották.
+// A bizonylat adatlapjának címe; a from paraméterrel tér vissza oda, ahonnan megnyitották.
 window.invoiceDetailUrl = (i, from) => `invoice-detail.html?id=${encodeURIComponent(i.id)}${from ? `&from=${encodeURIComponent(from)}` : ''}`;
 
-// A számlatáblák művelet-gombjai: PDF letöltése, újrapróbálás (sikertelennél), sztornózás (aktív, kiállított számlánál).
+// A bizonylattáblák művelet-gombjai: PDF letöltése, újrapróbálás (sikertelennél), sztornózás (aktív, kiállított bizonylatnál).
 window.invoiceActionButtons = function (i) {
   const icon = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#${id}"/></svg>`;
   const buttons = [];
@@ -312,12 +312,12 @@ window.invoiceActionButtons = function (i) {
     buttons.push(`<button class="icon-btn" type="button" title="Újrapróbálás" aria-label="Újrapróbálás" onclick="invoiceRetry(${jsArg(i.propertyId)}, ${i.periodYear}, ${i.periodMonth}, ${jsArg(i.propertyName)})">${icon('rotate-ccw')}</button>`);
   }
   if (invoiceIsActive(i) && i.status !== 'Failed') {
-    buttons.push(`<button class="icon-btn danger" type="button" title="Sztornózás" aria-label="Számla sztornózása" onclick="invoiceCancel(${jsArg(i.id)}, ${jsArg(i.number)}, ${i.status === 'Sent'})">${icon('file-minus')}</button>`);
+    buttons.push(`<button class="icon-btn danger" type="button" title="Sztornózás" aria-label="Bizonylat sztornózása" onclick="invoiceCancel(${jsArg(i.id)}, ${jsArg(i.number)}, ${i.status === 'Sent'})">${icon('file-minus')}</button>`);
   }
   return `<span class="invoice-actions">${buttons.join('')}</span>`;
 };
 
-// Állapotcímke a számlatáblákhoz: a sztornó bizonylat „Sztornó”, a sztornózott „Sztornózott” jelölést kap.
+// Állapotcímke a bizonylattáblákhoz: a sztornó bizonylat „Sztornó”, a sztornózott „Sztornózott” jelölést kap.
 window.invoiceStatusTag = function (i, labels) {
   if (i.cancelsInvoiceId) return '<span class="status-tag storno">Sztornó</span>';
   if (i.cancelledAt) return '<span class="status-tag cancelled" title="Sztornózva: ' + escapeHtml(formatDate(i.cancelledAt)) + '">Sztornózott</span>';

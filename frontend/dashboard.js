@@ -13,9 +13,9 @@ requireAuth();
   // ---------- szakaszok ----------
   function renderKpis() {
     const d = data;
-    $('kpi-invoiced-label').textContent = `Kiszámlázva ${inYear(d.year)}`;
+    $('kpi-invoiced-label').textContent = `Kiállítva ${inYear(d.year)}`;
     $('kpi-invoiced').textContent = huf(d.invoicedTotal);
-    $('kpi-invoiced-sub').textContent = `${d.invoiceCount} db számla${d.failed.count ? `, ${d.failed.count} sikertelen nélkül` : ''}`;
+    $('kpi-invoiced-sub').textContent = `${d.invoiceCount} db bizonylat${d.failed.count ? `, ${d.failed.count} sikertelen nélkül` : ''}`;
     const range = d.compareUntilMonth === 12 ? 'teljes év' : `jan–${MONTH_SHORT[d.compareUntilMonth - 1]}`;
     if (d.previousYearToDate > 0) {
       const pct = ((d.invoicedTotal - d.previousYearToDate) / d.previousYearToDate) * 100;
@@ -25,7 +25,7 @@ requireAuth();
         <span class="${up ? 'up' : 'down'}">${pctText}</span>
         <span class="vs">${d.year - 1} azonos időszakához képest (${range}: ${escapeHtml(huf(d.previousYearToDate))})</span>`;
     } else {
-      $('kpi-delta').innerHTML = `<span class="vs">${inYear(d.year - 1)} ugyanebben az időszakban nem volt számla.</span>`;
+      $('kpi-delta').innerHTML = `<span class="vs">${inYear(d.year - 1)} ugyanebben az időszakban nem volt bizonylat.</span>`;
     }
     $('kpi-utility-label').textContent = `Rezsi ${inYear(d.year)}`;
     $('kpi-utility').textContent = huf(d.utilityTotal);
@@ -43,24 +43,24 @@ requireAuth();
     const d = data;
     const cur = { name: String(d.year), color: css('--viz-accent'), values: d.monthly.map((m) => m.amount) };
     const prev = { name: String(d.year - 1), color: css('--viz-context'), values: d.monthly.map((m) => m.previousAmount) };
-    $('monthly-title').textContent = `Kiszámlázott összeg havonta (${d.year})`;
+    $('monthly-title').textContent = `Kiállított összeg havonta (${d.year})`;
     legend($('monthly-legend'), [cur, prev]);
     renderColumns($('monthly-chart'), {
       series: [prev, cur],
       stacked: false,
       capSeries: 1,
-      emptyText: 'Ebben az évben még nincs számla.',
-      ariaLabel: `Kiszámlázott összeg havonta, ${d.year} és ${d.year - 1}`,
+      emptyText: 'Ebben az évben még nincs bizonylat.',
+      ariaLabel: `Kiállított összeg havonta, ${d.year} és ${d.year - 1}`,
       tooltip: (i) => ({
         title: `${MONTH_NAMES[i]}`,
         rows: [
           { color: cur.color, label: cur.name, value: huf(cur.values[i]) },
           { color: prev.color, label: prev.name, value: huf(prev.values[i]) },
         ],
-        foot: `${d.monthly[i].count} db számla ${inYear(d.year)}`,
+        foot: `${d.monthly[i].count} db bizonylat ${inYear(d.year)}`,
       }),
     });
-    $('monthly-table').innerHTML = `<table><thead><tr><th>Hónap</th><th class="num">${d.year}</th><th class="num">Számlák</th><th class="num">${d.year - 1}</th></tr></thead><tbody>
+    $('monthly-table').innerHTML = `<table><thead><tr><th>Hónap</th><th class="num">${d.year}</th><th class="num">Bizonylatok</th><th class="num">${d.year - 1}</th></tr></thead><tbody>
       ${d.monthly.map((m, i) => `<tr><td>${MONTH_NAMES[i]}</td><td class="num">${huf(m.amount)}</td><td class="num">${m.count} db</td><td class="num">${huf(m.previousAmount)}</td></tr>`).join('')}
       <tr><td class="cell-main">Összesen</td><td class="num cell-main">${huf(d.invoicedTotal)}</td><td class="num">${d.invoiceCount} db</td><td class="num">${huf(d.monthly.reduce((s, m) => s + m.previousAmount, 0))}</td></tr>
     </tbody></table>`;
@@ -74,7 +74,7 @@ requireAuth();
       { key: 'failed', name: 'Sikertelen', tone: 'critical', color: css('--status-critical'), icon: 'triangle-alert', ...d.failed },
     ];
     const total = parts.reduce((s, p) => s + p.count, 0);
-    $('status-sub').textContent = total ? `${total} számla` : `${inYear(d.year)} még nincs számla.`;
+    $('status-sub').textContent = total ? `${total} bizonylat` : `${inYear(d.year)} még nincs bizonylat.`;
     const bar = total
       ? `<div class="segbar" role="img" aria-label="${escapeHtml(parts.map((p) => `${p.name}: ${p.count} db (${Math.round((p.count / total) * 100)}%)`).join(', '))}">
           ${parts.filter((p) => p.count > 0).map((p) => {
@@ -91,7 +91,7 @@ requireAuth();
           <span class="num">${p.count} db</span>
         </div>`).join('')}
       </div>
-      ${d.failed.count || d.generated.count ? '<a class="link status-link" href="invoice-bundles.html">Megnyitás a Számlák között<svg class="inline-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#arrow-right"/></svg></a>' : ''}`;
+      ${d.failed.count || d.generated.count ? '<a class="link status-link" href="invoice-bundles.html">Megnyitás a Bizonylatok között<svg class="inline-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#arrow-right"/></svg></a>' : ''}`;
     // A túl keskeny szelet nem kap feliratot (nem vágjuk le) — az értéke a listában és a buborékban van.
     $('status-chart').querySelectorAll('.seg').forEach((seg) => {
       if (seg.scrollWidth > seg.clientWidth) seg.textContent = '';
@@ -105,7 +105,7 @@ requireAuth();
   function renderProperties() {
     const list = data.byProperty;
     if (!list.length) {
-      $('property-chart').innerHTML = `<div class="panel-empty">${inYear(data.year)} még nincs kiszámlázott összeg.</div>`;
+      $('property-chart').innerHTML = `<div class="panel-empty">${inYear(data.year)} még nincs kiállított bizonylat.</div>`;
       return;
     }
     const limit = 10;
@@ -125,7 +125,7 @@ requireAuth();
       return;
     }
     const KIND = {
-      billing: { icon: 'receipt', label: 'Számla kiküldése' },
+      billing: { icon: 'receipt', label: 'Bizonylat kiküldése' },
       moveIn: { icon: 'arrow-right', label: 'Beköltözés' },
       moveOut: { icon: 'arrow-left', label: 'Kiköltözés' },
     };

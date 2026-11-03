@@ -28,7 +28,7 @@
           <button aria-label="Bezárás" class="modal-close" id="um-close" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
         </div>
         <div class="modal-body">
-          <div class="form-error" id="um-locked-note">Erre az időszakra már van számla, ezért a tételek nem módosíthatók. Ha javítani kell, sztornózd a számlát (a számla sorában a Sztornózás gombbal), utána a tételek szerkeszthetők.</div>
+          <div class="form-error" id="um-locked-note">Erre az időszakra már van bizonylat, ezért a tételek nem módosíthatók. Ha javítani kell, sztornózd a bizonylatot (a bizonylat sorában a Sztornózás gombbal), utána a tételek szerkeszthetők.</div>
 
           <h3 class="um-section-title">Rögzített tételek</h3>
           <div class="card-table" style="margin-bottom:4px;">

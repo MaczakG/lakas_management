@@ -35,7 +35,7 @@
     <div class="page-header">
       <div>
         <h1>Beállítások</h1>
-        <p>Előfizetés, rezsi-emlékeztető, a számlák kibocsátója és a bérlőknek küldött számla-levél szövege.</p>
+        <p>Előfizetés, rezsi-emlékeztető, a bizonylatok kiállítója és a bérlőknek küldött bizonylat-levél szövege.</p>
       </div>
     </div>
 
@@ -56,7 +56,7 @@
         <div class="section-head">
           <div>
             <h3>Rezsi emlékeztető</h3>
-            <p>Ha egy ingatlanhoz a következő számla időszakára a határidőig nem kerül rezsi tétel rögzítésre, ide megy az értesítés. A határidő a számlázás előtti utolsó ilyen sorszámú nap (pl. 25 → a december 1-jei számlázásnál november 25.).</p>
+            <p>Ha egy ingatlanhoz a következő bizonylat időszakára a határidőig nem kerül rezsi tétel rögzítésre, ide megy az értesítés. A határidő a kiállítás előtti utolsó ilyen sorszámú nap (pl. 25 → a december 1-jei kiállításnál november 25.).</p>
           </div>
         </div>
         <div class="field-row">
@@ -68,8 +68,8 @@
       <section class="section">
         <div class="section-head">
           <div>
-            <h3>Számla-kibocsátó adatai</h3>
-            <p>Ezek az adatok jelennek meg a generált számlák fejlécében.</p>
+            <h3>Bizonylat-kiállító adatai</h3>
+            <p>Ezek az adatok jelennek meg a generált bizonylatok fejlécében.</p>
           </div>
         </div>
         <div class="field"><label for="issuer-name">Név</label><input type="text" id="issuer-name"></div>
@@ -79,25 +79,25 @@
           <div class="field"><label for="issuer-bank">Bankszámlaszám</label><input type="text" id="issuer-bank"></div>
         </div>
         <div class="field"><label for="issuer-email">Válaszcím (e-mail)</label><input type="email" id="issuer-email" maxlength="256">
-          <span class="hint">Ha a bérlő válaszol a számla-levélre, erre a címre érkezik. Üresen hagyva az első adminisztrátor címe.</span></div>
-        <span class="hint">A számla sorszáma az ingatlanon beállított előtagból épül fel (Ingatlanok oldal).</span>
+          <span class="hint">Ha a bérlő válaszol a bizonylat-levélre, erre a címre érkezik. Üresen hagyva az első adminisztrátor címe.</span></div>
+        <span class="hint">A bizonylat sorszáma az ingatlanon beállított előtagból épül fel (Ingatlanok oldal).</span>
       </section>
 
       <section class="section">
         <div class="section-head">
           <div>
-            <h3>Számla e-mail szövege</h3>
-            <p>Ez a szöveg megy ki a bérlőnek minden hónapban a számla-PDF melléklettel együtt. Üresen hagyva az alapértelmezett szöveget használja a rendszer.</p>
+            <h3>Bizonylat e-mail szövege</h3>
+            <p>Ez a szöveg megy ki a bérlőnek minden hónapban a bizonylat-PDF melléklettel együtt. Üresen hagyva az alapértelmezett szöveget használja a rendszer.</p>
           </div>
         </div>
         <div class="field">
           <label for="invoice-email-subject">Tárgy</label>
-          <input type="text" id="invoice-email-subject" placeholder="Számla: {ingatlan}">
+          <input type="text" id="invoice-email-subject" placeholder="Bizonylat: {ingatlan}">
         </div>
         <div class="field">
           <label for="invoice-email-body">Szöveg</label>
-          <textarea id="invoice-email-body" rows="5" placeholder="Elkészült a(z) {ingatlan} ingatlanhoz tartozó számlád a(z) {időszak} időszakra.&#10;&#10;Fizetendő összeg: {összeg}"></textarea>
-          <span class="hint">Használható helyőrzők: {ingatlan}, {időszak}, {összeg}, {számlaszám}. A bekezdéseket üres sor választja el.</span>
+          <textarea id="invoice-email-body" rows="5" placeholder="Elkészült a(z) {ingatlan} ingatlanhoz tartozó bizonylatod a(z) {időszak} időszakra.&#10;&#10;Fizetendő összeg: {összeg}"></textarea>
+          <span class="hint">Használható helyőrzők: {ingatlan}, {időszak}, {összeg}, {bizonylatszám}. A bekezdéseket üres sor választja el.</span>
         </div>
       </section>
 

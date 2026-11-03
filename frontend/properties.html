@@ -48,7 +48,7 @@
     <div class="card-table">
       <table>
         <thead>
-          <tr><th>Ingatlan</th><th>Tulajdonos(ok)</th><th>Bérlő(k)</th><th>Bérleti díj</th><th>Rezsi</th><th>Számlázás</th><th>Következő számlázás</th></tr>
+          <tr><th>Ingatlan</th><th>Tulajdonos(ok)</th><th>Bérlő(k)</th><th>Bérleti díj</th><th>Rezsi</th><th>Kiállítás</th><th>Következő kiállítás</th></tr>
         </thead>
         <tbody id="properties-tbody">
           <tr class="empty-row"><td colspan="6">Betöltés...</td></tr>
@@ -69,7 +69,7 @@
       <div class="tabs" id="modal-tabs">
         <button class="tab-btn active" data-tab="basic" type="button">Alapadatok</button>
         <button class="tab-btn" data-tab="utility" type="button" id="tab-btn-utility" disabled>Rezsi</button>
-        <button class="tab-btn" data-tab="invoices" type="button" id="tab-btn-invoices" disabled>Számlák</button>
+        <button class="tab-btn" data-tab="invoices" type="button" id="tab-btn-invoices" disabled>Bizonylatok</button>
       </div>
 
       <!-- ---- Alapadatok ---- -->
@@ -82,24 +82,24 @@
               <span class="hint">A bérlőnél beállított devizanemben (alapértelmezetten Ft), ld. Bérlők oldal.</span>
             </div>
             <div class="field">
-              <label for="f-invoice-prefix">Számla előtag</label>
+              <label for="f-invoice-prefix">Bizonylat előtag</label>
               <input type="text" id="f-invoice-prefix" placeholder="pl. A22">
-              <span class="hint">A számla sorszáma ebből épül fel: előtag-hónap-év, pl. „A22-8-2026”.</span>
+              <span class="hint">A bizonylat sorszáma ebből épül fel: előtag-hónap-év, pl. „A22-8-2026”.</span>
             </div>
           </div>
 
           <div class="field-row-3">
-            <div class="field"><label for="f-billing-day">Számlázási nap (1–28)</label><input type="number" id="f-billing-day" min="1" max="28" value="5" required></div>
+            <div class="field"><label for="f-billing-day">Kiállítás napja (1–28)</label><input type="number" id="f-billing-day" min="1" max="28" value="5" required></div>
             <div class="field"><label for="f-billing-hour">Óra</label><input type="number" id="f-billing-hour" min="0" max="23" value="8" required></div>
             <div class="field"><label for="f-billing-minute">Perc</label><input type="number" id="f-billing-minute" min="0" max="59" value="0" required></div>
           </div>
 
-          <label class="checkbox-row" style="margin-bottom:18px;"><input type="checkbox" id="f-active" checked> Aktív (a rendszer csak aktív ingatlanokat számláz)</label>
+          <label class="checkbox-row" style="margin-bottom:18px;"><input type="checkbox" id="f-active" checked> Aktív (a rendszer csak aktív ingatlanokhoz állít ki bizonylatot)</label>
 
           <div class="field">
             <label>Tulajdonosok és tulajdoni hányaduk</label>
             <div id="owner-rows"></div>
-            <span class="hint" style="display:block;margin:-2px 0 8px;">A hányad tört alakban (pl. 1/2), a számlán így jelenik meg. Vagy mindenkinél add meg (összesen 1), vagy hagyd mindenkinél üresen (ekkor egyenlő arány).</span>
+            <span class="hint" style="display:block;margin:-2px 0 8px;">A hányad tört alakban (pl. 1/2), a bizonylaton így jelenik meg. Vagy mindenkinél add meg (összesen 1), vagy hagyd mindenkinél üresen (ekkor egyenlő arány).</span>
             <button class="btn btn-ghost btn-sm" type="button" id="add-owner-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#plus"/></svg>Tulajdonos hozzáadása</button>
           </div>
         </form>
@@ -127,11 +127,11 @@
         </div>
       </div>
 
-      <!-- ---- Számlák ---- -->
+      <!-- ---- Bizonylatok ---- -->
       <div class="tab-panel" id="panel-invoices">
         <div class="card-table">
           <table>
-            <thead><tr><th>Számlaszám</th><th>Időszak</th><th>Összeg</th><th>Státusz</th><th></th></tr></thead>
+            <thead><tr><th>Bizonylatszám</th><th>Időszak</th><th>Összeg</th><th>Státusz</th><th></th></tr></thead>
             <tbody id="invoices-tbody"><tr class="empty-row"><td colspan="5">Betöltés...</td></tr></tbody>
           </table>
         </div>
@@ -160,7 +160,7 @@ async function loadProperties() {
   setPageState([
     { n: active.length, label: 'aktív', tone: 'ok' },
     { n: properties.length - active.length, label: 'inaktív' },
-    { n: active.filter((p) => !p.utilityComplete).length, label: 'hiányzó rezsi a következő számlához', tone: 'warn' },
+    { n: active.filter((p) => !p.utilityComplete).length, label: 'hiányzó rezsi a következő bizonylathoz', tone: 'warn' },
   ]);
   renderProperties();
 }
@@ -181,7 +181,7 @@ function renderProperties() {
       <td>${escapeHtml(p.ownerNames || '–')}</td>
       <td>${escapeHtml(p.tenantNames || '–')}</td>
       <td>${formatMoney(p.rentAmount, p.rentCurrency)}</td>
-      <td title="A következő számla (${p.nextPeriodYear}. ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}) rezsije"><span class="status-tag ${p.utilityComplete ? 'ok' : 'missing'}">${p.utilityComplete ? 'Rendben' : 'Hiányzik'}</span><div class="cell-sub">${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}i számlához</div></td>
+      <td title="A következő bizonylat (${p.nextPeriodYear}. ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}) rezsije"><span class="status-tag ${p.utilityComplete ? 'ok' : 'missing'}">${p.utilityComplete ? 'Rendben' : 'Hiányzik'}</span><div class="cell-sub">${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}i bizonylathoz</div></td>
       <td>${String(p.billingDayOfMonth).padStart(2, '0')}. nap ${String(p.billingHour).padStart(2, '0')}:${String(p.billingMinute).padStart(2, '0')}</td>
       <td>${p.isActive ? formatNextBilling(p.nextBillingAt, p.billingDayOfMonth) : '–'}</td>
     </tr>
@@ -189,7 +189,7 @@ function renderProperties() {
 }
 
 // A következő időpont, amikor a BillingSchedulerService legenerálja és kiküldi ennek az ingatlannak a
-// számláját — a szerver számolja (budapesti idő, "2026-11-02T08:00:00" alakban), mert ha a beállított
+// bizonylatát — a szerver számolja (budapesti idő, "2026-11-02T08:00:00" alakban), mert ha a beállított
 // nap hétvégére vagy munkaszüneti napra esik, a kiküldés az utána következő első munkanapra tolódik.
 function formatNextBilling(nextBillingAt, billingDay) {
   const [date, time] = String(nextBillingAt).split('T');
@@ -351,7 +351,7 @@ const utilityMonthSelect = document.getElementById('u-month');
 utilityMonthSelect.innerHTML = MONTH_NAMES.map((name, idx) => `<option value="${idx + 1}">${name}</option>`).join('');
 
 async function loadUtilityCosts(propertyId) {
-  // Alapból a következő kiküldés időszaka (annak a rezsije kerül a számlára), nem az aktuális hónap.
+  // Alapból a következő kiküldés időszaka (annak a rezsije kerül a bizonylatra), nem az aktuális hónap.
   const now = new Date();
   const listed = properties.find((p) => p.id === propertyId);
   document.getElementById('u-year').value = listed?.nextPeriodYear ?? now.getFullYear();
@@ -401,7 +401,7 @@ document.getElementById('open-utility-month-btn').addEventListener('click', () =
   openUtilityMonth(Number(document.getElementById('u-year').value), Number(utilityMonthSelect.value));
 });
 
-// ---------- Számlák tab ----------
+// ---------- Bizonylatok tab ----------
 const propInvoiceStatusLabels = { Sent: 'Elküldve', Generated: 'Legenerálva', Failed: 'Sikertelen' };
 
 async function loadPropertyInvoices(propertyId) {
@@ -410,7 +410,7 @@ async function loadPropertyInvoices(propertyId) {
   const tbody = document.getElementById('invoices-tbody');
 
   if (invoices.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Még nincs számla.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Még nincs bizonylat.</td></tr>`;
     return;
   }
 

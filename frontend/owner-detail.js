@@ -1,5 +1,5 @@
 // Tulajdonos adatlap (owner-detail.html?id=...) — az ingatlan-adatlap mintájára: helyben szerkeszthető adatok
-// panelekben, alatta a tulajdonos ingatlanai (hányaddal) és az ingatlanok számlái.
+// panelekben, alatta a tulajdonos ingatlanai (hányaddal) és az ingatlanok bizonylatai.
 requireAuth();
 
 const ownerId = new URLSearchParams(location.search).get('id');
@@ -73,8 +73,8 @@ function renderSummary() {
   document.getElementById('summary').innerHTML = [
     detailRow('Ingatlanok', `${ownedProperties.length} db${active.length !== ownedProperties.length ? ` (${active.length} aktív)` : ''}`),
     detailRow('Kiadva', active.length ? `${rented} / ${active.length}` : '<span class="dim">–</span>'),
-    detailRow(`Számlázva ${year}-ben`, `${formatCurrency(thisYear)} <span class="dim">(az ingatlanok teljes összege)</span>`),
-    detailRow('Számlák', `${issued.length} db`),
+    detailRow(`Kiállítva ${year}-ben`, `${formatCurrency(thisYear)} <span class="dim">(az ingatlanok teljes összege)</span>`),
+    detailRow('Bizonylatok', `${issued.length} db`),
   ].join('');
 }
 
@@ -109,7 +109,7 @@ function renderProperties() {
 
 function renderInvoices() {
   document.getElementById('count-invoices').textContent = invoices.length || '';
-  document.getElementById('invoices-body').innerHTML = renderInvoiceTable(invoices, 'A tulajdonos ingatlanaihoz még nincs számla.', { from: `owner:${ownerId}` });
+  document.getElementById('invoices-body').innerHTML = renderInvoiceTable(invoices, 'A tulajdonos ingatlanaihoz még nincs bizonylat.', { from: `owner:${ownerId}` });
 }
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
@@ -147,7 +147,7 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
   layoutMasonry();
 })();
 
-// Újrapróbálás / törlés után a számlák és az összegzés frissül.
+// Újrapróbálás / törlés után a bizonylatok és az összegzés frissül.
 document.addEventListener('invoices-changed', async () => {
   const res = await apiFetch(`/api/owners/${ownerId}/invoices`);
   if (!res.ok) return;

@@ -21,8 +21,8 @@ public class InvoiceGenerationService(
 {
     // A Beállítások oldalon szerkeszthető sablon alapértéke — csak akkor kerül elő, ha a mező
     // üres, hogy a régebbi (még nem testreszabott) telepítéseken ne változzon a kiküldött szöveg.
-    private const string DefaultInvoiceEmailSubject = "Számla — {ingatlan}";
-    private const string DefaultInvoiceEmailBody = "Elkészült a(z) {ingatlan} ingatlanhoz tartozó számlád a(z) {időszak} időszakra.\n\nFizetendő összeg: {összeg}";
+    private const string DefaultInvoiceEmailSubject = "Bizonylat — {ingatlan}";
+    private const string DefaultInvoiceEmailBody = "Elkészült a(z) {ingatlan} ingatlanhoz tartozó bizonylatod a(z) {időszak} időszakra.\n\nFizetendő összeg: {összeg}";
 
     // onProgress (opcionális): a felület folyamatjelzőjének — előbb a lépések terve („plan”), aztán minden lépés
     // kezdete (data, pdf, upload, email, save). A visszahívás hibája (pl. bezárt böngésző) a generálást nem állítja meg.
@@ -149,7 +149,8 @@ public class InvoiceGenerationService(
                     ["{ingatlan}"] = property.Name,
                     ["{időszak}"] = periodLabel,
                     ["{összeg}"] = MoneyFormat.Huf(invoice.AmountTotal),
-                    ["{számlaszám}"] = invoice.Number,
+                    ["{bizonylatszám}"] = invoice.Number,
+                    ["{számlaszám}"] = invoice.Number, // régebbi, testreszabott sablonokhoz
                 };
                 string Fill(string template) => placeholders.Aggregate(template, (acc, kv) => acc.Replace(kv.Key, kv.Value));
 
@@ -188,7 +189,7 @@ public class InvoiceGenerationService(
     {
         if (original.IsStorno) throw new InvalidOperationException("Sztornó bizonylatot nem lehet sztornózni.");
         if (original.CancelledAt is not null) throw new InvalidOperationException("Ezt a bizonylatot már sztornózták.");
-        if (original.Status == InvoiceStatus.Failed) throw new InvalidOperationException("Sikertelen számlát nem kell sztornózni: nem lett kiállítva. Próbáld újra.");
+        if (original.Status == InvoiceStatus.Failed) throw new InvalidOperationException("Sikertelen bizonylatot nem kell sztornózni: nem lett kiállítva. Próbáld újra.");
 
         await db.Entry(original).Collection(i => i.Lines).LoadAsync(ct);
         await db.Entry(original).Reference(i => i.Property).LoadAsync(ct);
