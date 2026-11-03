@@ -6,13 +6,15 @@ public record PropertyListItemDto(
     Guid Id, string Name, decimal RentAmount, RentCurrency RentCurrency, bool IsActive,
     string OwnerNames, string TenantNames,
     bool UtilityComplete, int BillingDayOfMonth, int BillingHour, int BillingMinute,
-    DateTime NextBillingAt); // budapesti helyi idő, munkanapra tolva (ld. Billing.BillingCalendar)
+    DateTime NextBillingAt, // budapesti helyi idő, munkanapra tolva (ld. Billing.BillingCalendar)
+    // A következő kiküldés időszaka — a UtilityComplete erre az időszakra vonatkozik (ennek a rezsije kerül a számlára).
+    int NextPeriodYear, int NextPeriodMonth);
 
 public record PropertyDetailDto(
     Guid Id, string Name, decimal RentAmount, string? InvoicePrefix,
     int BillingDayOfMonth, int BillingHour, int BillingMinute, bool IsActive,
     List<PropertyOwnerDto> Owners, List<TenantDto> Tenants,
-    PropertySheetDto Sheet, DateTime NextBillingAt);
+    PropertySheetDto Sheet, DateTime NextBillingAt, int NextPeriodYear, int NextPeriodMonth);
 
 // Az ingatlan adatlapja (property-detail.html) — mind opcionális.
 public record PropertySheetDto(

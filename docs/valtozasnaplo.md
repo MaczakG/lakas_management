@@ -8,6 +8,23 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Élesben
 
+### v2026.11.03.4 — 2026. 11. 03.
+
+- **2026.11.03.4** — Számla generálása folyamatjelzővel (Számlázás: „Számla generálása most”, „Újrapróbálás”):
+  a sáv a valós lépéseket követi (adatok, PDF, tárhely, e-mail, rögzítés), a végén az eredménnyel. A számlán a
+  rezsi tételesen látszik (minden rögzített tétel külön sor, pl. Áram, Gáz, Közös költség), alatta „Összesen”
+  sorral; a sorok sorrendje rögzített (migráció: InvoiceLines.Position). A már kiküldött számlák nem változnak.
+- **2026.11.03.3** — A Beállítások oldal tetején „Előfizetés” rész: állapot (díjmentes / üzemeltető / próbaidő /
+  aktív / fizetés sikertelen / csak olvasható), érvényesség, aktív ingatlanok, díj, mentett kártya, és gomb az
+  Előfizetés oldalra (fizetés, kártya, számlák).
+- **2026.11.03.2** — A „Rezsi: Rendben / Hiányzik” jelzés a következő számla időszakát nézi, nem az aktuális
+  hónapot (pl. dec. 5-i számlázásnál a decemberi rezsinek kell meglennie — akár már november végén rögzítve).
+  Az ingatlanlistán látszik, melyik hónap számlájához; az adatlapon és a Rezsi felvételben is ez az alapértelmezett
+  hónap, a hónaptáblázat jelöli a „következő számla” hónapját. A Rezsi felvétel „Havi rezsi bontás” diagramja
+  megújult (a Vezérlőpulttal egyező stílus: tengely, tételenkénti színek, buborék, kattintásra megnyíló hónap).
+- **2026.11.03.1** — A Vezérlőpult a kezdőoldal: belépés után, a főoldalról és az oldalsáv logójáról is ide jut
+  a felhasználó.
+
 ### v2026.11.03 — 2026. 11. 03.
 
 - **2026.11.03** — Új „Vezérlőpult” menüpont diagramokkal, évválasztóval: kiszámlázott összeg (az előző év azonos

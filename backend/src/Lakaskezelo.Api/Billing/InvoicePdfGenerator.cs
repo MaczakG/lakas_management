@@ -77,6 +77,13 @@ public static class InvoicePdfGenerator
                             table.Cell().Border(0.75f).BorderColor(Colors.Grey.Lighten1).Padding(8).Text(line.Label);
                             table.Cell().Border(0.75f).BorderColor(Colors.Grey.Lighten1).Padding(8).Text(MoneyFormat.Huf(line.Amount));
                         }
+
+                        // Tételes (bérleti díj + rezsi tételek) számlán a végösszeg is látszik.
+                        if (lines.Count > 1)
+                        {
+                            table.Cell().Border(0.75f).BorderColor(Colors.Grey.Lighten1).Background(Colors.Grey.Lighten4).Padding(8).Text("Összesen").Bold();
+                            table.Cell().Border(0.75f).BorderColor(Colors.Grey.Lighten1).Background(Colors.Grey.Lighten4).Padding(8).Text(MoneyFormat.Huf(lines.Sum(l => l.Amount))).Bold();
+                        }
                     });
 
                     if (!string.IsNullOrWhiteSpace(invoice.RentConversionNote))

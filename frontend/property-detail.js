@@ -288,18 +288,19 @@ function renderTenant() {
 
 function renderSummary() {
   const year = new Date().getFullYear();
-  const now = new Date();
   const issued = invoices.filter((i) => i.status !== 'Failed');
   const last = issued[0];
   const thisYear = issued.filter((i) => i.periodYear === year).reduce((sum, i) => sum + Number(i.amountTotal), 0);
   const failed = invoices.filter((i) => i.status === 'Failed').length;
-  const utilityThisMonth = utilityEntries.some((u) => u.year === now.getFullYear() && u.month === now.getMonth() + 1);
+  // A következő kiküldés időszakának rezsije kerül a számlára — ezt nézzük, nem az aktuális hónapot.
+  const utilityNext = utilityEntries.some((u) => u.year === property.nextPeriodYear && u.month === property.nextPeriodMonth);
+  const nextLabel = `${MONTH_NAMES[property.nextPeriodMonth - 1].toLowerCase()}i számlához`;
   const row = (label, value) => `<div class="prop"><dt>${label}</dt><dd>${value}</dd></div>`;
   document.getElementById('summary').innerHTML = [
     row('Utolsó számla', last ? `<span class="mono">${escapeHtml(last.number)}</span> <span class="dim">· ${formatDate(last.issuedAt)}</span>` : '<span class="dim">Még nincs</span>'),
     row(`Számlázva ${year}-ben`, formatCurrency(thisYear)),
     row('Kiállított számlák', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
-    row('Rezsi e hónapban', utilityThisMonth ? '<span class="status-tag ok">Rögzítve</span>' : '<span class="status-tag missing">Hiányzik</span>'),
+    row(`Rezsi a ${nextLabel}`, utilityNext ? '<span class="status-tag ok">Rögzítve</span>' : '<span class="status-tag missing">Hiányzik</span>'),
     row('Kaució', property.sheet.deposit != null ? formatCurrency(property.sheet.deposit) : '<span class="dim">—</span>'),
   ].join('');
 }
@@ -391,9 +392,9 @@ function activateTab(name) {
   try { localStorage.setItem('propertyDetailTab', name); } catch { /* privát mód: nem baj */ }
 }
 document.querySelectorAll('.record-tab').forEach((b) => b.addEventListener('click', () => activateTab(b.dataset.tab)));
+// Új rezsi alapból a következő kiküldés időszakára (annak a számlájára kerül).
 document.getElementById('add-utility').addEventListener('click', () => {
-  const now = new Date();
-  window.openUtility(now.getFullYear(), now.getMonth() + 1);
+  window.openUtility(property.nextPeriodYear, property.nextPeriodMonth);
 });
 
 // ---------- masonry: a panelek a mindenkori legrövidebb oszlopba kerülnek ----------

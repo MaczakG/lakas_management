@@ -12,7 +12,7 @@
   <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Menü">${icon('menu')}</button>
   <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
   <aside class="sidebar">
-    <a class="brand" href="properties.html">
+    <a class="brand" href="dashboard.html">
       <span class="brand-mark">${icon('house')}</span>
       <span class="brand-name">Lakáskezelő<small>Bérbeadás és számlázás</small></span>
     </a>
@@ -48,7 +48,7 @@
   </aside>`);
 
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.
-  const page = location.pathname.split('/').pop() || 'properties.html';
+  const page = location.pathname.split('/').pop() || 'dashboard.html';
   const activePage = { 'property-detail.html': 'properties.html', 'tenant-detail.html': 'tenants.html', 'owner-detail.html': 'owners.html' }[page] || page;
   window.__currentPage = page;
   document.querySelectorAll('.sidebar .nav-item[href]').forEach((a) => {

@@ -15,6 +15,14 @@
   .test-result.error{color:var(--coral);}
   .save-note{font-size:12.5px;color:var(--green);font-weight:600;margin-left:12px;display:none;}
   .save-note.show{display:inline;}
+  .sub-wrap{max-width:640px;}
+  .sub-grid{display:grid;grid-template-columns:180px 1fr;gap:10px 16px;font-size:13.5px;margin:4px 0 0;}
+  .sub-grid dt{color:var(--muted);font-weight:600;}
+  .sub-grid dd{color:var(--ink);font-weight:500;margin:0;}
+  .sub-grid dd .dim{color:var(--muted);font-weight:500;}
+  .sub-note{font-size:13px;color:var(--ink-soft);margin-top:14px;line-height:1.5;}
+  .sub-actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;}
+  @media (max-width: 560px){ .sub-grid{grid-template-columns:1fr;gap:2px 0;} .sub-grid dd{margin-bottom:8px;} }
 </style>
 </head>
 <body>
@@ -28,8 +36,20 @@
       <div>
         <div class="page-eyebrow">Fiók</div>
         <h1>Beállítások</h1>
-        <p>Rezsi-emlékeztető, a számlák kibocsátója és a bérlőknek küldött számla-levél szövege.</p>
+        <p>Előfizetés, rezsi-emlékeztető, a számlák kibocsátója és a bérlőknek küldött számla-levél szövege.</p>
       </div>
+    </div>
+
+    <div class="sub-wrap">
+      <section class="section" id="subscription-section">
+        <div class="section-head">
+          <div>
+            <h3>Előfizetés</h3>
+            <p>A Lakáskezelő díja és az előfizetésed állapota.</p>
+          </div>
+        </div>
+        <div id="sub-body"><p class="hint">Betöltés...</p></div>
+      </section>
     </div>
 
     <form id="settings-form" class="settings-form">
@@ -137,7 +157,64 @@ $('settings-form').addEventListener('submit', async (e) => {
   setTimeout(() => note.classList.remove('show'), 2000);
 });
 
+// ---------- Előfizetés (összefoglaló; a kezelés — fizetés, kártya, számlák — az Előfizetés oldalon) ----------
+const SUB_STATUS = { Trial: ['Próbaidő', 'warn'], Active: ['Aktív', 'ok'], PastDue: ['Fizetés sikertelen', 'warn'], Locked: ['Csak olvasható', 'missing'] };
+async function loadSubscription() {
+  const res = await apiFetch('/api/subscription');
+  const body = $('sub-body');
+  if (!body) return; // munkatársnál a Beállítások helyén csak egy tájékoztató van
+  if (res.status === 403) { $('subscription-section').hidden = true; return; }
+  const d = await readJson(res);
+  if (!res.ok) { body.innerHTML = `<p class="hint">${escapeHtml(errorMessage(res, d, 'Nem sikerült betölteni az előfizetést.'))}</p>`; return; }
+  const st = d.state;
+  // „2026. 11. 17-ig” (a rag előtt nem marad pont)
+  const day = (v) => (v ? new Date(v).toLocaleDateString('hu-HU').replace(/\.$/, '') : '—');
+  const unit = `${formatCurrency(d.monthlyPricePerProperty)} / aktív ingatlan / hó${d.pricesIncludeVat ? ' (bruttó)' : ' + ÁFA'}`;
+  const row = (label, value) => `<dt>${label}</dt><dd>${value}</dd>`;
+  const props = `${d.activeProperties} db`;
+
+  if (st.isOperator) {
+    body.innerHTML = `<dl class="sub-grid">
+      ${row('Állapot', '<span class="status-tag ok">Üzemeltető</span>')}
+      ${row('Aktív ingatlanok', props)}
+    </dl><p class="sub-note">A szolgáltatás üzemeltetőjeként a cégednek nincs díja.</p>`;
+    return;
+  }
+  if (!st.billingEnabled) {
+    body.innerHTML = `<dl class="sub-grid">
+      ${row('Állapot', '<span class="status-tag ok">Díjmentes</span>')}
+      ${row('Aktív ingatlanok', props)}
+      ${row('Díj (bekapcsolás után)', unit)}
+      ${row('Ennyi lenne most', `${formatCurrency(d.monthlyQuote.grossAmount)} / hó <span class="dim">· éves fizetéssel ${formatCurrency(d.yearlyQuote.grossAmount)} / év (−${d.yearlyDiscountPercent}%)</span>`)}
+    </dl><p class="sub-note">A díjszedés még nincs bekapcsolva — a rendszert jelenleg díjmentesen használod.</p>`;
+    return;
+  }
+
+  const [label, tone] = SUB_STATUS[st.locked ? 'Locked' : st.status] || [st.status, ''];
+  const until = st.status === 'Trial'
+    ? `Próbaidő ${day(st.trialEndsAt)}-ig`
+    : st.paidUntil ? `Kifizetve ${day(st.paidUntil)}-ig` : '—';
+  const yearly = d.interval === 'Yearly';
+  const fee = yearly
+    ? `${formatCurrency(d.yearlyQuote.grossAmount)} / év <span class="dim">(−${d.yearlyDiscountPercent}%)</span>`
+    : `${formatCurrency(d.monthlyQuote.grossAmount)} / hó`;
+  const card = d.cardRegistered
+    ? (st.cancelAtPeriodEnd ? 'Lemondva — a kifizetett időszak végén lejár' : `Bankkártya mentve — automatikus megújítás (${yearly ? 'éves' : 'havi'})`)
+    : '<span class="dim">Nincs mentett kártya</span>';
+  body.innerHTML = `<dl class="sub-grid">
+    ${row('Állapot', `<span class="status-tag ${tone}">${label}</span>`)}
+    ${row('Érvényes', until)}
+    ${st.status === 'PastDue' && st.graceEndsAt ? row('Türelmi idő', `${day(st.graceEndsAt)}-ig`) : ''}
+    ${row('Aktív ingatlanok', props)}
+    ${row('Díj', `${fee} <span class="dim">· ${unit}</span>`)}
+    ${row('Fizetés', card)}
+  </dl>
+  ${st.locked ? '<p class="sub-note">Az előfizetés lejárt, ezért a rendszer csak olvasható. Fizetés után azonnal újra szerkeszthető.</p>' : ''}
+  <div class="sub-actions"><a class="btn btn-secondary" href="subscription.html">Előfizetés kezelése →</a></div>`;
+}
+
 loadSettings();
+loadSubscription();
 </script>
 </body>
 </html>

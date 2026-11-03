@@ -28,7 +28,7 @@ public class InvoicePdfStore(LakaskezeloDbContext db, AppSettingsService setting
         }
 
         var settings = await settingsService.GetAsync(ct);
-        var pdf = InvoicePdfGenerator.Generate(invoice, invoice.Property!, invoice.Tenant, settings, [.. invoice.Lines]);
+        var pdf = InvoicePdfGenerator.Generate(invoice, invoice.Property!, invoice.Tenant, settings, [.. InvoiceLine.InDisplayOrder(invoice.Lines)]);
 
         if (configured)
         {

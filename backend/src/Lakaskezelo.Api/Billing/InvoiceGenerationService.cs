@@ -24,8 +24,18 @@ public class InvoiceGenerationService(
     private const string DefaultInvoiceEmailSubject = "Számla — {ingatlan}";
     private const string DefaultInvoiceEmailBody = "Elkészült a(z) {ingatlan} ingatlanhoz tartozó számlád a(z) {időszak} időszakra.\n\nFizetendő összeg: {összeg}";
 
-    public async Task<Invoice> GenerateAndSendAsync(Property property, int year, int month, CancellationToken ct)
+    // onProgress (opcionális): a felület folyamatjelzőjének — előbb a lépések terve („plan”), aztán minden lépés
+    // kezdete (data, pdf, upload, email, save). A visszahívás hibája (pl. bezárt böngésző) a generálást nem állítja meg.
+    public async Task<Invoice> GenerateAndSendAsync(Property property, int year, int month, CancellationToken ct,
+        Func<GenerationProgress, Task>? onProgress = null)
     {
+        async Task Report(GenerationProgress progress)
+        {
+            if (onProgress is null) return;
+            try { await onProgress(progress); }
+            catch (Exception ex) { logger.LogDebug(ex, "Invoice progress callback failed"); }
+        }
+
         var existing = await db.Invoices
             .Include(i => i.Lines)
             .FirstOrDefaultAsync(i => i.PropertyId == property.Id && i.PeriodYear == year && i.PeriodMonth == month, ct);
@@ -56,13 +66,21 @@ public class InvoiceGenerationService(
 
         try
         {
+            var storageConfigured = await storage.IsConfiguredAsync(ct);
+            var willEmail = !string.IsNullOrWhiteSpace(tenant?.Email);
+            var plan = new List<string> { GenerationSteps.Data, GenerationSteps.Pdf };
+            if (storageConfigured) plan.Add(GenerationSteps.Upload);
+            if (willEmail) plan.Add(GenerationSteps.Email);
+            plan.Add(GenerationSteps.Save);
+            await Report(new GenerationProgress(GenerationSteps.Plan, plan));
+            await Report(new GenerationProgress(GenerationSteps.Data));
+
             // A bérleti díj sor összege a bérlőnél beállított devizanemtől függ (RentCurrency) — az
             // Ingatlan RentAmount mezője HUF helyett EUR/USD is lehet, de a számlán mindig a
             // legfrissebb tárolt MNB árfolyamon átváltott HUF összeg jelenik meg. Ha nincs még
             // elérhető árfolyam a beállított devizához, a számla Failed státusszal jön létre, jól
             // olvasható hibaüzenettel.
             var (rentAmountHuf, conversionNote) = await ResolveRentAmountAsync(property, tenant, ct);
-            var utilityTotal = utilityLines.Sum(u => u.Amount);
 
             invoice.RentConversionNote = conversionNote;
 
@@ -80,22 +98,27 @@ public class InvoiceGenerationService(
 
             var newLines = new List<InvoiceLine>
             {
-                new() { Id = Guid.NewGuid(), InvoiceId = invoice.Id, Label = "Bérleti díj", Amount = rentAmountHuf },
+                new() { Id = Guid.NewGuid(), InvoiceId = invoice.Id, Label = InvoiceLine.RentLabel, Amount = rentAmountHuf, Position = 0 },
             };
-            if (utilityTotal > 0)
+            // A rezsi tételesen kerül a számlára: a Rezsi felvételben rögzített minden tétel külön sor, a felvett
+            // megnevezéssel (pl. Áram, Gáz, Közös költség), a rögzítés sorrendjében.
+            foreach (var u in utilityLines.Where(u => u.Amount != 0).OrderBy(u => u.CreatedAt).ThenBy(u => u.Label))
             {
-                newLines.Add(new InvoiceLine { Id = Guid.NewGuid(), InvoiceId = invoice.Id, Label = "Rezsiköltség (ha van)", Amount = utilityTotal });
+                var label = string.IsNullOrWhiteSpace(u.Label) ? "Rezsi" : u.Label.Trim();
+                newLines.Add(new InvoiceLine { Id = Guid.NewGuid(), InvoiceId = invoice.Id, Label = label, Amount = u.Amount, Position = newLines.Count });
             }
             db.InvoiceLines.AddRange(newLines);
             invoice.AmountTotal = newLines.Sum(l => l.Amount);
 
+            await Report(new GenerationProgress(GenerationSteps.Pdf));
             var pdfBytes = InvoicePdfGenerator.Generate(invoice, property, tenant, settings, newLines);
 
             // A tárhely hibája nem akaszthatja meg a számla kiküldését: ilyenkor a PDF letöltéskor
             // (InvoicePdfStore) a tárolt adatokból újragenerálódik és akkor mentődik el.
             invoice.PdfStorageKey = null;
-            if (await storage.IsConfiguredAsync(ct))
+            if (storageConfigured)
             {
+                await Report(new GenerationProgress(GenerationSteps.Upload));
                 try
                 {
                     var key = InvoicePdfStore.StorageKey(invoice);
@@ -109,8 +132,9 @@ public class InvoiceGenerationService(
             }
 
             var emailed = false;
-            if (!string.IsNullOrWhiteSpace(tenant?.Email))
+            if (willEmail)
             {
+                await Report(new GenerationProgress(GenerationSteps.Email));
                 var periodLabel = $"{year}.{month:D2}";
                 var placeholders = new Dictionary<string, string>
                 {
@@ -142,6 +166,7 @@ public class InvoiceGenerationService(
             invoice.ErrorMessage = ex.Message;
         }
 
+        await Report(new GenerationProgress(GenerationSteps.Save));
         if (existing is null) db.Invoices.Add(invoice);
         await db.SaveChangesAsync(ct);
         return invoice;
@@ -175,4 +200,17 @@ public class InvoiceGenerationService(
         var prefix = string.IsNullOrWhiteSpace(property.InvoicePrefix) ? "SZLA" : property.InvoicePrefix;
         return $"{prefix}-{month}-{year}";
     }
+}
+
+// A számla-generálás egy lépése a folyamatjelzőhöz (ld. InvoicesController.GenerateWithProgress).
+public record GenerationProgress(string Step, IReadOnlyList<string>? Plan = null);
+
+public static class GenerationSteps
+{
+    public const string Plan = "plan";
+    public const string Data = "data";
+    public const string Pdf = "pdf";
+    public const string Upload = "upload";
+    public const string Email = "email";
+    public const string Save = "save";
 }
