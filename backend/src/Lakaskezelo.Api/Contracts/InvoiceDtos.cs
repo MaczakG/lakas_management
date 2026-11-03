@@ -8,7 +8,10 @@ public record InvoiceDto(
     Guid Id, Guid PropertyId, string PropertyName, string? TenantName,
     int PeriodYear, int PeriodMonth, string Number, DateTime IssuedAt, DateOnly DueDate,
     decimal AmountTotal, InvoiceStatus Status, DateTime? SentAt, string? ErrorMessage,
-    List<InvoiceLineDto> Lines, DateTime? CancelledAt = null, Guid? CancelsInvoiceId = null, string? Provider = null);
+    List<InvoiceLineDto> Lines, DateTime? CancelledAt = null, Guid? CancelsInvoiceId = null, string? Provider = null,
+    DateOnly? PaidAt = null);
+
+public record MarkInvoicePaidRequest(DateOnly Date);
 
 public record GenerateInvoiceRequest(Guid PropertyId, int Year, int Month);
 

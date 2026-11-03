@@ -13,5 +13,6 @@ public class TenantPaymentConfiguration : IEntityTypeConfiguration<TenantPayment
         builder.Property(p => p.Note).HasMaxLength(500);
         builder.HasOne(p => p.Tenant).WithMany().HasForeignKey(p => p.TenantId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(p => new { p.TenantId, p.Date });
+        builder.HasOne(p => p.Invoice).WithMany().HasForeignKey(p => p.InvoiceId).OnDelete(DeleteBehavior.SetNull);
     }
 }

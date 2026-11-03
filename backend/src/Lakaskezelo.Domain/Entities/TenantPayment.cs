@@ -11,6 +11,9 @@ public class TenantPayment : ICompanyOwned
     public DateOnly Date { get; set; }
     public decimal Amount { get; set; }
     public string? Note { get; set; }
+    // Ha egy bizonylat fizetettre állításából jött: a bizonylat (törléskor a bizonylat fizetett jelölése is megszűnik).
+    public Guid? InvoiceId { get; set; }
+    public Invoice? Invoice { get; set; }
     public DateTime CreatedAt { get; set; }
     public Guid? CreatedByUserId { get; set; }
 }

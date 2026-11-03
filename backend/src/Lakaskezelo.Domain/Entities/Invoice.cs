@@ -44,6 +44,10 @@ public class Invoice : ICompanyOwned
     public Guid? CancelsInvoiceId { get; set; }
     public Invoice? CancelsInvoice { get; set; }
 
+    // Fizetettre állítva: a befizetés napja. Ilyenkor egy hozzá kötött befizetés (TenantPayment.InvoiceId) is
+    // rögzül a bizonylat végösszegével, így a bérlő egyenlegében is megjelenik; visszavonáskor az is törlődik.
+    public DateOnly? PaidAt { get; set; }
+
     // Sztornó bizonylat-e. (Aktív bizonylat: nem sztornó, és nem is sztornózták — ilyenből egy lehet időszakonként.)
     public bool IsStorno => CancelsInvoiceId != null;
 

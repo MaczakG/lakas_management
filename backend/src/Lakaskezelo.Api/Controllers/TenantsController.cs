@@ -39,7 +39,7 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
     {
         if (!await db.Tenants.AnyAsync(t => t.Id == id, ct)) return NotFound();
         var invoices = await ChargedInvoices().Where(i => i.TenantId == id).ToListAsync(ct);
-        var payments = await db.TenantPayments.Where(p => p.TenantId == id).ToListAsync(ct);
+        var payments = await db.TenantPayments.Include(p => p.Invoice).Where(p => p.TenantId == id).ToListAsync(ct);
 
         var rows = invoices.Select(i => new
             {
@@ -51,7 +51,8 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
             .Concat(payments.Select(p => new
             {
                 Sort = (Date: p.Date, At: p.CreatedAt),
-                Entry = new TenantLedgerEntryDto("payment", p.Id, p.Date, "Befizetés", -p.Amount, 0, null, null, false, false, p.Note),
+                Entry = new TenantLedgerEntryDto("payment", p.Id, p.Date, p.Invoice is null ? "Befizetés" : "Befizetés — bizonylat fizetve",
+                    -p.Amount, 0, p.InvoiceId, p.Invoice?.Number, false, false, p.Note),
             }))
             .OrderBy(r => r.Sort.Date).ThenBy(r => r.Sort.At)
             .ToList();
@@ -99,8 +100,10 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
     [HttpDelete("{id:guid}/payments/{paymentId:guid}")]
     public async Task<IActionResult> DeletePayment(Guid id, Guid paymentId, CancellationToken ct)
     {
-        var payment = await db.TenantPayments.FirstOrDefaultAsync(p => p.Id == paymentId && p.TenantId == id, ct);
+        var payment = await db.TenantPayments.Include(p => p.Invoice).FirstOrDefaultAsync(p => p.Id == paymentId && p.TenantId == id, ct);
         if (payment is null) return NotFound();
+        // Bizonylat fizetettre állításából jött befizetés törlésével a bizonylat fizetett jelölése is megszűnik.
+        if (payment.Invoice is { } paidInvoice) paidInvoice.PaidAt = null;
         db.TenantPayments.Remove(payment);
         await db.SaveChangesAsync(ct);
         return NoContent();
