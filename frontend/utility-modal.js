@@ -10,6 +10,7 @@
     #um-overlay .modal{max-width:640px;}
     .um-draft-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px;}
     .um-draft-row .field{margin-bottom:0;}
+    .um-draft-row button svg{width:16px;height:16px;display:block;margin:auto;}
     .um-draft-row button{width:42px;height:42px;border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;color:var(--coral);flex-shrink:0;}
     .um-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:4px 0 16px;}
     .um-existing-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:10px 0 20px;text-align:right;}
@@ -24,7 +25,7 @@
       <div class="modal">
         <div class="modal-head">
           <div><h2 id="um-title">Rezsi tételek</h2><p id="um-subtitle"></p></div>
-          <button class="modal-close" id="um-close" type="button">✕</button>
+          <button aria-label="Bezárás" class="modal-close" id="um-close" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
         </div>
         <div class="modal-body">
           <div class="form-error" id="um-locked-note">Erre az időszakra már van számla, ezért a tételek nem módosíthatók. Ha javítani kell, archiváld a számlát (a számla sorában az Archiválás gombbal), utána a tételek szerkeszthetők.</div>
@@ -61,7 +62,7 @@
     row.innerHTML = `
       <div class="field"><label>Megnevezés</label><input type="text" class="um-draft-label" placeholder="pl. Áram"></div>
       <div class="field"><label>Összeg (Ft)</label><input type="number" class="um-draft-amount" min="0"></div>
-      <button type="button" title="Sor eltávolítása">✕</button>
+      <button type="button" title="Sor eltávolítása" aria-label="Sor eltávolítása"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
     `;
     row.querySelector('button').addEventListener('click', () => { row.remove(); updateDraftTotal(); });
     row.querySelector('.um-draft-amount').addEventListener('input', updateDraftTotal);

@@ -209,7 +209,7 @@ async function loadSubscription() {
     ${row('Fizetés', card)}
   </dl>
   ${st.locked ? '<p class="sub-note">Az előfizetés lejárt, ezért a rendszer csak olvasható. Fizetés után azonnal újra szerkeszthető.</p>' : ''}
-  <div class="sub-actions"><a class="btn btn-secondary" href="subscription.html">Előfizetés kezelése →</a></div>`;
+  <div class="sub-actions"><a class="btn btn-secondary" href="subscription.html">Előfizetés kezelése<svg class="inline-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#arrow-right"/></svg></a></div>`;
 }
 
 loadSettings();

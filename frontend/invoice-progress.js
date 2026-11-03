@@ -179,7 +179,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ic-title">
       <div class="modal-head">
         <div><h2 id="ic-title">Számla készítése</h2><p id="ic-sub">Válaszd ki az időszakot. A számlára az időszak rezsi tételei kerülnek.</p></div>
-        <button class="modal-close" type="button" data-ic-close aria-label="Bezárás">✕</button>
+        <button class="modal-close" type="button" data-ic-close aria-label="Bezárás"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
       </div>
       <div class="modal-body">
         <div class="form-error" id="ic-error"></div>
