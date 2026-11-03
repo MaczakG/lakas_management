@@ -137,6 +137,7 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
     scope: { ownerId },
     container: '#documents-body',
     count: '#count-documents',
+    uploadButton: '#upload-doc',
     links: async (doc) => {
       const options = ownedProperties.map((p) => ({ value: p.propertyId, label: p.name }));
       if (doc?.propertyId && !options.some((o) => o.value === doc.propertyId)) options.push({ value: doc.propertyId, label: doc.propertyName });

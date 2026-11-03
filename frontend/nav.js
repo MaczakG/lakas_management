@@ -48,7 +48,10 @@
 
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.
   const page = location.pathname.split('/').pop() || 'dashboard.html';
-  const activePage = { 'property-detail.html': 'properties.html', 'tenant-detail.html': 'tenants.html', 'owner-detail.html': 'owners.html' }[page] || page;
+  // A dokumentum adatlapja ahhoz a menüponthoz tartozik, ahonnan megnyitották (?from=property:…).
+  const docFrom = page === 'document-detail.html' ? (new URLSearchParams(location.search).get('from') || 'property').split(':')[0] : null;
+  const activePage = { 'property-detail.html': 'properties.html', 'tenant-detail.html': 'tenants.html', 'owner-detail.html': 'owners.html',
+    'document-detail.html': { tenant: 'tenants.html', owner: 'owners.html' }[docFrom] || 'properties.html' }[page] || page;
   window.__currentPage = page;
   document.querySelectorAll('.sidebar .nav-item[href]').forEach((a) => {
     if (a.getAttribute('href') === activePage) a.classList.add('active');
