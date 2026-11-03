@@ -26,6 +26,22 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         return Ok(invoices.Select(ToDto));
     }
 
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<InvoiceDetailDto>> Get(Guid id, CancellationToken ct)
+    {
+        var invoice = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
+            .FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (invoice is null) return NotFound();
+        var related = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
+            .Where(i => i.Id != id && i.PropertyId == invoice.PropertyId && i.PeriodYear == invoice.PeriodYear && i.PeriodMonth == invoice.PeriodMonth)
+            .OrderBy(i => i.IssuedAt)
+            .ToListAsync(ct);
+        var cancelledBy = invoice.CancelledByUserId is { } uid
+            ? await db.Users.Where(u => u.Id == uid).Select(u => u.FullName).FirstOrDefaultAsync(ct)
+            : null;
+        return Ok(new InvoiceDetailDto(ToDto(invoice), cancelledBy, invoice.RentConversionNote, [.. related.Select(ToDto)]));
+    }
+
     [HttpGet("{id:guid}/pdf")]
     public async Task<IActionResult> DownloadPdf(Guid id, CancellationToken ct)
     {
@@ -106,27 +122,31 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         }
     }
 
-    // A kiállított bizonylat nem törölhető (nincs DELETE végpont), csak archiválható. Az archivált számla
-    // megmarad és letölthető, de nem zárja az időszak rezsijét (PropertiesController.IsPeriodLockedAsync), nem
-    // számít bele az összesítőkbe és a csomagba, és új számla készíthető ugyanarra az időszakra.
-    [HttpPost("{id:guid}/archive")]
-    public async Task<ActionResult<InvoiceDto>> Archive(Guid id, CancellationToken ct)
+    // A kiállított bizonylat nem törölhető és nem archiválható (nincs ilyen végpont): csak sztornózható. Ilyenkor
+    // sztornó bizonylat készül (InvoiceGenerationService.CancelAsync); az eredeti „sztornózott” lesz, nem zárja
+    // tovább az időszak rezsijét, és új számla készíthető ugyanarra az időszakra.
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<ActionResult<InvoiceDto>> Cancel(Guid id, CancellationToken ct)
     {
-        var invoice = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
-            .FirstOrDefaultAsync(i => i.Id == id, ct);
+        var invoice = await db.Invoices.FirstOrDefaultAsync(i => i.Id == id, ct);
         if (invoice is null) return NotFound();
-        if (invoice.ArchivedAt is null)
+        Invoice storno;
+        try
         {
-            invoice.ArchivedAt = DateTime.UtcNow;
-            invoice.ArchivedByUserId = User.GetUserId();
-            await db.SaveChangesAsync(ct);
+            storno = await generator.CancelAsync(invoice, User.GetUserId(), ct);
         }
-        return Ok(ToDto(invoice));
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        await db.Entry(storno).Reference(i => i.Property).LoadAsync(ct);
+        await db.Entry(storno).Reference(i => i.Tenant).LoadAsync(ct);
+        return Ok(ToDto(storno));
     }
 
     public static InvoiceDto ToDto(Invoice invoice) => new(
         invoice.Id, invoice.PropertyId, invoice.Property?.Name ?? "", invoice.Tenant?.Name,
         invoice.PeriodYear, invoice.PeriodMonth, invoice.Number, invoice.IssuedAt, invoice.DueDate,
         invoice.AmountTotal, invoice.Status, invoice.SentAt, invoice.ErrorMessage,
-        [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))], invoice.ArchivedAt);
+        [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))], invoice.CancelledAt, invoice.CancelsInvoiceId);
 }

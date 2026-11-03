@@ -139,7 +139,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         return Ok(ToDto(entry, isLocked: false));
     }
 
-    private const string LockedMessage = "Erre az időszakra már van számla, ezért a rezsi tételek nem módosíthatók. Ha javítani kell, archiváld a számlát, utána a tételek szerkeszthetők.";
+    private const string LockedMessage = "Erre az időszakra már van számla, ezért a rezsi tételek nem módosíthatók. Ha javítani kell, sztornózd a számlát, utána a tételek szerkeszthetők.";
 
     // Meglévő tétel javítása (megnevezés, összeg) — csak ha az időszakra nincs aktív (nem archivált) számla.
     [HttpPut("{id:guid}/utility-costs/{entryId:guid}")]
@@ -176,11 +176,11 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
     // sikeresen legenerált vagy kiküldött számla — a Failed státuszú próbálkozás szándékosan nem
     // zár le semmit, hogy a hiányzó/hibás adat javítható és a generálás újrapróbálható legyen.
     private async Task<bool> IsPeriodLockedAsync(Guid propertyId, int year, int month, CancellationToken ct) =>
-        await db.Invoices.AnyAsync(i => i.PropertyId == propertyId && i.PeriodYear == year && i.PeriodMonth == month && i.ArchivedAt == null
+        await db.Invoices.AnyAsync(i => i.PropertyId == propertyId && i.PeriodYear == year && i.PeriodMonth == month && i.CancelledAt == null && i.CancelsInvoiceId == null
             && (i.Status == Domain.Enums.InvoiceStatus.Sent || i.Status == Domain.Enums.InvoiceStatus.Generated), ct);
 
     private async Task<HashSet<(int Year, int Month)>> LockedPeriodsAsync(Guid propertyId, CancellationToken ct) =>
-        (await db.Invoices.Where(i => i.PropertyId == propertyId && i.ArchivedAt == null
+        (await db.Invoices.Where(i => i.PropertyId == propertyId && i.CancelledAt == null && i.CancelsInvoiceId == null
                 && (i.Status == Domain.Enums.InvoiceStatus.Sent || i.Status == Domain.Enums.InvoiceStatus.Generated))
             .Select(i => new { i.PeriodYear, i.PeriodMonth })
             .ToListAsync(ct))

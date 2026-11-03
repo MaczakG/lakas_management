@@ -91,7 +91,7 @@ requireAuth();
           <span class="num">${p.count} db</span>
         </div>`).join('')}
       </div>
-      ${d.failed.count || d.generated.count ? '<a class="link status-link" href="invoice-bundles.html">Megnyitás a Számla csomagokban<svg class="inline-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#arrow-right"/></svg></a>' : ''}`;
+      ${d.failed.count || d.generated.count ? '<a class="link status-link" href="invoice-bundles.html">Megnyitás a Számlák között<svg class="inline-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#arrow-right"/></svg></a>' : ''}`;
     // A túl keskeny szelet nem kap feliratot (nem vágjuk le) — az értéke a listában és a buborékban van.
     $('status-chart').querySelectorAll('.seg').forEach((seg) => {
       if (seg.scrollWidth > seg.clientWidth) seg.textContent = '';

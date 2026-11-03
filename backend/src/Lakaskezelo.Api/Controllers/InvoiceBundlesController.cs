@@ -11,9 +11,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.Controllers;
 
-// Számla csomagok: havonta az összes számla PDF-je egy ZIP-ben, egy összesítő CSV-vel együtt
-// (könyvelőnek, archiváláshoz). A sikertelen (Failed) számlák nem kerülnek a csomagba, mert nem
-// mentek ki — a havi listában külön számként látszanak.
+// Számla csomagok: havonta az összes kiállított bizonylat PDF-je egy ZIP-ben, egy összesítő CSV-vel együtt
+// (könyvelőnek). A sztornózott bizonylat és a sztornója is benne van (a sztornó negatív összeggel, így az összesen
+// helyes); a sikertelen (Failed) számlák nem, mert nem lettek kiállítva — a havi listában külön számként látszanak.
 [Authorize]
 [ApiController]
 [Route("api/invoice-bundles")]
@@ -30,22 +30,21 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
     public async Task<ActionResult<List<InvoiceBundleMonthDto>>> List([FromQuery] int year, CancellationToken ct)
     {
         var invoices = await db.Invoices.Where(i => i.PeriodYear == year)
-            .Select(i => new { i.PeriodMonth, i.Status, i.AmountTotal, Archived = i.ArchivedAt != null })
+            .Select(i => new { i.PeriodMonth, i.Status, i.AmountTotal, Storno = i.CancelsInvoiceId != null })
             .ToListAsync(ct);
-        // Az archiváltak nem kerülnek a csomagba és az összegbe, csak a számuk látszik.
         return Ok(invoices
             .GroupBy(i => i.PeriodMonth)
             .OrderByDescending(g => g.Key)
             .Select(g => new InvoiceBundleMonthDto(
                 year, g.Key,
-                g.Count(i => !i.Archived && i.Status != InvoiceStatus.Failed),
-                g.Count(i => !i.Archived && i.Status == InvoiceStatus.Failed),
-                g.Where(i => !i.Archived && i.Status != InvoiceStatus.Failed).Sum(i => i.AmountTotal),
-                g.Count(i => i.Archived))));
+                g.Count(i => i.Status != InvoiceStatus.Failed),
+                g.Count(i => i.Status == InvoiceStatus.Failed),
+                g.Where(i => i.Status != InvoiceStatus.Failed).Sum(i => i.AmountTotal),
+                g.Count(i => i.Storno))));
     }
 
-    // Egy hónap számlái (a lista lenyíló soraihoz): elöl a csomagba (ZIP-be) kerülők, a végén a sikertelenek —
-    // és az archiváltak. Ezek nem kerülnek a csomagba, de innen újrapróbálhatók, illetve megtekinthetők.
+    // Egy hónap számlái (a lista lenyíló soraihoz): elöl a csomagba (ZIP-be) kerülők sorszám szerint (így a sztornózott
+    // bizonylat, a sztornója és az új számla egymás alatt van), a végén a sikertelenek, amelyek innen újrapróbálhatók.
     [HttpGet("{year:int}/{month:int}")]
     public async Task<ActionResult<List<InvoiceDto>>> Invoices(int year, int month, CancellationToken ct)
     {
@@ -53,8 +52,7 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
             .Where(i => i.PeriodYear == year && i.PeriodMonth == month)
             .ToListAsync(ct);
         return Ok(invoices
-            .OrderBy(i => i.ArchivedAt != null)
-            .ThenBy(i => i.Status == InvoiceStatus.Failed)
+            .OrderBy(i => i.Status == InvoiceStatus.Failed)
             .ThenBy(i => i.Number)
             .Select(InvoicesController.ToDto));
     }
@@ -63,7 +61,7 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
     public async Task<IActionResult> DownloadZip(int year, int month, CancellationToken ct)
     {
         var invoices = await InvoicesController.WithPdfData(db.Invoices)
-            .Where(i => i.PeriodYear == year && i.PeriodMonth == month && i.Status != InvoiceStatus.Failed && i.ArchivedAt == null)
+            .Where(i => i.PeriodYear == year && i.PeriodMonth == month && i.Status != InvoiceStatus.Failed)
             .OrderBy(i => i.Number)
             .ToListAsync(ct);
         if (invoices.Count == 0) return NotFound(new { message = "Ebben a hónapban nincs kiküldött vagy legenerált számla." });
@@ -85,7 +83,7 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
                     Csv(invoice.Number), Csv(invoice.Property?.Name), Csv(invoice.Tenant?.Name),
                     $"{invoice.PeriodYear}.{invoice.PeriodMonth:D2}", invoice.IssuedAt.ToString("yyyy.MM.dd", Hu),
                     invoice.DueDate.ToString("yyyy.MM.dd", Hu), invoice.AmountTotal.ToString("0", Hu),
-                    invoice.Status == InvoiceStatus.Sent ? "Elküldve" : "Legenerálva")).Append("\r\n");
+                    Csv(StatusText(invoice, invoices)))).Append("\r\n");
             }
 
             // UTF-8 BOM + pontosvessző, hogy a magyar Excel ékezethelyesen, oszlopokra bontva nyissa meg.
@@ -96,6 +94,17 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
         }
 
         return File(buffer.ToArray(), "application/zip", $"szamlak-{year}-{month:D2}.zip");
+    }
+
+    private static string StatusText(Domain.Entities.Invoice invoice, List<Domain.Entities.Invoice> all)
+    {
+        var sent = invoice.Status == InvoiceStatus.Sent ? "Elküldve" : "Legenerálva";
+        if (invoice.CancelsInvoiceId is { } originalId)
+        {
+            var original = all.FirstOrDefault(i => i.Id == originalId)?.Number;
+            return $"Sztornó{(original is null ? "" : $" ({original} sztornója)")}, {sent.ToLowerInvariant()}";
+        }
+        return invoice.CancelledAt is not null ? $"Sztornózott, {sent.ToLowerInvariant()}" : sent;
     }
 
     private static string Csv(string? value)

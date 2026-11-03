@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Lakaskezelo.Api.Settings;
 using Lakaskezelo.Api.Storage;
 using Lakaskezelo.Data;
@@ -28,7 +29,10 @@ public class InvoicePdfStore(LakaskezeloDbContext db, AppSettingsService setting
         }
 
         var settings = await settingsService.GetAsync(ct);
-        var pdf = InvoicePdfGenerator.Generate(invoice, invoice.Property!, invoice.Tenant, settings, [.. InvoiceLine.InDisplayOrder(invoice.Lines)]);
+        var cancelsNumber = invoice.CancelsInvoiceId is { } originalId
+            ? await db.Invoices.Where(i => i.Id == originalId).Select(i => i.Number).FirstOrDefaultAsync(ct)
+            : null;
+        var pdf = InvoicePdfGenerator.Generate(invoice, invoice.Property!, invoice.Tenant, settings, [.. InvoiceLine.InDisplayOrder(invoice.Lines)], cancelsNumber);
 
         if (configured)
         {

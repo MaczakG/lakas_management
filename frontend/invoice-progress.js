@@ -252,7 +252,7 @@
     }
     // Ha az időszakra már van számla, a generálás azt frissíti (ugyanazzal a sorszámmal) — ezt előbb jóvá kell hagyni.
     const invRes = await apiFetch(`/api/properties/${propertyId}/invoices`);
-    const existing = invRes.ok ? (await invRes.json()).find((i) => i.periodYear === year && i.periodMonth === month && !i.archivedAt) : null;
+    const existing = invRes.ok ? (await invRes.json()).find((i) => i.periodYear === year && i.periodMonth === month && invoiceIsActive(i)) : null;
     if (existing && existing.status !== 'Failed') {
       const sent = existing.status === 'Sent';
       const ok = await uiConfirm(
@@ -274,42 +274,52 @@ window.invoiceRetry = async (propertyId, year, month, propertyName) => {
   document.dispatchEvent(new CustomEvent('invoices-changed'));
 };
 
-// A kiállított bizonylat nem törölhető, csak archiválható. Az archivált számla megmarad (PDF-je letölthető), de nem
-// számít bele az összesítőkbe és a csomagba, az időszak rezsi tételei újra szerkeszthetők, és új számla készíthető.
-window.invoiceArchive = async (id, number) => {
+// Aktív számla: nem sztornó bizonylat, és nem is sztornózták (ilyenből egy van időszakonként; ez zárja a rezsit).
+window.invoiceIsActive = (i) => !i.cancelledAt && !i.cancelsInvoiceId;
+
+// A kiállított bizonylat nem törölhető és nem archiválható, csak sztornózható: ilyenkor külön sztornó bizonylat
+// készül (negatív összegekkel, az eredetire hivatkozva). Mindkettő megmarad és a havi csomagba is bekerül; az időszak
+// rezsi tételei újra szerkeszthetők, és új számla készíthető rá.
+window.invoiceCancel = async (id, number, sent) => {
   const ok = await uiConfirm(
-    `A(z) ${number} számla archiválása után:\n\n`
-    + '• a bizonylat megmarad, a PDF továbbra is letölthető;\n'
-    + '• nem számít bele az összesítőkbe és a havi csomagba;\n'
+    `A(z) ${number} számla sztornózásakor:\n\n`
+    + `• külön sztornó bizonylat készül (${number}-S) negatív összegekkel, az eredetire hivatkozva;\n`
+    + '• az eredeti „sztornózott” jelölést kap, mindkettő bekerül a havi csomagba;\n'
+    + (sent ? '• a bérlő e-mailben megkapja a sztornó bizonylatot;\n' : '')
     + '• az időszak rezsi tételei újra szerkeszthetők, és új számla készíthető rá.\n\n'
-    + 'Az archiválás nem vonható vissza.',
-    { title: 'Számla archiválása', confirmText: 'Archiválás' });
-  if (!ok) return;
-  const res = await apiFetch(`/api/invoices/${id}/archive`, { method: 'POST' });
+    + 'A sztornózás nem vonható vissza.',
+    { title: 'Számla sztornózása', confirmText: 'Sztornózás', danger: true });
+  if (!ok) return false;
+  const res = await apiFetch(`/api/invoices/${id}/cancel`, { method: 'POST' });
   if (!res.ok) {
-    await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült archiválni a számlát.'), { title: 'Archiválás sikertelen' });
-    return;
+    await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült sztornózni a számlát.'), { title: 'Sztornózás sikertelen' });
+    return false;
   }
   document.dispatchEvent(new CustomEvent('invoices-changed'));
+  return true;
 };
 
-// A számlatáblák művelet-gombjai: PDF letöltése, újrapróbálás (sikertelennél), törlés.
+// A számla adatlapjának címe; a from paraméterrel tér vissza oda, ahonnan megnyitották.
+window.invoiceDetailUrl = (i, from) => `invoice-detail.html?id=${encodeURIComponent(i.id)}${from ? `&from=${encodeURIComponent(from)}` : ''}`;
+
+// A számlatáblák művelet-gombjai: PDF letöltése, újrapróbálás (sikertelennél), sztornózás (aktív, kiállított számlánál).
 window.invoiceActionButtons = function (i) {
   const icon = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#${id}"/></svg>`;
   const buttons = [];
   if (i.status !== 'Failed') {
     buttons.push(`<button class="icon-btn" type="button" title="PDF letöltése" aria-label="PDF letöltése" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">${icon('download')}</button>`);
-  } else if (!i.archivedAt) {
+  } else if (invoiceIsActive(i)) {
     buttons.push(`<button class="icon-btn" type="button" title="Újrapróbálás" aria-label="Újrapróbálás" onclick="invoiceRetry(${jsArg(i.propertyId)}, ${i.periodYear}, ${i.periodMonth}, ${jsArg(i.propertyName)})">${icon('rotate-ccw')}</button>`);
   }
-  if (!i.archivedAt) {
-    buttons.push(`<button class="icon-btn" type="button" title="Archiválás" aria-label="Számla archiválása" onclick="invoiceArchive(${jsArg(i.id)}, ${jsArg(i.number)})">${icon('archive')}</button>`);
+  if (invoiceIsActive(i) && i.status !== 'Failed') {
+    buttons.push(`<button class="icon-btn danger" type="button" title="Sztornózás" aria-label="Számla sztornózása" onclick="invoiceCancel(${jsArg(i.id)}, ${jsArg(i.number)}, ${i.status === 'Sent'})">${icon('file-minus')}</button>`);
   }
   return `<span class="invoice-actions">${buttons.join('')}</span>`;
 };
 
-// Állapotcímke a számlatáblákhoz — az archivált számla „Archivált” címkét kap.
+// Állapotcímke a számlatáblákhoz: a sztornó bizonylat „Sztornó”, a sztornózott „Sztornózott” jelölést kap.
 window.invoiceStatusTag = function (i, labels) {
-  if (i.archivedAt) return '<span class="status-tag inactive" title="Archiválva: ' + escapeHtml(formatDate(i.archivedAt)) + '">Archivált</span>';
+  if (i.cancelsInvoiceId) return '<span class="status-tag storno">Sztornó</span>';
+  if (i.cancelledAt) return '<span class="status-tag cancelled" title="Sztornózva: ' + escapeHtml(formatDate(i.cancelledAt)) + '">Sztornózott</span>';
   return `<span class="status-tag ${escapeHtml(i.status)}">${labels[i.status] || escapeHtml(i.status)}</span>`;
 };

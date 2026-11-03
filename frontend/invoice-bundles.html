@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Számla csomagok | Lakáskezelő</title>
+<title>Számlák | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="detail.css">
@@ -47,7 +47,7 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <h1>Számla csomagok</h1>
+        <h1>Számlák</h1>
         <p>Havonta az összes számla PDF-je egy ZIP-fájlban, egy Excelben megnyitható összesítővel együtt.</p>
       </div>
       <button class="btn btn-primary" type="button" id="create-invoice-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#file-plus"/></svg>Számla készítése</button>
@@ -68,7 +68,7 @@
         </tbody>
       </table>
     </div>
-    <p class="hint" style="margin-top:10px;">A sikertelen számlák nem kerülnek a csomagba, mert nem mentek ki, az archiváltak pedig érvénytelenek. A hónap sorát lenyitva ezek is láthatók.</p>
+    <p class="hint" style="margin-top:10px;">A csomagban a sztornózott számla és a sztornója is benne van (a sztornó negatív összeggel, így az összesen helyes). A sikertelen számlák nem kerülnek bele, mert nem lettek kiállítva; a hónap sorát lenyitva ezek is láthatók és újrapróbálhatók.</p>
   </main>
 </div>
 
@@ -109,11 +109,11 @@ async function loadBundles() {
     const fileName = `szamlak-${m.year}-${String(m.month).padStart(2, '0')}.zip`;
     const key = `${m.year}-${m.month}`;
     // Lenyitható minden hónap, amiben van számla (a sikertelenek is látszanak, hogy újrapróbálhatók legyenek).
-    const expandable = m.invoiceCount + m.failedCount + (m.archivedCount || 0) > 0;
+    const expandable = m.invoiceCount + m.failedCount > 0;
     return `
       <tr${expandable ? ` class="bundle-row" data-key="${key}" data-year="${m.year}" data-month="${m.month}" tabindex="0" aria-expanded="false"` : ''}>
         <td class="cell-main">${expandable ? `<span class="chev">${DETAIL_ICON('chevron-right')}</span>` : ''}${label}</td>
-        <td>${m.invoiceCount} db${m.failedCount > 0 ? `<div class="failed-note">+ ${m.failedCount} sikertelen</div>` : ''}${m.archivedCount > 0 ? `<div class="cell-sub">+ ${m.archivedCount} archivált</div>` : ''}</td>
+        <td>${m.invoiceCount} db${m.failedCount > 0 ? `<div class="failed-note">+ ${m.failedCount} sikertelen</div>` : ''}${m.stornoCount > 0 ? `<div class="cell-sub">ebből ${m.stornoCount} sztornó</div>` : ''}</td>
         <td>${formatCurrency(m.totalAmount)}</td>
         <td class="row-actions">${m.invoiceCount > 0
           ? `<button class="btn btn-primary btn-sm" type="button" onclick="event.stopPropagation(); exportBundle(this, ${m.year}, ${m.month}, '${fileName}')">Exportálás (ZIP)</button>`
@@ -141,7 +141,7 @@ async function toggleBundle(row) {
     const res = await apiFetch(`/api/invoice-bundles/${row.dataset.year}/${row.dataset.month}`);
     const invoices = await readJson(res);
     if (!res.ok) throw new Error(errorMessage(res, invoices, 'Nem sikerült betölteni a számlákat.'));
-    box.innerHTML = renderInvoiceTable(invoices, 'Ebben a hónapban nincs számla.', { showPeriod: false });
+    box.innerHTML = renderInvoiceTable(invoices, 'Ebben a hónapban nincs számla.', { showPeriod: false, from: 'bundles' });
   } catch (e) {
     loadedMonths.delete(row.dataset.key);
     box.innerHTML = `<div class="panel-empty">${escapeHtml(e.message || 'Nem sikerült betölteni a számlákat.')}</div>`;

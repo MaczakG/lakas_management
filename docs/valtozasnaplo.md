@@ -4,6 +4,22 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.13** — Archiválás helyett sztornózás: a kiállított számla nem törölhető és nem archiválható, csak
+  külön sztornó bizonylat készíthető hozzá (a számla sorában vagy adatlapján a Sztornózás gombbal). A sztornó
+  bizonylat az eredeti sorait negatív összeggel tartalmazza, saját sorszámmal (pl. FUT-2026-011-S), az eredetire
+  hivatkozva; ha az eredeti ki volt küldve, a bérlő e-mailben megkapja. Jelölés: „Sztornózott” (eredeti) és
+  „Sztornó”. Mindkettő bekerül a havi csomagba (ZIP és összesítő; a sztornó negatív, így az összesen helyes).
+  Sztornózás után az időszak rezsije szerkeszthető, és új számla készíthető rá („/2” sorszámmal). A korábban
+  archivált számlák sztornózottak lettek, és elkészült hozzájuk a sztornó bizonylat (migráció: InvoiceStorno).
+  Új: saját adatlap minden számlának. Bal oldalon:
+  - az adatok;
+  - a tételek;
+  - a kapcsolódó bizonylatok (eredeti, sztornó, új számla).
+
+  Jobb oldalon a PDF előnézete 60%-on. Megnyitás: a számla sorszámára kattintva.
+  A „Számla csomagok” menüpont neve „Számlák”, számla ikonnal. A címkék („pillek”) doboz és kapszula nélkül:
+  az állapot színes szöveg egy kis ikonnal, a szűrők aláhúzott fülként, a számlálók sima számként jelennek meg.
+  Az ÁSZF-ből kikerült a Flaticon-forrásmegjelölés (a menü alján megmaradt).
 - **2026.11.03.12** — Saját adatlap minden dokumentumnak (a listában a névre kattintva). Bal oldalon:
   - az adatok, helyben szerkeszthetően: név, típus, kapcsolódó ingatlan, bérlő és tulajdonos, megjegyzés; mellettük a fájl, a formátum, a méret, a verzió és a feltöltés adatai;
   - a verziók listája;
