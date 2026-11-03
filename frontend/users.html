@@ -155,27 +155,27 @@ async function withBusy(btn, label, fn) {
 window.resendInvite = (id, btn) => withBusy(btn, 'Küldés...', async () => {
   const res = await apiFetch(`/api/users/${id}/resend-invite`, { method: 'POST' });
   const data = await readJson(res);
-  alert(errorMessage(res, data, res.ok ? 'Elküldve.' : 'Nem sikerült elküldeni.'));
+  await uiAlert(errorMessage(res, data, res.ok ? 'A meghívót újra elküldtük.' : 'Nem sikerült elküldeni.'), { title: 'Meghívó' });
 });
 
-window.sendPasswordReset = (id, btn) => {
+window.sendPasswordReset = async (id, btn) => {
   const u = users.find((x) => x.id === id);
-  if (!u || !confirm(`Elküldjük a jelszó-visszaállító e-mailt a(z) ${u.email} címre?`)) return;
+  if (!u || !(await uiConfirm(`Elküldjük a jelszó-visszaállító e-mailt a(z) ${u.email} címre?`, { title: 'Jelszó-visszaállítás', confirmText: 'Küldés' }))) return;
   return withBusy(btn, 'Küldés...', async () => {
     const res = await apiFetch('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: u.email }) });
     const data = await readJson(res);
-    alert(res.ok ? 'Elküldve.' : errorMessage(res, data, 'Nem sikerült elküldeni.'));
+    await uiAlert(res.ok ? 'A jelszó-visszaállító e-mailt elküldtük.' : errorMessage(res, data, 'Nem sikerült elküldeni.'), { title: 'Jelszó-visszaállítás' });
   });
 };
 
 window.deleteUser = async (id) => {
   const u = users.find((x) => x.id === id);
-  if (!u || !confirm(`Biztosan törlöd: ${u.fullName} (${u.email})?`)) return;
+  if (!u || !(await uiConfirm(`Biztosan törlöd: ${u.fullName} (${u.email})?`, { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/users/${id}`, { method: 'DELETE' });
   if (res.ok) {
     loadUsers();
   } else {
-    alert(errorMessage(res, await readJson(res), 'Nem sikerült törölni.'));
+    await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült törölni.'), { title: 'Törlés sikertelen' });
   }
 };
 
@@ -201,7 +201,7 @@ document.getElementById('user-form').addEventListener('submit', async (e) => {
       const message = errorMessage(res, await readJson(res), 'Hiba történt a mentés során.');
       // 502: a felhasználó létrejött, csak a meghívó e-mail nem ment ki — a listában újraküldhető.
       if (res.status === 502) {
-        alert(message);
+        await uiAlert(message, { title: 'Meghívó' });
       } else {
         errorEl.textContent = message;
         errorEl.classList.add('show');

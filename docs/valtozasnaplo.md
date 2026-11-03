@@ -4,7 +4,12 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
-(nincs)
+- **2026.11.03.5** — A „Számlázás” menüpont megszűnt: számlát az ingatlan adatlapján és a Számla csomagok oldalon a
+  „Számla készítése” gombbal lehet készíteni (alapból a következő számla időszakára; meglévő számlánál előbb
+  rákérdez). A sikertelen számlák a Számla csomagok hónap-sorát lenyitva újrapróbálhatók, és minden számlatáblából
+  (adatlapok, csomagok) törölhetők. A böngésző saját ablakai (figyelmeztetés, megerősítés, beírás) és a natív
+  legördülő listák helyett mindenhol a Lakáskezelő saját, egységes dizájnú ablakai és listái jelennek meg
+  (egérrel, érintéssel és billentyűzettel is).
 
 ## Élesben
 

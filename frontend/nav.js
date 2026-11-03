@@ -29,7 +29,6 @@
       ${item('tenants.html', 'users', 'Bérlők')}
 
       <div class="nav-label">Pénzügy</div>
-      ${item('billing.html', 'receipt', 'Számlázás')}
       ${item('invoice-bundles.html', 'package', 'Számla csomagok')}
       ${item('exchange-rates.html', 'arrow-left-right', 'Árfolyamok')}
 

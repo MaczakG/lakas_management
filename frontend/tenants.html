@@ -173,7 +173,7 @@ window.editTenant = (id) => {
 };
 
 window.deleteTenant = async (id) => {
-  if (!confirm('Biztosan törlöd ezt a bérlőt?')) return;
+  if (!(await uiConfirm('Biztosan törlöd ezt a bérlőt?', { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/tenants/${id}`, { method: 'DELETE' });
   if (res.ok || res.status === 204) loadData();
 };

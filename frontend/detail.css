@@ -113,3 +113,4 @@
 
 .owner-row{display:grid;grid-template-columns:1fr 90px 36px;gap:10px;margin-bottom:10px;align-items:center;}
 .owner-row .field{margin:0;}
+.invoice-actions{display:inline-flex;gap:6px;justify-content:flex-end;}
