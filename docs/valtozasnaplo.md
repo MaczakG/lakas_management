@@ -4,6 +4,12 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+Jelenleg nincs ilyen változás.
+
+## Élesben
+
+### v2026.11.03.20 — 2026. 11. 03.
+
 - **2026.11.03.20** — Egyenleg-sáv a bérlő adatlapján, a fejléc alatt.
   - Nagy számmal mutatja az egyenleget, színnel jelölve: tartozás (piros), túlfizetés (zöld), rendezett.
   - Mellette:
@@ -144,8 +150,6 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
   (adatlapok, csomagok) törölhetők. A böngésző saját ablakai (figyelmeztetés, megerősítés, beírás) és a natív
   legördülő listák helyett mindenhol a Lakáskezelő saját, egységes dizájnú ablakai és listái jelennek meg
   (egérrel, érintéssel és billentyűzettel is).
-
-## Élesben
 
 ### v2026.11.03.4 — 2026. 11. 03.
 
