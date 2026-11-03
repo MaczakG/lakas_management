@@ -219,6 +219,11 @@ builder.Services.AddScoped<S3InvoiceStorage>();
 builder.Services.AddScoped<InvoicePdfStore>();
 builder.Services.AddScoped<Lakaskezelo.Api.Documents.DocumentStorage>();
 
+// ---------- Cégek számlázója (Billingo, Számlázz.hu) ----------
+builder.Services.AddHttpClient<Lakaskezelo.Api.Invoicing.BillingoInvoiceProvider>(c => c.Timeout = TimeSpan.FromSeconds(40));
+builder.Services.AddHttpClient<Lakaskezelo.Api.Invoicing.SzamlazzInvoiceProvider>(c => c.Timeout = TimeSpan.FromSeconds(60));
+builder.Services.AddScoped<Lakaskezelo.Api.Invoicing.InvoiceProviderResolver>();
+
 // ---------- Számlázás ----------
 builder.Services.AddScoped<InvoiceGenerationService>();
 builder.Services.AddHostedService<BillingSchedulerService>();

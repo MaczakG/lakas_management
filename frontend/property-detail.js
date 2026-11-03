@@ -74,8 +74,9 @@ function renderField(field) {
   const id = `f-${field.path.replace(/\./g, '-')}`;
   let control;
   if (field.type === 'select') {
-    control = `<select class="iinput" id="${id}"><option value="">Nincs megadva</option>${field.options
-      .map((o) => `<option value="${escapeHtml(o)}"${o === value ? ' selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select>`;
+    const opts = (typeof field.options === 'function' ? field.options() : field.options).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
+    control = `<select class="iinput" id="${id}"><option value="">${escapeHtml(field.emptyLabel ? field.emptyLabel() : 'Nincs megadva')}</option>${opts
+      .map((o) => `<option value="${escapeHtml(o.value)}"${o.value === value ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}</select>`;
   } else if (field.type === 'textarea') {
     control = `<textarea class="iinput" id="${id}" placeholder="${escapeHtml(field.placeholder || '')}">${escapeHtml(value ?? '')}</textarea>`;
   } else {
@@ -244,7 +245,18 @@ function renderComputed() {
   renderSummary();
 }
 
+// Cégnél, összekötött számlázóval az ingatlan áfája is beállítható (üresen a cég alapértelmezése).
+let company = null;
+const VAT_LABELS = { TAM: 'Tárgyi adómentes (TAM)', AAM: 'Alanyi adómentes (AAM)', 27: '27%', 18: '18%', 5: '5%', 0: '0%' };
+const VAT_OPTIONS = ['TAM', 'AAM', '27', '18', '5', '0'].map((c) => ({ value: c, label: VAT_LABELS[c] }));
+const VAT_FIELDS = [
+  { path: 'sheet.rentVat', label: 'Bérleti díj áfája', type: 'select', options: VAT_OPTIONS, emptyLabel: () => `Alapértelmezés: ${VAT_LABELS[company?.defaultRentVat] || 'TAM'}` },
+  { path: 'sheet.utilityVat', label: 'Rezsi áfája', type: 'select', options: VAT_OPTIONS, emptyLabel: () => `Alapértelmezés: ${VAT_LABELS[company?.defaultUtilityVat] || 'TAM'}` },
+];
+
 function renderPanels() {
+  FIELDS.billing = FIELDS.billing.filter((f) => !VAT_FIELDS.includes(f));
+  if (company?.invoiceProvider) FIELDS.billing.push(...VAT_FIELDS);
   document.getElementById('props-basic').innerHTML = FIELDS.basic.map(renderField).join('');
   document.getElementById('props-billing').innerHTML = FIELDS.billing.map(renderField).join('')
     + '<div class="prop"><dt>Következő kiállítás</dt><dd id="next-billing"></dd></div>';
@@ -514,11 +526,13 @@ async function loadUtility() {
 }
 
 async function load() {
-  const [pRes, iRes, uRes] = await Promise.all([
+  const [pRes, iRes, uRes, cRes] = await Promise.all([
     apiFetch(`/api/properties/${propertyId}`),
     apiFetch(`/api/properties/${propertyId}/invoices`),
     apiFetch(`/api/properties/${propertyId}/utility-costs`),
+    company ? null : apiFetch('/api/company'),
   ]);
+  if (cRes?.ok) company = await cRes.json();
   if (pRes.status === 404) {
     document.getElementById('p-name').textContent = 'Nincs ilyen ingatlan';
     showError('Az ingatlan nem található. Lehet, hogy törölték.');

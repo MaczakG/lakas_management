@@ -13,6 +13,8 @@
   .test-result{font-size:13px;font-weight:600;margin-top:10px;}
   .test-result.ok{color:var(--green);}
   .test-result.error{color:var(--coral);}
+  .test-row{display:flex;align-items:center;gap:12px;margin:0 0 16px;}
+  .test-row .test-result{margin-top:0;}
   .save-note{font-size:12.5px;color:var(--green);font-weight:600;margin-left:12px;display:none;}
   .save-note.show{display:inline;}
   .sub-wrap{max-width:640px;}
@@ -62,6 +64,46 @@
         <div class="field-row">
           <div class="field"><label for="utility-email">Rezsi kontakt e-mail</label><input type="email" id="utility-email"></div>
           <div class="field"><label for="utility-deadline">Rögzítési határidő (nap)</label><input type="number" id="utility-deadline" min="1" max="28"></div>
+        </div>
+      </section>
+
+      <section class="section" id="invoicing-section">
+        <div class="section-head">
+          <div>
+            <h3>Bérbeadó és számlázó</h3>
+            <p>Magánszemély bérbeadó bizonylatot állít ki. Cégként vagy egyéni vállalkozóként összekötheted a Számlázz.hu vagy a Billingo fiókodat: ilyenkor a havi díjról valódi számla készül a számlázódban (saját sorszámmal, NAV-bejelentéssel), és a Lakáskezelő küldi ki a bérlőnek.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="kind">Bérbeadó</label>
+            <select id="kind"><option value="private">Magánszemély</option><option value="business">Cég vagy egyéni vállalkozó</option></select></div>
+          <div class="field" id="provider-field" hidden><label for="provider">Számlázó</label>
+            <select id="provider"><option value="">Nincs összekötve (bizonylat készül)</option><option value="Billingo">Billingo</option><option value="Szamlazzhu">Számlázz.hu</option></select></div>
+        </div>
+        <div id="billingo-fields" hidden>
+          <div class="field-row">
+            <div class="field"><label for="billingo-key">Billingo API-kulcs</label><input type="password" id="billingo-key" autocomplete="off">
+              <span class="hint">Billingo → Beállítások → API kulcsok. <span id="billingo-key-state"></span></span></div>
+            <div class="field"><label for="billingo-block">Számlatömb</label><select id="billingo-block"><option value="">Előbb teszteld a kapcsolatot</option></select></div>
+          </div>
+        </div>
+        <div id="szamlazz-fields" hidden>
+          <div class="field-row">
+            <div class="field"><label for="szamlazz-key">Számla Agent kulcs</label><input type="password" id="szamlazz-key" autocomplete="off">
+              <span class="hint">Számlázz.hu → Beállítások → Számla Agent kulcsok. <span id="szamlazz-key-state"></span></span></div>
+            <div class="field"><label for="szamlazz-prefix">Számlaszám-előtag <span class="dim">(nem kötelező)</span></label><input type="text" id="szamlazz-prefix" maxlength="20"></div>
+          </div>
+        </div>
+        <div class="test-row" id="provider-test-row" hidden>
+          <button class="btn btn-secondary btn-sm" type="button" id="provider-test">Kapcsolat tesztelése</button>
+          <span class="test-result" id="provider-test-result"></span>
+        </div>
+        <div id="vat-fields" hidden>
+          <div class="field-row">
+            <div class="field"><label for="rent-vat">Bérleti díj áfája</label><select id="rent-vat"></select></div>
+            <div class="field"><label for="utility-vat">Rezsi áfája</label><select id="utility-vat"></select></div>
+          </div>
+          <span class="hint">Lakás bérbeadása általában tárgyi adómentes (TAM); ha bizonytalan vagy, kérdezd a könyvelődet. Ingatlanonként az adatlapon felülírható. A bérleti díj és a rezsi tételek összege bruttó, vagyis amit a bérlő fizet.</span>
         </div>
       </section>
 
@@ -130,7 +172,57 @@ async function loadSettings() {
   $('issuer-email').value = s.issuerEmail || '';
   $('invoice-email-subject').value = s.invoiceEmailSubject || '';
   $('invoice-email-body').value = s.invoiceEmailBody || '';
+  $('kind').value = s.isBusiness ? 'business' : 'private';
+  $('provider').value = s.invoiceProvider || '';
+  $('billingo-key-state').textContent = s.billingoApiKeySet ? 'Mentett kulcs van; csak cseréhez írj be újat.' : '';
+  $('szamlazz-key-state').textContent = s.szamlazzAgentKeySet ? 'Mentett kulcs van; csak cseréhez írj be újat.' : '';
+  $('billingo-block').innerHTML = s.billingoBlockId
+    ? `<option value="${s.billingoBlockId}">#${s.billingoBlockId} (mentett)</option>` : '<option value="">Előbb teszteld a kapcsolatot</option>';
+  $('szamlazz-prefix').value = s.szamlazzInvoicePrefix || '';
+  $('rent-vat').innerHTML = vatOptions(s.defaultRentVat || 'TAM');
+  $('utility-vat').innerHTML = vatOptions(s.defaultUtilityVat || 'TAM');
+  syncInvoicing();
 }
+
+// ---------- Bérbeadó és számlázó ----------
+const VAT_LABELS = { TAM: 'Tárgyi adómentes (TAM)', AAM: 'Alanyi adómentes (AAM)', 27: '27%', 18: '18%', 5: '5%', 0: '0%' };
+function vatOptions(value) {
+  return ['TAM', 'AAM', '27', '18', '5', '0'].map((c) => `<option value="${c}"${c === value ? ' selected' : ''}>${VAT_LABELS[c]}</option>`).join('');
+}
+function syncInvoicing() {
+  const business = $('kind').value === 'business';
+  const provider = business ? $('provider').value : '';
+  $('provider-field').hidden = !business;
+  $('billingo-fields').hidden = provider !== 'Billingo';
+  $('szamlazz-fields').hidden = provider !== 'Szamlazzhu';
+  $('provider-test-row').hidden = !provider;
+  $('vat-fields').hidden = !provider;
+}
+$('kind').addEventListener('change', syncInvoicing);
+$('provider').addEventListener('change', () => { $('provider-test-result').textContent = ''; syncInvoicing(); });
+$('provider-test').addEventListener('click', async () => {
+  const out = $('provider-test-result');
+  out.className = 'test-result';
+  out.textContent = 'Tesztelés…';
+  const res = await apiFetch('/api/settings/invoicing/test', {
+    method: 'POST',
+    body: JSON.stringify({ provider: $('provider').value, billingoApiKey: $('billingo-key').value.trim() || null, szamlazzAgentKey: $('szamlazz-key').value.trim() || null }),
+  });
+  const r = await readJson(res);
+  if (!res.ok || !r.success) {
+    out.className = 'test-result error';
+    out.textContent = r.error || errorMessage(res, r, 'A kapcsolat nem sikerült.');
+    return;
+  }
+  out.className = 'test-result ok';
+  out.textContent = 'A kapcsolat rendben.';
+  if (r.blocks) {
+    const current = $('billingo-block').value;
+    $('billingo-block').innerHTML = r.blocks.length
+      ? r.blocks.map((b) => `<option value="${b.id}"${String(b.id) === current ? ' selected' : ''}>${escapeHtml(b.name)}</option>`).join('')
+      : '<option value="">Nincs számlatömb a Billingo fiókban</option>';
+  }
+});
 
 $('settings-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -145,6 +237,14 @@ $('settings-form').addEventListener('submit', async (e) => {
     issuerEmail: val('issuer-email'),
     invoiceEmailSubject: val('invoice-email-subject'),
     invoiceEmailBody: val('invoice-email-body'),
+    isBusiness: $('kind').value === 'business',
+    invoiceProvider: $('kind').value === 'business' ? ($('provider').value || null) : null,
+    billingoApiKey: val('billingo-key'),
+    billingoBlockId: Number($('billingo-block').value) || null,
+    szamlazzAgentKey: val('szamlazz-key'),
+    szamlazzInvoicePrefix: val('szamlazz-prefix'),
+    defaultRentVat: $('rent-vat').value || 'TAM',
+    defaultUtilityVat: $('utility-vat').value || 'TAM',
   };
   const res = await apiFetch('/api/settings', { method: 'PUT', body: JSON.stringify(payload) });
   const note = $('save-note');
@@ -152,6 +252,9 @@ $('settings-form').addEventListener('submit', async (e) => {
     await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült menteni.'), { title: 'Mentés sikertelen' });
     return;
   }
+  $('billingo-key').value = '';
+  $('szamlazz-key').value = '';
+  loadSettings();
   note.classList.add('show');
   setTimeout(() => note.classList.remove('show'), 2000);
 });

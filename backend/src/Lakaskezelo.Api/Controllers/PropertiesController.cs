@@ -224,6 +224,8 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             property.WaterMeter = Clean(s.WaterMeter);
             property.Deposit = s.Deposit;
             property.Notes = Clean(s.Notes);
+            property.RentVat = Clean(s.RentVat);
+            property.UtilityVat = Clean(s.UtilityVat);
         }
     }
 
@@ -237,6 +239,9 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         if (s.BuildYear is { } y && (y < 1500 || y > DateTime.UtcNow.Year + 5)) return "Érvénytelen építési év.";
         if (s.Deposit is < 0) return "A kaució nem lehet negatív.";
         if ((s.Notes?.Length ?? 0) > 4000) return "A megjegyzés legfeljebb 4000 karakter lehet.";
+        if ((!string.IsNullOrWhiteSpace(s.RentVat) && !Lakaskezelo.Domain.VatCodes.IsValid(s.RentVat.Trim()))
+            || (!string.IsNullOrWhiteSpace(s.UtilityVat) && !Lakaskezelo.Domain.VatCodes.IsValid(s.UtilityVat.Trim())))
+            return "Érvénytelen áfakulcs.";
         return null;
     }
 
@@ -318,7 +323,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         [.. property.Tenants.Select(t => new TenantDto(t.Id, t.Name, t.Email, t.Phone, t.Address, t.TaxId, t.PropertyId, property.Name, t.MoveInDate, t.MoveOutDate, t.Notes, t.RentCurrency))],
         new PropertySheetDto(property.PropertyType, property.PostalCode, property.City, property.Street, property.FloorDoor, property.Hrsz,
             property.FloorArea, property.Rooms, property.BuildYear, property.ElectricityMeter, property.GasMeter, property.WaterMeter,
-            property.Deposit, property.Notes),
+            property.Deposit, property.Notes, property.RentVat, property.UtilityVat),
         next.At, next.Period.Year, next.Period.Month);
     }
 

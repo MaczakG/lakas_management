@@ -36,6 +36,10 @@ public class Property : ICompanyOwned
     public decimal? Deposit { get; set; }     // kaució, Ft
     public string? Notes { get; set; }
 
+    // Áfa a számlázóval kiállított számlán (ld. VatCodes); null: a cég alapértelmezése (AppSettings.Default*Vat).
+    public string? RentVat { get; set; }
+    public string? UtilityVat { get; set; }
+
     public List<PropertyOwner> PropertyOwners { get; set; } = [];
     public List<Tenant> Tenants { get; set; } = [];
     public List<UtilityCostEntry> UtilityCostEntries { get; set; } = [];

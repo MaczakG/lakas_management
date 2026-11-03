@@ -21,7 +21,9 @@ public record PropertySheetDto(
     string? PropertyType, string? PostalCode, string? City, string? Street, string? FloorDoor, string? Hrsz,
     decimal? FloorArea, decimal? Rooms, int? BuildYear,
     string? ElectricityMeter, string? GasMeter, string? WaterMeter,
-    decimal? Deposit, string? Notes);
+    decimal? Deposit, string? Notes,
+    // Áfa a számlázóval kiállított számlán (cégnél); null: a cég alapértelmezése.
+    string? RentVat = null, string? UtilityVat = null);
 
 public record PropertyOwnerDto(Guid OwnerId, string OwnerName, string? Share);
 

@@ -17,11 +17,15 @@ public class InvoiceGenerationService(
     AppSettingsService settingsService,
     S3InvoiceStorage storage,
     IEmailSender emailSender,
+    Invoicing.InvoiceProviderResolver providers,
     ILogger<InvoiceGenerationService> logger)
 {
     // A Beállítások oldalon szerkeszthető sablon alapértéke — csak akkor kerül elő, ha a mező
     // üres, hogy a régebbi (még nem testreszabott) telepítéseken ne változzon a kiküldött szöveg.
     private const string DefaultInvoiceEmailSubject = "Bizonylat — {ingatlan}";
+    // Cégnél, számlázóval kiállított valódi számlánál.
+    private const string DefaultProviderEmailSubject = "Számla — {ingatlan}";
+    private const string DefaultProviderEmailBody = "Elkészült a(z) {ingatlan} ingatlanhoz tartozó számlád a(z) {időszak} időszakra.\n\nFizetendő összeg: {összeg}";
     private const string DefaultInvoiceEmailBody = "Elkészült a(z) {ingatlan} ingatlanhoz tartozó bizonylatod a(z) {időszak} időszakra.\n\nFizetendő összeg: {összeg}";
 
     // onProgress (opcionális): a felület folyamatjelzőjének — előbb a lépések terve („plan”), aztán minden lépés
@@ -47,6 +51,16 @@ public class InvoiceGenerationService(
             : 0;
 
         var settings = await settingsService.GetAsync(ct);
+        var company = await db.Companies.SingleAsync(c => c.Id == property.CompanyId, ct);
+        // Cégnél, beállított számlázóval valódi számla készül a számlázóban (különben a saját bizonylatunk).
+        var provider = providers.For(company, settings);
+        // Kiállított számlát (vagy ha közben számlázóra váltottak, kiállított bizonylatot) nem lehet felülírni:
+        // javításhoz sztornózni kell, és új készül.
+        if (existing is not null && existing.Status != InvoiceStatus.Failed && (provider is not null || existing.Provider is not null))
+        {
+            throw new InvalidOperationException(
+                $"Erre az időszakra már ki van állítva: {existing.Number}. Javításhoz sztornózd, és utána készíts újat.");
+        }
         var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.PropertyId == property.Id, ct);
         var utilityLines = await db.UtilityCostEntries
             .Where(u => u.PropertyId == property.Id && u.Year == year && u.Month == month)
@@ -72,11 +86,14 @@ public class InvoiceGenerationService(
         invoice.Number = existing?.Number
             ?? BuildInvoiceNumber(property, year, month) + (cancelledCount > 0 ? $"/{cancelledCount + 1}" : "");
 
+        // Ha a számla már elkészült a számlázóban, a későbbi lépések (PDF letöltés, tárhely, e-mail) hibája nem teheti
+        // „Sikertelenné” — különben az újrapróbálás még egy számlát állítana ki.
+        var issuedAtProvider = false;
         try
         {
             var storageConfigured = await storage.IsConfiguredAsync(ct);
             var willEmail = !string.IsNullOrWhiteSpace(tenant?.Email);
-            var plan = new List<string> { GenerationSteps.Data, GenerationSteps.Pdf };
+            var plan = new List<string> { GenerationSteps.Data, provider is null ? GenerationSteps.Pdf : GenerationSteps.Provider };
             if (storageConfigured) plan.Add(GenerationSteps.Upload);
             if (willEmail) plan.Add(GenerationSteps.Email);
             plan.Add(GenerationSteps.Save);
@@ -118,13 +135,45 @@ public class InvoiceGenerationService(
             db.InvoiceLines.AddRange(newLines);
             invoice.AmountTotal = newLines.Sum(l => l.Amount);
 
-            await Report(new GenerationProgress(GenerationSteps.Pdf));
-            var pdfBytes = InvoicePdfGenerator.Generate(invoice, property, tenant, settings, newLines);
+            byte[]? pdfBytes;
+            if (provider is null)
+            {
+                await Report(new GenerationProgress(GenerationSteps.Pdf));
+                pdfBytes = InvoicePdfGenerator.Generate(invoice, property, tenant, settings, newLines);
+            }
+            else
+            {
+                await Report(new GenerationProgress(GenerationSteps.Provider));
+                if (tenant is null) throw new Invoicing.ProviderException("Az ingatlanhoz nincs bérlő rendelve, így nincs kinek számlát kiállítani.");
+                var rentVat = property.RentVat ?? settings.DefaultRentVat;
+                var utilityVat = property.UtilityVat ?? settings.DefaultUtilityVat;
+                var today = DateOnly.FromDateTime(BudapestClock.Now);
+                var comment = $"{property.Name}, {year}. {MonthName(month)}"
+                    + (string.IsNullOrWhiteSpace(conversionNote) ? "" : $"\n{conversionNote}");
+                var request = new Invoicing.ProviderInvoiceRequest(
+                    Invoicing.InvoicingProviders.BuyerFor(tenant, property),
+                    [.. newLines.Select(l => new Invoicing.ProviderLine(
+                        l.Position == 0 ? $"{l.Label} ({year}. {MonthName(month)})" : l.Label, l.Amount, l.Position == 0 ? rentVat : utilityVat))],
+                    today, invoice.DueDate, invoice.DueDate, comment);
+                var issued = await provider.IssueAsync(settings, request, ct);
+                issuedAtProvider = true;
+                invoice.Provider = provider.Name;
+                invoice.ProviderDocumentId = issued.DocumentId;
+                invoice.Number = issued.Number;
+                invoice.IssuedAt = DateTime.UtcNow;
+                if (issued.BillingoPartnerId is { } partnerId) tenant.BillingoPartnerId = partnerId;
+                pdfBytes = issued.Pdf;
+                if (pdfBytes is null)
+                {
+                    try { pdfBytes = await provider.DownloadPdfAsync(settings, invoice, ct); }
+                    catch (Invoicing.ProviderException ex) { logger.LogWarning(ex, "Provider PDF of {Number} not available yet", invoice.Number); }
+                }
+            }
 
             // A tárhely hibája nem akaszthatja meg a számla kiküldését: ilyenkor a PDF letöltéskor
             // (InvoicePdfStore) a tárolt adatokból újragenerálódik és akkor mentődik el.
             invoice.PdfStorageKey = null;
-            if (storageConfigured)
+            if (storageConfigured && pdfBytes is not null)
             {
                 await Report(new GenerationProgress(GenerationSteps.Upload));
                 try
@@ -140,7 +189,7 @@ public class InvoiceGenerationService(
             }
 
             var emailed = false;
-            if (willEmail)
+            if (willEmail && pdfBytes is not null)
             {
                 await Report(new GenerationProgress(GenerationSteps.Email));
                 var periodLabel = $"{year}.{month:D2}";
@@ -154,8 +203,10 @@ public class InvoiceGenerationService(
                 };
                 string Fill(string template) => placeholders.Aggregate(template, (acc, kv) => acc.Replace(kv.Key, kv.Value));
 
-                var subject = Fill(string.IsNullOrWhiteSpace(settings.InvoiceEmailSubject) ? DefaultInvoiceEmailSubject : settings.InvoiceEmailSubject);
-                var bodyText = Fill(string.IsNullOrWhiteSpace(settings.InvoiceEmailBody) ? DefaultInvoiceEmailBody : settings.InvoiceEmailBody);
+                var subject = Fill(string.IsNullOrWhiteSpace(settings.InvoiceEmailSubject)
+                    ? (provider is null ? DefaultInvoiceEmailSubject : DefaultProviderEmailSubject) : settings.InvoiceEmailSubject);
+                var bodyText = Fill(string.IsNullOrWhiteSpace(settings.InvoiceEmailBody)
+                    ? (provider is null ? DefaultInvoiceEmailBody : DefaultProviderEmailBody) : settings.InvoiceEmailBody);
 
                 var bodyParagraphsHtml = string.Concat(bodyText
                     .Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
@@ -167,7 +218,13 @@ public class InvoiceGenerationService(
 
             invoice.Status = emailed ? InvoiceStatus.Sent : InvoiceStatus.Generated;
             invoice.SentAt = emailed ? DateTime.UtcNow : null;
-            invoice.ErrorMessage = null;
+            invoice.ErrorMessage = pdfBytes is null ? "A számla elkészült, de a PDF-je még nem tölthető le a számlázóból, ezért e-mailben nem ment ki." : null;
+        }
+        catch (Exception ex) when (issuedAtProvider)
+        {
+            logger.LogWarning(ex, "Post-issue step failed for provider invoice {Number}", invoice.Number);
+            invoice.Status = InvoiceStatus.Generated;
+            invoice.ErrorMessage = $"A számla elkészült, de utána hiba történt: {ex.Message}";
         }
         catch (Exception ex)
         {
@@ -217,10 +274,47 @@ public class InvoiceGenerationService(
         {
             Id = Guid.NewGuid(), CompanyId = original.CompanyId, InvoiceId = storno.Id, Label = l.Label, Amount = -l.Amount, Position = i,
         }).ToList();
-        storno.AmountTotal = lines.Sum(l => l.Amount);
+        // A sztornó mindig pontosan az eredeti végösszegét nullázza. Ha az eredeti tételei nem adják ki a végösszeget
+        // (régi vagy importált bizonylat), a különbség egy külön soron szerepel.
+        var difference = -original.AmountTotal - lines.Sum(l => l.Amount);
+        if (difference != 0)
+        {
+            lines.Add(new InvoiceLine
+            {
+                Id = Guid.NewGuid(), CompanyId = original.CompanyId, InvoiceId = storno.Id,
+                Label = "Egyéb tétel az eredeti bizonylat végösszege szerint", Amount = difference, Position = lines.Count,
+            });
+        }
+        storno.AmountTotal = -original.AmountTotal;
 
-        var pdf = InvoicePdfGenerator.Generate(storno, property, original.Tenant, settings, lines, original.Number);
-        if (await storage.IsConfiguredAsync(ct))
+        byte[]? pdf;
+        if (original.Provider is null)
+        {
+            pdf = InvoicePdfGenerator.Generate(storno, property, original.Tenant, settings, lines, original.Number);
+        }
+        else
+        {
+            // Számlázóban kiállított számla sztornója is ott készül (saját sorszámmal).
+            var provider = providers.ByName(original.Provider)
+                ?? throw new InvalidOperationException("A számlát kiállító számlázó nincs beállítva.");
+            if (!Invoicing.InvoicingProviders.IsConfigured(settings) || settings.InvoiceProvider != original.Provider)
+            {
+                throw new InvalidOperationException($"A sztornóhoz a(z) {original.Provider} összekötésnek beállítva kell lennie (Beállítások).");
+            }
+            Invoicing.ProviderInvoice cancelled;
+            try { cancelled = await provider.CancelAsync(settings, original, ct); }
+            catch (Invoicing.ProviderException ex) { throw new InvalidOperationException(ex.Message, ex); }
+            storno.Provider = original.Provider;
+            storno.ProviderDocumentId = cancelled.DocumentId;
+            storno.Number = cancelled.Number;
+            pdf = cancelled.Pdf;
+            if (pdf is null)
+            {
+                try { pdf = await provider.DownloadPdfAsync(settings, storno, ct); }
+                catch (Invoicing.ProviderException ex) { logger.LogWarning(ex, "Storno PDF {Number} not available yet", storno.Number); }
+            }
+        }
+        if (pdf is not null && await storage.IsConfiguredAsync(ct))
         {
             try
             {
@@ -235,11 +329,13 @@ public class InvoiceGenerationService(
         }
 
         var tenant = original.Tenant;
-        if (original.Status == InvoiceStatus.Sent && !string.IsNullOrWhiteSpace(tenant?.Email))
+        if (pdf is not null && original.Status == InvoiceStatus.Sent && !string.IsNullOrWhiteSpace(tenant?.Email))
         {
-            var subject = $"Sztornó bizonylat — {property.Name}";
-            var text = $"A(z) {original.Number} számú bizonylatot ({original.PeriodYear}.{original.PeriodMonth:D2}) sztornóztuk. "
-                + $"A sztornó bizonylatot ({storno.Number}) mellékeltük.\n\nKérjük, az eredeti bizonylatot tekintsd érvénytelennek.";
+            var kind = original.Provider is null ? "bizonylat" : "számla";
+            var kindAcc = original.Provider is null ? "bizonylatot" : "számlát";
+            var subject = $"Sztornó {kind} — {property.Name}";
+            var text = $"A(z) {original.Number} számú {kindAcc} ({original.PeriodYear}.{original.PeriodMonth:D2}) sztornóztuk. "
+                + $"A sztornó {kindAcc} ({storno.Number}) mellékeltük.\n\nKérjük, az eredeti {kindAcc} tekintsd érvénytelennek.";
             var html = string.Concat(text.Split("\n\n").Select(p => $"""<p style="margin:0 0 12px;">{System.Net.WebUtility.HtmlEncode(p)}</p>"""));
             var body = EmailTemplate.Render(preheader: subject, heading: subject, bodyHtml: html);
             try
@@ -264,6 +360,9 @@ public class InvoiceGenerationService(
         await db.SaveChangesAsync(ct);
         return storno;
     }
+
+    private static string MonthName(int month) =>
+        new[] { "január", "február", "március", "április", "május", "június", "július", "augusztus", "szeptember", "október", "november", "december" }[month - 1];
 
     private async Task<(decimal AmountHuf, string? ConversionNote)> ResolveRentAmountAsync(Property property, Tenant? tenant, CancellationToken ct)
     {
@@ -303,6 +402,7 @@ public static class GenerationSteps
     public const string Plan = "plan";
     public const string Data = "data";
     public const string Pdf = "pdf";
+    public const string Provider = "provider";
     public const string Upload = "upload";
     public const string Email = "email";
     public const string Save = "save";

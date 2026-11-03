@@ -12,6 +12,15 @@
   .login-box h1{font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-0.01em;margin-bottom:10px;text-align:center;}
   .login-box .lead{text-align:center;color:var(--ink-soft);font-size:14px;margin-bottom:24px;}
 </style>
+<style>
+  .kind-choice{border:0;padding:0;margin:0 0 16px;}
+  .kind-choice legend{font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
+  .kind-option{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:6px;}
+  .kind-option:has(input:checked){border-color:var(--accent);background:var(--accent-bg);}
+  .kind-option input{margin-top:3px;accent-color:var(--accent);}
+  .kind-option span{display:flex;flex-direction:column;gap:2px;font-size:13.5px;color:var(--ink);}
+  .kind-option small{font-size:12.5px;color:var(--ink-soft);}
+</style>
 </head>
 <body>
 
@@ -23,6 +32,13 @@
   <div class="form-error" id="form-error"></div>
   <div class="form-success" id="form-success"></div>
   <form id="register-form">
+    <fieldset class="field kind-choice">
+      <legend>Hogyan adsz bérbe?</legend>
+      <label class="kind-option"><input type="radio" name="kind" value="private" checked>
+        <span><b>Magánszemélyként</b><small>A rendszer havonta bizonylatot állít ki.</small></span></label>
+      <label class="kind-option"><input type="radio" name="kind" value="business">
+        <span><b>Cégként vagy egyéni vállalkozóként</b><small>Összekötheted a Számlázz.hu vagy a Billingo fiókodat, és valódi számla készül.</small></span></label>
+    </fieldset>
     <div class="field">
       <label for="company">Cég vagy magánszemély neve</label>
       <input type="text" id="company" autocomplete="organization" minlength="2" maxlength="200" required>
@@ -89,6 +105,7 @@
         email: document.getElementById('email').value.trim(),
         password: document.getElementById('password').value,
         acceptTerms: document.getElementById('accept').checked,
+        isBusiness: document.querySelector('input[name="kind"]:checked').value === 'business',
       });
       if (!res.ok) {
         showMsg('form-error', errorMessage(res, data, 'Nem sikerült a regisztráció.'));

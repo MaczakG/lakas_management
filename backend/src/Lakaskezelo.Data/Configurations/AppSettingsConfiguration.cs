@@ -13,6 +13,12 @@ public class AppSettingsConfiguration : IEntityTypeConfiguration<AppSettings>
         // Cégenként legfeljebb egy beállítás-sor.
         builder.HasIndex(s => s.CompanyId).IsUnique();
         builder.Property(s => s.IssuerEmail).HasMaxLength(256);
+        builder.Property(s => s.InvoiceProvider).HasMaxLength(20);
+        builder.Property(s => s.BillingoApiKey).HasMaxLength(200);
+        builder.Property(s => s.SzamlazzAgentKey).HasMaxLength(200);
+        builder.Property(s => s.SzamlazzInvoicePrefix).HasMaxLength(20);
+        builder.Property(s => s.DefaultRentVat).HasMaxLength(10).HasDefaultValue("TAM");
+        builder.Property(s => s.DefaultUtilityVat).HasMaxLength(10).HasDefaultValue("TAM");
         builder.HasData(new AppSettings
         {
             Id = AppSettings.LegacySingletonId,

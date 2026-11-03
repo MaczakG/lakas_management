@@ -47,8 +47,15 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
     {
         var invoice = await WithPdfData(db.Invoices).FirstOrDefaultAsync(i => i.Id == id, ct);
         if (invoice is null) return NotFound();
-        var pdf = await pdfStore.GetOrCreateAsync(invoice, ct);
-        return File(pdf, "application/pdf", InvoicePdfStore.FileName(invoice));
+        try
+        {
+            var pdf = await pdfStore.GetOrCreateAsync(invoice, ct);
+            return File(pdf, "application/pdf", InvoicePdfStore.FileName(invoice));
+        }
+        catch (Invoicing.ProviderException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new { message = ex.Message });
+        }
     }
 
     // Minden, ami a PDF (újra)generálásához kell — ld. InvoicePdfStore.GetOrCreateAsync.
@@ -65,7 +72,15 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         var property = await db.Properties.FindAsync([request.PropertyId], ct);
         if (property is null) return NotFound(new { message = "Az ingatlan nem található." });
 
-        var invoice = await generator.GenerateAndSendAsync(property, request.Year, request.Month, ct);
+        Invoice invoice;
+        try
+        {
+            invoice = await generator.GenerateAndSendAsync(property, request.Year, request.Month, ct);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
 
         await db.Entry(invoice).Reference(i => i.Property).LoadAsync(ct);
         await db.Entry(invoice).Reference(i => i.Tenant).LoadAsync(ct);
@@ -113,6 +128,11 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
             await db.Entry(invoice).Collection(i => i.Lines).LoadAsync();
             await Write(new { type = "done", invoice = ToDto(invoice) });
         }
+        catch (InvalidOperationException ex)
+        {
+            try { await Write(new { type = "error", message = ex.Message }); }
+            catch (Exception writeEx) { logger.LogDebug(writeEx, "Could not report the generation error to the client"); }
+        }
         catch (Exception ex)
         {
             // A válasz már elindult, státuszkódot nem lehet váltani — a hibát a folyam utolsó sora jelzi.
@@ -148,5 +168,5 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         invoice.Id, invoice.PropertyId, invoice.Property?.Name ?? "", invoice.Tenant?.Name,
         invoice.PeriodYear, invoice.PeriodMonth, invoice.Number, invoice.IssuedAt, invoice.DueDate,
         invoice.AmountTotal, invoice.Status, invoice.SentAt, invoice.ErrorMessage,
-        [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))], invoice.CancelledAt, invoice.CancelsInvoiceId);
+        [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))], invoice.CancelledAt, invoice.CancelsInvoiceId, invoice.Provider);
 }

@@ -28,8 +28,29 @@ namespace Lakaskezelo.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BillingoApiKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("BillingoBlockId")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("DefaultRentVat")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("TAM");
+
+                    b.Property<string>("DefaultUtilityVat")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("TAM");
 
                     b.Property<int>("EmailProvider")
                         .HasColumnType("integer");
@@ -39,6 +60,10 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<string>("InvoiceEmailSubject")
                         .HasColumnType("text");
+
+                    b.Property<string>("InvoiceProvider")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("IssuerAddress")
                         .HasColumnType("text");
@@ -95,6 +120,14 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<string>("SmtpUsername")
                         .HasColumnType("text");
 
+                    b.Property<string>("SzamlazzAgentKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SzamlazzInvoicePrefix")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -116,6 +149,8 @@ namespace Lakaskezelo.Data.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             CompanyId = new Guid("d0000000-0000-4000-8000-000000000001"),
+                            DefaultRentVat = "TAM",
+                            DefaultUtilityVat = "TAM",
                             EmailProvider = 0,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             UtilityDeadlineDay = 5
@@ -132,6 +167,9 @@ namespace Lakaskezelo.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("DocumentTypesInitialized")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsBusiness")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
@@ -156,6 +194,7 @@ namespace Lakaskezelo.Data.Migrations
                             Id = new Guid("d0000000-0000-4000-8000-000000000001"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DocumentTypesInitialized = false,
+                            IsBusiness = false,
                             Name = "Alapértelmezett cég"
                         });
                 });
@@ -436,6 +475,14 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<Guid>("PropertyId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ProviderDocumentId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("RentConversionNote")
                         .HasColumnType("text");
@@ -842,12 +889,18 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<decimal>("RentAmount")
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<string>("RentVat")
+                        .HasColumnType("text");
+
                     b.Property<decimal?>("Rooms")
                         .HasColumnType("numeric(4,1)");
 
                     b.Property<string>("Street")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("UtilityVat")
+                        .HasColumnType("text");
 
                     b.Property<string>("WaterMeter")
                         .HasMaxLength(50)
@@ -1085,6 +1138,9 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<string>("Address")
                         .HasColumnType("text");
+
+                    b.Property<int?>("BillingoPartnerId")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
