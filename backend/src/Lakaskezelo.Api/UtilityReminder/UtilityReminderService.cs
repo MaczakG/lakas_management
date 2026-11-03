@@ -106,19 +106,19 @@ public class UtilityReminderService(IServiceScopeFactory scopeFactory, ILogger<U
         if (missing.Count == 0) return;
 
         string Period(DateOnly d) => $"{d.Year}. {HungarianMonths[d.Month - 1]}";
-        string Line(DateOnly period, DateTime at, string name) => $"{name}: {Period(period)} (számlázás: {at:yyyy.MM.dd. HH:mm})";
+        string Line(DateOnly period, DateTime at, string name) => $"{name}: {Period(period)} (kiállítás: {at:yyyy.MM.dd. HH:mm})";
         var listHtml = string.Join("", missing.Select(x => $"<li>{System.Net.WebUtility.HtmlEncode(Line(x.Period, x.At, x.Property.Name))}</li>"));
         var listText = string.Join("\n", missing.Select(x => $"- {Line(x.Period, x.At, x.Property.Name)}"));
 
         var htmlBody = EmailTemplate.Render(
-            preheader: $"{missing.Count} ingatlanhoz hiányzik a rezsi a következő számlához",
+            preheader: $"{missing.Count} ingatlanhoz hiányzik a rezsi a következő bizonylathoz",
             heading: "Hiányzó rezsi tételek",
             bodyHtml: $"""
-                <p style="margin:0 0 12px;">A következő ingatlanoknál a soron következő számla időszakára még nincs rezsi tétel rögzítve:</p>
+                <p style="margin:0 0 12px;">A következő ingatlanoknál a soron következő bizonylat időszakára még nincs rezsi tétel rögzítve:</p>
                 <ul style="margin:0 0 12px;padding-left:20px;">{listHtml}</ul>
-                <p style="margin:0 0 12px;">A rezsit a számlázás előtt rögzítsd, hogy rákerüljön a számlára.</p>
+                <p style="margin:0 0 12px;">A rezsit a kiállítás előtt rögzítsd, hogy rákerüljön a bizonylatra.</p>
                 """);
-        var textBody = $"A soron következő számla időszakára hiányzó rezsi tételek:\n{listText}";
+        var textBody = $"A soron következő bizonylat időszakára hiányzó rezsi tételek:\n{listText}";
 
         var sent = await emailSender.SendAsync(settings.UtilityContactEmail, EmailTemplate.UniqueSubject("Hiányzó rezsi tételek"), htmlBody, textBody, null, ct);
         if (!sent)

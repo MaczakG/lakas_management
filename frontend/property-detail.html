@@ -19,7 +19,7 @@
 
   <main class="main">
     <!-- Minden ingatlannak saját adatlapja van, a Yardly jármű-adatlapjának mintájára: fent a helyben
-         szerkeszthető adatai panelekben, alatta minden, ami hozzá tartozik (számlák, rezsi, bérlők)
+         szerkeszthető adatai panelekben, alatta minden, ami hozzá tartozik (bizonylatok, rezsi, bérlők)
          egy füles listában. -->
     <div class="detail-page">
       <div class="detail-head">
@@ -36,7 +36,7 @@
           <p class="detail-hint">Kattints egy adatra, és írd át. A változás azonnal mentődik.</p>
         </div>
         <div class="detail-actions">
-          <button class="btn btn-primary btn-sm" type="button" id="create-invoice-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#file-plus"/></svg>Számla készítése</button>
+          <button class="btn btn-primary btn-sm" type="button" id="create-invoice-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#file-plus"/></svg>Bizonylat készítése</button>
           <button class="btn btn-secondary btn-sm" type="button" id="toggle-active-btn"></button>
           <button class="btn btn-danger btn-sm" type="button" id="delete-btn">Ingatlan törlése</button>
         </div>
@@ -50,7 +50,7 @@
           <dl class="panel-body props" id="props-basic"></dl>
         </section>
         <section class="panel">
-          <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Bérlés és számlázás</h2></div>
+          <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Bérlés és bizonylatok</h2></div>
           <dl class="panel-body props" id="props-billing"></dl>
         </section>
         <section class="panel">
@@ -84,14 +84,14 @@
       <section class="record-tabs">
         <div class="record-tabbar">
           <div class="record-tablist" role="tablist">
-            <button class="record-tab" type="button" role="tab" data-tab="invoices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Számlák <span class="panel-count" id="count-invoices"></span></button>
+            <button class="record-tab" type="button" role="tab" data-tab="invoices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Bizonylatok <span class="panel-count" id="count-invoices"></span></button>
             <button class="record-tab" type="button" role="tab" data-tab="utility"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#zap"/></svg>Rezsi <span class="panel-count" id="count-utility"></span></button>
             <button class="record-tab" type="button" role="tab" data-tab="tenants"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#users"/></svg>Bérlők <span class="panel-count" id="count-tenants"></span></button>
           
             <button class="record-tab" type="button" role="tab" data-tab="documents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#paperclip"/></svg>Dokumentumok <span class="panel-count" id="count-documents"></span></button>
           </div>
           <div class="record-tab-actions">
-            <button class="btn btn-secondary" type="button" id="add-utility" data-tab-action="utility" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#plus"/></svg>Rezsi a következő számlához</button>
+            <button class="btn btn-secondary" type="button" id="add-utility" data-tab-action="utility" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#plus"/></svg>Rezsi a következő bizonylathoz</button>
             <button class="btn btn-secondary" type="button" id="upload-doc" data-tab-action="documents" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#upload"/></svg>Feltöltés</button>
           </div>
         </div>

@@ -4,6 +4,14 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.15** — „Számla” helyett mindenhol „bizonylat”, mert magánszemély bérbeadó nem állít ki számlát, csak
+  bizonylatot:
+  - menü, oldalcímek, gombok, fülek, táblák, ablakok és üzenetek: például „Bizonylatok” menüpont, „Bizonylat készítése”, „Sztornó bizonylat”;
+  - a kiállítás szavai is átírva: „Kiállítás napja” a „Számlázási nap” helyett, „Következő kiállítás”, „Kiállítva 2026-ban”;
+  - a bérlőnek küldött levél alapértelmezett szövege, a rezsi emlékeztető, a havi csomag (bizonylatok-ÉÉÉÉ-HH.zip, „Bizonylatszám” oszlop).
+
+  Az e-mail sablonban az új helyőrző a {bizonylatszám}; a régi {számlaszám} is működik tovább. Nem változott: a
+  bankszámla, a rezsi-szolgáltatók számlái (dokumentumtípus) és a saját előfizetés Billingo-számlái.
 - **2026.11.03.14** — Az ikonok a Phosphor Icons készletből jönnek (MIT licenc: ingyenes, a felületen semmit nem kell
   feltüntetni). A Flaticon ikonok és a „Uicons by Flaticon” forrásmegjelölés mindenhonnan kikerültek (menü lábléce,
   platform menü). A legördülő nyíl, a kiválasztott elem pipája és az állapotcímkék ikonjai is lecserélődtek.

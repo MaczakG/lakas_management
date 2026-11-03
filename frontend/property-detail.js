@@ -1,6 +1,6 @@
 // Ingatlan adatlap (property-detail.html?id=...). A panelek értékei helyben szerkeszthetők: egy mező
 // elhagyásakor (vagy Enterre) a teljes ingatlan PUT-tal mentődik — a szerver a frissített adatlapot adja
-// vissza, abból frissül a fejléc és a számolt értékek (pl. a munkanapra tolt következő számlázás).
+// vissza, abból frissül a fejléc és a számolt értékek (pl. a munkanapra tolt következő kiállítás).
 // A mezőket mentés után nem rajzoljuk újra, hogy a fókusz ne ugorjon el.
 requireAuth();
 
@@ -33,8 +33,8 @@ const FIELDS = {
   billing: [
     { path: 'rentAmount', label: 'Bérleti díj', type: 'number', group: true, required: true, suffix: () => rentCurrencyLabel() },
     { path: 'sheet.deposit', label: 'Kaució', type: 'number', group: true, suffix: () => 'Ft' },
-    { path: 'invoicePrefix', label: 'Számla előtag', placeholder: 'pl. A22', upper: true },
-    { path: 'billingDayOfMonth', label: 'Számlázási nap', type: 'number', integer: true, min: 1, max: 28, required: true, placeholder: '1–28' },
+    { path: 'invoicePrefix', label: 'Bizonylat előtag', placeholder: 'pl. A22', upper: true },
+    { path: 'billingDayOfMonth', label: 'Kiállítás napja', type: 'number', integer: true, min: 1, max: 28, required: true, placeholder: '1–28' },
     { path: 'billingTime', label: 'Kiküldés ideje', type: 'time', required: true, placeholder: 'óó:pp' },
   ],
   tech: [
@@ -225,7 +225,7 @@ function renderHeader() {
   document.getElementById('toggle-active-btn').textContent = property.isActive ? 'Inaktiválás' : 'Aktiválás';
 }
 
-// A nem szerkeszthető, számolt értékek: következő számlázás, deviza-utótag, összegzés.
+// A nem szerkeszthető, számolt értékek: következő kiállítás, deviza-utótag, összegzés.
 function renderComputed() {
   const next = String(property.nextBillingAt);
   const [date, time] = next.split('T');
@@ -235,7 +235,7 @@ function renderComputed() {
   if (nextEl) {
     nextEl.innerHTML = property.isActive
       ? `${y}.${m}.${d}. ${time.slice(0, 5)}${shifted ? ' <span class="dim">(munkanapra tolva)</span>' : ''}`
-      : '<span class="dim">Inaktív, nem számláz</span>';
+      : '<span class="dim">Inaktív, nem állít ki bizonylatot</span>';
   }
   document.querySelectorAll('[data-suffix]').forEach((el) => {
     const field = Object.values(FIELDS).flat().find((f) => f.path === el.dataset.suffix);
@@ -247,7 +247,7 @@ function renderComputed() {
 function renderPanels() {
   document.getElementById('props-basic').innerHTML = FIELDS.basic.map(renderField).join('');
   document.getElementById('props-billing').innerHTML = FIELDS.billing.map(renderField).join('')
-    + '<div class="prop"><dt>Következő számlázás</dt><dd id="next-billing"></dd></div>';
+    + '<div class="prop"><dt>Következő kiállítás</dt><dd id="next-billing"></dd></div>';
   document.getElementById('props-tech').innerHTML = FIELDS.tech.map(renderField).join('');
   document.getElementById('props-notes').innerHTML = FIELDS.notes.map(renderField).join('');
   Object.values(FIELDS).forEach(bindFields);
@@ -282,7 +282,7 @@ function renderTenant() {
     row('E-mail', t.email ? `<a class="link" href="mailto:${escapeHtml(t.email)}">${escapeHtml(t.email)}</a>` : '<span class="dim">–</span>'),
     row('Telefon', t.phone ? escapeHtml(t.phone) : '<span class="dim">–</span>'),
     row('Beköltözés', t.moveInDate ? formatDate(t.moveInDate) : '<span class="dim">–</span>'),
-    row('Díj devizája', t.rentCurrency === 'HUF' ? 'Forint' : `${escapeHtml(t.rentCurrency)} <span class="dim">(MNB-árfolyamon számlázva)</span>`),
+    row('Díj devizája', t.rentCurrency === 'HUF' ? 'Forint' : `${escapeHtml(t.rentCurrency)} <span class="dim">(MNB-árfolyamon átszámítva)</span>`),
   ].join('');
 }
 
@@ -292,14 +292,14 @@ function renderSummary() {
   const last = issued[0];
   const thisYear = issued.filter((i) => i.periodYear === year).reduce((sum, i) => sum + Number(i.amountTotal), 0);
   const failed = invoices.filter((i) => i.status === 'Failed' && (!i.cancelledAt && !i.cancelsInvoiceId)).length;
-  // A következő kiküldés időszakának rezsije kerül a számlára — ezt nézzük, nem az aktuális hónapot.
+  // A következő kiküldés időszakának rezsije kerül a bizonylatra — ezt nézzük, nem az aktuális hónapot.
   const utilityNext = utilityEntries.some((u) => u.year === property.nextPeriodYear && u.month === property.nextPeriodMonth);
-  const nextLabel = `${MONTH_NAMES[property.nextPeriodMonth - 1].toLowerCase()}i számlához`;
+  const nextLabel = `${MONTH_NAMES[property.nextPeriodMonth - 1].toLowerCase()}i bizonylathoz`;
   const row = (label, value) => `<div class="prop"><dt>${label}</dt><dd>${value}</dd></div>`;
   document.getElementById('summary').innerHTML = [
-    row('Utolsó számla', last ? `<span class="mono">${escapeHtml(last.number)}</span> <span class="dim">${formatDate(last.issuedAt)}</span>` : '<span class="dim">Még nincs</span>'),
-    row(`Számlázva ${year}-ben`, formatCurrency(thisYear)),
-    row('Kiállított számlák', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
+    row('Utolsó bizonylat', last ? `<span class="mono">${escapeHtml(last.number)}</span> <span class="dim">${formatDate(last.issuedAt)}</span>` : '<span class="dim">Még nincs</span>'),
+    row(`Kiállítva ${year}-ben`, formatCurrency(thisYear)),
+    row('Kiállított bizonylatok', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
     row(`Rezsi a ${nextLabel}`, utilityNext ? '<span class="status-tag ok">Rögzítve</span>' : '<span class="status-tag missing">Hiányzik</span>'),
     row('Kaució', property.sheet.deposit != null ? formatCurrency(property.sheet.deposit) : '<span class="dim">–</span>'),
   ].join('');
@@ -309,7 +309,7 @@ function renderInvoices() {
   document.getElementById('count-invoices').textContent = invoices.length || '';
   const body = document.getElementById('invoices-body');
   if (!invoices.length) {
-    body.innerHTML = '<div class="panel-empty">Ehhez az ingatlanhoz még nincs számla.</div>';
+    body.innerHTML = '<div class="panel-empty">Ehhez az ingatlanhoz még nincs bizonylat.</div>';
     return;
   }
   body.innerHTML = `<table>
@@ -390,7 +390,7 @@ function activateTab(name) {
   try { localStorage.setItem('propertyDetailTab', name); } catch { /* privát mód: nem baj */ }
 }
 document.querySelectorAll('.record-tab').forEach((b) => b.addEventListener('click', () => activateTab(b.dataset.tab)));
-// Új rezsi alapból a következő kiküldés időszakára (annak a számlájára kerül).
+// Új rezsi alapból a következő kiküldés időszakára (annak a bizonylatára kerül).
 document.getElementById('add-utility').addEventListener('click', () => {
   window.openUtility(property.nextPeriodYear, property.nextPeriodMonth);
 });
@@ -421,11 +421,11 @@ window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer
 // ---------- fejléc-műveletek ----------
 
 document.getElementById('create-invoice-btn').addEventListener('click', () => openInvoiceCreateDialog({ propertyId }));
-// Számla készítése / újrapróbálás / törlés után az adatlap (számlák, összegzés, rezsi-zárolás) frissül.
+// Bizonylat készítése / újrapróbálás / törlés után az adatlap (bizonylatok, összegzés, rezsi-zárolás) frissül.
 document.addEventListener('invoices-changed', () => load());
 
 document.getElementById('toggle-active-btn').addEventListener('click', async () => {
-  if (property.isActive && !(await uiConfirm('Inaktív ingatlanra nem megy ki automatikus számla. Biztosan inaktiválod?', { title: 'Inaktiválás', confirmText: 'Inaktiválás' }))) return;
+  if (property.isActive && !(await uiConfirm('Inaktív ingatlanra nem megy ki automatikus bizonylat. Biztosan inaktiválod?', { title: 'Inaktiválás', confirmText: 'Inaktiválás' }))) return;
   const error = await save({ ...structuredClone(property), isActive: !property.isActive });
   if (error) showError(error);
 });
@@ -437,7 +437,7 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
     location.href = 'properties.html';
     return;
   }
-  showError(errorMessage(res, await readJson(res), 'Nem sikerült törölni az ingatlant (lehet, hogy már van hozzá számla).'));
+  showError(errorMessage(res, await readJson(res), 'Nem sikerült törölni az ingatlant (lehet, hogy már van hozzá bizonylat).'));
 });
 
 // ---------- tulajdonosok szerkesztése ----------

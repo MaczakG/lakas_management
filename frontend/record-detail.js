@@ -1,6 +1,6 @@
 // Közös építőkövek az adatlapokhoz (bérlő, tulajdonos) — az ingatlan-adatlap (property-detail.js) mintájára:
 // helyben szerkeszthető mezők (elhagyáskor / Enterre mentenek), panelek „masonry” elrendezése, fülek és a
-// számlák táblája.
+// bizonylatok táblája.
 const DETAIL_ICON = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#${id}"/></svg>`;
 const DETAIL_INVOICE_STATUS = { Sent: 'Kiküldve', Generated: 'Nem küldött', Failed: 'Sikertelen' };
 

@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Számlák | Lakáskezelő</title>
+<title>Bizonylatok | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="detail.css">
 <style>
-  /* Évszűrő: háttér nélkül, csak a lista — azokkal az évekkel, amelyekhez van számla. */
+  /* Évszűrő: háttér nélkül, csak a lista — azokkal az évekkel, amelyekhez van bizonylat. */
   .year-filter{display:flex;align-items:center;gap:10px;margin:0 0 14px;}
   .year-filter label{font-size:13px;font-weight:600;color:var(--ink-soft);}
   .year-filter select{width:120px;height:40px;}
   .failed-note{font-size:12px;color:var(--coral);}
-  /* Lenyíló hónap-sorok: a kattintott sor alatt egy külön sorban jelennek meg a csomag számlái. */
+  /* Lenyíló hónap-sorok: a kattintott sor alatt egy külön sorban jelennek meg a csomag bizonylatai. */
   .bundle-row{cursor:pointer;}
   .bundle-row .chev{display:inline-flex;width:16px;height:16px;margin-right:8px;vertical-align:-3px;color:var(--muted);transition:transform .2s ease;}
   .bundle-row .chev svg{width:16px;height:16px;}
@@ -27,7 +27,7 @@
   .bundle-slide{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease;}
   .bundle-detail.open .bundle-slide{grid-template-rows:1fr;}
   .bundle-slide-inner{overflow:hidden;min-height:0;}
-  /* A lenyíló számlák teljes szélességben, külön keret nélkül, a hónap sora alatt. */
+  /* A lenyíló bizonylatok teljes szélességben, külön keret nélkül, a hónap sora alatt. */
   .bundle-content{overflow-x:auto;border-top:1px solid var(--line);}
   .bundle-content table{width:100%;}
   .bundle-content thead th{background:var(--surface-2);}
@@ -47,10 +47,10 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <h1>Számlák</h1>
-        <p>Havonta az összes számla PDF-je egy ZIP-fájlban, egy Excelben megnyitható összesítővel együtt.</p>
+        <h1>Bizonylatok</h1>
+        <p>Havonta az összes bizonylat PDF-je egy ZIP-fájlban, egy Excelben megnyitható összesítővel együtt.</p>
       </div>
-      <button class="btn btn-primary" type="button" id="create-invoice-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#file-plus"/></svg>Számla készítése</button>
+      <button class="btn btn-primary" type="button" id="create-invoice-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#file-plus"/></svg>Bizonylat készítése</button>
     </div>
 
     <div class="year-filter" id="year-filter" hidden>
@@ -61,14 +61,14 @@
     <div class="card-table">
       <table>
         <thead>
-          <tr><th>Hónap</th><th>Számlák</th><th>Összesen</th><th></th></tr>
+          <tr><th>Hónap</th><th>Bizonylatok</th><th>Összesen</th><th></th></tr>
         </thead>
         <tbody id="bundles-tbody">
           <tr class="empty-row"><td colspan="4">Betöltés...</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="hint" style="margin-top:10px;">A csomagban a sztornózott számla és a sztornója is benne van (a sztornó negatív összeggel, így az összesen helyes). A sikertelen számlák nem kerülnek bele, mert nem lettek kiállítva; a hónap sorát lenyitva ezek is láthatók és újrapróbálhatók.</p>
+    <p class="hint" style="margin-top:10px;">A csomagban a sztornózott bizonylat és a sztornója is benne van (a sztornó negatív összeggel, így az összesen helyes). A sikertelen bizonylatok nem kerülnek bele, mert nem lettek kiállítva; a hónap sorát lenyitva ezek is láthatók és újrapróbálhatók.</p>
   </main>
 </div>
 
@@ -77,7 +77,7 @@ requireAuth();
 
 const yearSelect = document.getElementById('year-select');
 
-// Csak azok az évek, amelyekhez van legalább egy számla; alapból a folyó év, ha van benne számla, különben a legutóbbi.
+// Csak azok az évek, amelyekhez van legalább egy bizonylat; alapból a folyó év, ha van benne bizonylat, különben a legutóbbi.
 async function loadYears() {
   const res = await apiFetch('/api/invoice-bundles/years');
   const years = res.ok ? await res.json() : [];
@@ -92,7 +92,7 @@ async function loadYears() {
 async function loadBundles() {
   const tbody = document.getElementById('bundles-tbody');
   if (!yearSelect.value) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Még nincs számla. A „Számla készítése” gombbal készíthetsz egyet.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Még nincs bizonylat. A „Bizonylat készítése” gombbal készíthetsz egyet.</td></tr>`;
     return;
   }
   const year = Number(yearSelect.value);
@@ -100,15 +100,15 @@ async function loadBundles() {
   const months = await res.json();
 
   if (months.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Ebben az évben még nincs számla.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Ebben az évben még nincs bizonylat.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = months.map((m) => {
     const label = `${m.year}. ${MONTH_NAMES[m.month - 1]}`;
-    const fileName = `szamlak-${m.year}-${String(m.month).padStart(2, '0')}.zip`;
+    const fileName = `bizonylatok-${m.year}-${String(m.month).padStart(2, '0')}.zip`;
     const key = `${m.year}-${m.month}`;
-    // Lenyitható minden hónap, amiben van számla (a sikertelenek is látszanak, hogy újrapróbálhatók legyenek).
+    // Lenyitható minden hónap, amiben van bizonylat (a sikertelenek is látszanak, hogy újrapróbálhatók legyenek).
     const expandable = m.invoiceCount + m.failedCount > 0;
     return `
       <tr${expandable ? ` class="bundle-row" data-key="${key}" data-year="${m.year}" data-month="${m.month}" tabindex="0" aria-expanded="false"` : ''}>
@@ -126,7 +126,7 @@ async function loadBundles() {
   }).join('');
 }
 
-// Hónaponként egyszer töltjük be a csomag számláit; újranyitáskor a már letöltött lista látszik.
+// Hónaponként egyszer töltjük be a csomag bizonylatait; újranyitáskor a már letöltött lista látszik.
 const loadedMonths = new Set();
 async function toggleBundle(row) {
   const detail = row.nextElementSibling;
@@ -140,11 +140,11 @@ async function toggleBundle(row) {
   try {
     const res = await apiFetch(`/api/invoice-bundles/${row.dataset.year}/${row.dataset.month}`);
     const invoices = await readJson(res);
-    if (!res.ok) throw new Error(errorMessage(res, invoices, 'Nem sikerült betölteni a számlákat.'));
-    box.innerHTML = renderInvoiceTable(invoices, 'Ebben a hónapban nincs számla.', { showPeriod: false, from: 'bundles' });
+    if (!res.ok) throw new Error(errorMessage(res, invoices, 'Nem sikerült betölteni a bizonylatokat.'));
+    box.innerHTML = renderInvoiceTable(invoices, 'Ebben a hónapban nincs bizonylat.', { showPeriod: false, from: 'bundles' });
   } catch (e) {
     loadedMonths.delete(row.dataset.key);
-    box.innerHTML = `<div class="panel-empty">${escapeHtml(e.message || 'Nem sikerült betölteni a számlákat.')}</div>`;
+    box.innerHTML = `<div class="panel-empty">${escapeHtml(e.message || 'Nem sikerült betölteni a bizonylatokat.')}</div>`;
   }
 }
 
@@ -158,7 +158,7 @@ bundlesBody.addEventListener('keydown', (e) => {
   if (row && e.target === row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleBundle(row); }
 });
 
-// A csomag összeállítása több másodperc is lehet (régi számláknál a PDF újragenerálódik), ezért
+// A csomag összeállítása több másodperc is lehet (régi bizonylatoknál a PDF újragenerálódik), ezért
 // a gomb addig le van tiltva.
 window.exportBundle = async (button, year, month, fileName) => {
   const original = button.textContent;
@@ -174,7 +174,7 @@ window.exportBundle = async (button, year, month, fileName) => {
 
 yearSelect.addEventListener('change', () => { loadedMonths.clear(); loadBundles(); });
 
-// Számla készítése, újrapróbálás vagy törlés után a lista frissül (a nyitott hónapok újra lenyithatók).
+// Bizonylat készítése, újrapróbálás vagy törlés után a lista frissül (a nyitott hónapok újra lenyithatók).
 document.getElementById('create-invoice-btn').addEventListener('click', () => openInvoiceCreateDialog());
 document.addEventListener('invoices-changed', async () => { loadedMonths.clear(); await loadYears(); loadBundles(); });
 loadYears().then(loadBundles);

@@ -1,5 +1,5 @@
 // Bérlő adatlap (tenant-detail.html?id=...) — az ingatlan-adatlap mintájára: helyben szerkeszthető adatok
-// panelekben (minden módosítás a teljes bérlő PUT-jával mentődik), alatta a bérlő számlái.
+// panelekben (minden módosítás a teljes bérlő PUT-jával mentődik), alatta a bérlő bizonylatai.
 requireAuth();
 
 const tenantId = new URLSearchParams(location.search).get('id');
@@ -14,16 +14,16 @@ const editor = createInlineEditor({ getRecord: () => tenant, save });
 const FIELDS = {
   basic: [
     { path: 'name', label: 'Név', required: true },
-    { path: 'email', label: 'E-mail', type: 'email', placeholder: 'ide megy a számla' },
+    { path: 'email', label: 'E-mail', type: 'email', placeholder: 'ide megy a bizonylat' },
     { path: 'phone', label: 'Telefon' },
     { path: 'taxId', label: 'Adószám' },
-    { path: 'address', label: 'Számlázási cím', placeholder: 'ha eltér az ingatlan címétől' },
+    { path: 'address', label: 'Cím a bizonylaton', placeholder: 'ha eltér az ingatlan címétől' },
   ],
   lease: () => [
     { path: 'propertyId', label: 'Ingatlan', type: 'select', options: properties.map((p) => ({ value: p.id, label: p.name })) },
     { path: 'moveInDate', label: 'Beköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
     { path: 'moveOutDate', label: 'Kiköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
-    { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: [{ value: 'HUF', label: 'Forint (Ft)' }, { value: 'EUR', label: 'Euró (EUR), MNB-árfolyamon számlázva' }] },
+    { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: [{ value: 'HUF', label: 'Forint (Ft)' }, { value: 'EUR', label: 'Euró (EUR), MNB-árfolyamon átszámítva' }] },
   ],
   notes: [
     { path: 'notes', label: 'Megjegyzés', type: 'textarea', wide: true, placeholder: 'Bármi, amit a bérlőről tudni kell (szerződés, kaució, kulcsok…)' },
@@ -66,7 +66,7 @@ function renderHeader() {
     ? '<span class="status-tag inactive">Nincs ingatlanhoz rendelve</span>'
     : isCurrent() ? '<span class="status-tag ok">Jelenlegi bérlő</span>' : '<span class="status-tag inactive">Kiköltözött</span>';
   document.getElementById('p-sub').textContent = [tenant.propertyName, tenant.email, tenant.phone].filter(Boolean).join(', ')
-    || 'Add meg az elérhetőségeket, a számla az e-mail címre megy.';
+    || 'Add meg az elérhetőségeket, a bizonylat az e-mail címre megy.';
 }
 
 function renderProperty() {
@@ -84,7 +84,7 @@ function renderProperty() {
   body.innerHTML = [
     detailRow('Megnevezés', `<a class="link" href="property-detail.html?id=${encodeURIComponent(prop.id)}">${escapeHtml(prop.name)}</a>`),
     detailRow('Bérleti díj', `${formatNumber(prop.rentAmount, prop.rentAmount % 1 ? 2 : 0)} ${escapeHtml(currency)} / hó`),
-    detailRow('Számlázási nap', `minden hónap ${prop.billingDayOfMonth}. napja`),
+    detailRow('Kiállítás napja', `minden hónap ${prop.billingDayOfMonth}. napja`),
     detailRow('Állapot', prop.isActive ? '<span class="status-tag ok">Aktív</span>' : '<span class="status-tag inactive">Inaktív</span>'),
   ].join('');
 }
@@ -98,10 +98,10 @@ function renderSummary() {
   const failed = invoices.length - issued.length;
   document.getElementById('summary').innerHTML = [
     detailRow('Bérlet kezdete', tenant.moveInDate ? formatDate(tenant.moveInDate) : '<span class="dim">–</span>'),
-    detailRow('Kiszámlázva összesen', formatCurrency(total)),
-    detailRow(`Kiszámlázva ${year}-ben`, formatCurrency(thisYear)),
-    detailRow('Számlák', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
-    detailRow('Utolsó számla', last ? `${escapeHtml(last.number)}, ${formatCurrency(last.amountTotal)}` : '<span class="dim">–</span>'),
+    detailRow('Kiállítva összesen', formatCurrency(total)),
+    detailRow(`Kiállítva ${year}-ben`, formatCurrency(thisYear)),
+    detailRow('Bizonylatok', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
+    detailRow('Utolsó bizonylat', last ? `${escapeHtml(last.number)}, ${formatCurrency(last.amountTotal)}` : '<span class="dim">–</span>'),
   ].join('');
 }
 
@@ -115,7 +115,7 @@ function renderPanels() {
 
 function renderInvoices() {
   document.getElementById('count-invoices').textContent = invoices.length || '';
-  document.getElementById('invoices-body').innerHTML = renderInvoiceTable(invoices, 'Ennek a bérlőnek még nincs számlája.', { showTenant: false, from: `tenant:${tenantId}` });
+  document.getElementById('invoices-body').innerHTML = renderInvoiceTable(invoices, 'Ennek a bérlőnek még nincs bizonylata.', { showTenant: false, from: `tenant:${tenantId}` });
 }
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
@@ -153,7 +153,7 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
   layoutMasonry();
 })();
 
-// Újrapróbálás / törlés után a számlák és az összegzés frissül.
+// Újrapróbálás / törlés után a bizonylatok és az összegzés frissül.
 document.addEventListener('invoices-changed', async () => {
   const res = await apiFetch(`/api/tenants/${tenantId}/invoices`);
   if (!res.ok) return;

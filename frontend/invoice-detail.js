@@ -1,6 +1,6 @@
-// A számla adatlapja: adatok, tételek, kapcsolódó bizonylatok (ugyanannak az ingatlannak ugyanarra az időszakra:
-// az eredeti, a sztornója, az új számla), és a PDF előnézete (alapból 60%). Műveletek: PDF letöltése, újrapróbálás
-// (sikertelennél), sztornózás (aktív, kiállított számlánál). A ?from= paraméter: bundles | property:<id> |
+// A bizonylat adatlapja: adatok, tételek, kapcsolódó bizonylatok (ugyanannak az ingatlannak ugyanarra az időszakra:
+// az eredeti, a sztornója, az új bizonylat), és a PDF előnézete (alapból 60%). Műveletek: PDF letöltése, újrapróbálás
+// (sikertelennél), sztornózás (aktív, kiállított bizonylatnál). A ?from= paraméter: bundles | property:<id> |
 // tenant:<id> | owner:<id> — a morzsamenühöz.
 const invoiceId = new URLSearchParams(location.search).get('id');
 if (!invoiceId) location.replace('invoice-bundles.html');
@@ -29,9 +29,9 @@ function crumbs() {
     owner: ['Tulajdonosok', 'owners.html', `owner-detail.html?id=${encodeURIComponent(id)}#invoices`, null],
   }[kind];
   if (back && id) {
-    return `<li><a href="${back[1]}">${back[0]}</a></li>${back[3] ? `<li><a href="${back[2]}">${escapeHtml(back[3])}</a></li>` : `<li><a href="${back[2]}">Adatlap</a></li>`}<li><a href="${back[2]}">Számlák</a></li>`;
+    return `<li><a href="${back[1]}">${back[0]}</a></li>${back[3] ? `<li><a href="${back[2]}">${escapeHtml(back[3])}</a></li>` : `<li><a href="${back[2]}">Adatlap</a></li>`}<li><a href="${back[2]}">Bizonylatok</a></li>`;
   }
-  return `<li><a href="invoice-bundles.html">Számlák</a></li><li>${invoice.periodYear}. ${MONTH_NAMES[invoice.periodMonth - 1]}</li>`;
+  return `<li><a href="invoice-bundles.html">Bizonylatok</a></li><li>${invoice.periodYear}. ${MONTH_NAMES[invoice.periodMonth - 1]}</li>`;
 }
 
 function render() {
@@ -102,7 +102,7 @@ $('zoom-val').addEventListener('click', () => preview.reset());
 function showPdf() {
   if (invoice.status === 'Failed') {
     $('pv-title').textContent = 'Előnézet';
-    $('pv-stage').innerHTML = `<div class="dv-message">${Docs.ICO('triangle-alert')}<h3>A számla nem készült el</h3><p></p></div>`;
+    $('pv-stage').innerHTML = `<div class="dv-message">${Docs.ICO('triangle-alert')}<h3>A bizonylat nem készült el</h3><p></p></div>`;
     $('pv-stage').querySelector('p').textContent = invoice.errorMessage || 'Próbáld újra az Újrapróbálás gombbal.';
     return;
   }
@@ -126,10 +126,10 @@ async function load() {
   const res = await apiFetch(`/api/invoices/${invoiceId}`);
   if (res.status === 404) {
     $('i-number').textContent = 'Nem található';
-    showError('A számla nem található.');
+    showError('A bizonylat nem található.');
     return;
   }
-  if (!res.ok) { showError(errorMessage(res, await readJson(res), 'Nem sikerült betölteni a számlát.')); return; }
+  if (!res.ok) { showError(errorMessage(res, await readJson(res), 'Nem sikerült betölteni a bizonylatot.')); return; }
   detail = await res.json();
   const changed = !invoice || invoice.status !== detail.invoice.status;
   invoice = detail.invoice;

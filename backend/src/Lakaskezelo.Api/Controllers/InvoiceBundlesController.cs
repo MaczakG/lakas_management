@@ -64,12 +64,12 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
             .Where(i => i.PeriodYear == year && i.PeriodMonth == month && i.Status != InvoiceStatus.Failed)
             .OrderBy(i => i.Number)
             .ToListAsync(ct);
-        if (invoices.Count == 0) return NotFound(new { message = "Ebben a hónapban nincs kiküldött vagy legenerált számla." });
+        if (invoices.Count == 0) return NotFound(new { message = "Ebben a hónapban nincs kiküldött vagy legenerált bizonylat." });
 
         using var buffer = new MemoryStream();
         using (var zip = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
         {
-            var summary = new StringBuilder("Számlaszám;Ingatlan;Bérlő;Időszak;Kiállítva;Fizetési határidő;Összeg (Ft);Állapot\r\n");
+            var summary = new StringBuilder("Bizonylatszám;Ingatlan;Bérlő;Időszak;Kiállítva;Fizetési határidő;Összeg (Ft);Állapot\r\n");
             foreach (var invoice in invoices)
             {
                 var pdf = await pdfStore.GetOrCreateAsync(invoice, ct);
@@ -93,7 +93,7 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
             await summaryStream.WriteAsync(bytes, ct);
         }
 
-        return File(buffer.ToArray(), "application/zip", $"szamlak-{year}-{month:D2}.zip");
+        return File(buffer.ToArray(), "application/zip", $"bizonylatok-{year}-{month:D2}.zip");
     }
 
     private static string StatusText(Domain.Entities.Invoice invoice, List<Domain.Entities.Invoice> all)

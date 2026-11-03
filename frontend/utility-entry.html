@@ -95,7 +95,7 @@ async function loadMonths() {
     invoices.filter((i) => (!i.cancelledAt && !i.cancelsInvoiceId) && (i.status === 'Sent' || i.status === 'Generated') && i.periodYear === year).map((i) => i.periodMonth)
   );
 
-  // A következő kiküldés időszaka (annak a rezsije kerül a számlára) — a táblázatban jelöljük.
+  // A következő kiküldés időszaka (annak a rezsije kerül a bizonylatra) — a táblázatban jelöljük.
   const property = properties.find((p) => p.id === propertyId);
   const isNext = (month) => property && property.isActive && property.nextPeriodYear === year && property.nextPeriodMonth === month;
 
@@ -111,7 +111,7 @@ async function loadMonths() {
 
     return `
       <tr class="clickable" onclick="openMonth(${month})">
-        <td class="cell-main">${name}${isNext(month) ? '<span class="status-tag warn next-tag" title="Ennek a hónapnak a rezsije kerül a következő számlára">következő számla</span>' : ''}</td>
+        <td class="cell-main">${name}${isNext(month) ? '<span class="status-tag warn next-tag" title="Ennek a hónapnak a rezsije kerül a következő bizonylatra">következő bizonylat</span>' : ''}</td>
         <td>${monthEntries.length}</td>
         <td>${monthEntries.length > 0 ? formatCurrency(sum) : '–'}</td>
         <td>${statusTag}</td>
