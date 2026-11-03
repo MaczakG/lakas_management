@@ -116,11 +116,11 @@
   }
 
   window.__umDeleteEntry = async (entryId) => {
-    if (!confirm('Biztosan törlöd ezt a tételt?')) return;
+    if (!(await uiConfirm('Biztosan törlöd ezt a tételt?', { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
     const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/${entryId}`, { method: 'DELETE' });
     if (!res.ok && res.status !== 204) {
       const data = await res.json().catch(() => ({}));
-      alert(data.message || 'Nem sikerült törölni a tételt.');
+      await uiAlert(data.message || 'Nem sikerült törölni a tételt.', { title: 'Törlés sikertelen' });
       return;
     }
     await refresh();

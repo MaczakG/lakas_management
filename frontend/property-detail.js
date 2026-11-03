@@ -322,9 +322,7 @@ function renderInvoices() {
         <td>${formatDate(i.issuedAt)}</td>
         <td class="num">${formatCurrency(i.amountTotal)}</td>
         <td><span class="status-tag ${escapeHtml(i.status)}">${INVOICE_STATUS[i.status] || escapeHtml(i.status)}</span></td>
-        <td class="num">${i.status !== 'Failed'
-          ? `<button class="icon-btn" type="button" title="PDF letöltése" aria-label="PDF letöltése" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">${ICON('download')}</button>`
-          : ''}</td>
+        <td class="num">${invoiceActionButtons(i)}</td>
       </tr>`).join('')}</tbody></table>`;
 }
 
@@ -422,14 +420,18 @@ window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer
 
 // ---------- fejléc-műveletek ----------
 
+document.getElementById('create-invoice-btn').addEventListener('click', () => openInvoiceCreateDialog({ propertyId }));
+// Számla készítése / újrapróbálás / törlés után az adatlap (számlák, összegzés, rezsi-zárolás) frissül.
+document.addEventListener('invoices-changed', () => load());
+
 document.getElementById('toggle-active-btn').addEventListener('click', async () => {
-  if (property.isActive && !confirm('Inaktív ingatlanra nem megy ki automatikus számla. Biztosan inaktiválod?')) return;
+  if (property.isActive && !(await uiConfirm('Inaktív ingatlanra nem megy ki automatikus számla. Biztosan inaktiválod?', { title: 'Inaktiválás', confirmText: 'Inaktiválás' }))) return;
   const error = await save({ ...structuredClone(property), isActive: !property.isActive });
   if (error) showError(error);
 });
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
-  if (!confirm(`Biztosan törlöd ezt az ingatlant: „${property.name}”? Ez nem vonható vissza.`)) return;
+  if (!(await uiConfirm(`Biztosan törlöd ezt az ingatlant: „${property.name}”? Ez nem vonható vissza.`, { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/properties/${propertyId}`, { method: 'DELETE' });
   if (res.ok || res.status === 204) {
     location.href = 'properties.html';

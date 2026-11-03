@@ -378,3 +378,25 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .sub-banner.warn svg{color:var(--amber);}
 .sub-banner.danger{background:var(--coral-bg);border-color:var(--coral-border);}
 .sub-banner.danger svg{color:var(--coral);}
+
+/* ---------- Saját párbeszédablak (uiAlert / uiConfirm / uiPrompt — app.js) ---------- */
+.ui-dialog-overlay{z-index:400;}
+.ui-dialog{max-width:440px;}
+.ui-dialog-message{white-space:pre-line;color:var(--ink-soft);font-size:14px;line-height:1.55;margin:0;}
+.ui-dialog-field{margin:14px 0 0;}
+.btn-danger-solid{background:var(--coral-solid);color:#fff;border-color:var(--coral-solid);box-shadow:var(--shadow-xs);}
+.btn-danger-solid:hover{background:var(--coral);border-color:var(--coral);}
+
+/* ---------- Saját legördülő lista (a natív select-lista helyett — app.js) ---------- */
+.ui-menu{position:fixed;z-index:450;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg);
+  padding:5px;overflow-y:auto;max-height:300px;max-width:min(420px,calc(100vw - 16px));animation:ui-menu-in .12s ease-out;}
+@keyframes ui-menu-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.ui-option{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border-radius:7px;cursor:pointer;
+  font-size:13.5px;font-weight:500;color:var(--ink);line-height:1.35;user-select:none;}
+.ui-option span{overflow:hidden;text-overflow:ellipsis;}
+.ui-option.active{background:var(--accent-bg);}
+.ui-option.selected{color:var(--accent);font-weight:600;}
+.ui-option.selected::after{content:"";width:14px;height:14px;flex-shrink:0;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat;}
+.ui-option.disabled{color:var(--muted);cursor:default;}
+@media (prefers-reduced-motion: reduce){ .ui-menu{animation:none;} }

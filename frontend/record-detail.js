@@ -152,9 +152,8 @@ function renderInvoiceTable(invoices, emptyText, { showProperty = true, showTena
         <td>${formatDate(i.issuedAt)}</td>
         <td class="num">${formatCurrency(i.amountTotal)}</td>
         <td><span class="status-tag ${escapeHtml(i.status)}">${DETAIL_INVOICE_STATUS[i.status] || escapeHtml(i.status)}</span></td>
-        <td class="num">${i.status !== 'Failed'
-          ? `<button class="icon-btn" type="button" title="PDF letöltése" aria-label="PDF letöltése" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">${DETAIL_ICON('download')}</button>`
-          : ''}</td>
+        <td class="num">${window.invoiceActionButtons ? invoiceActionButtons(i)
+          : (i.status !== 'Failed' ? `<button class="icon-btn" type="button" title="PDF letöltése" aria-label="PDF letöltése" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">${DETAIL_ICON('download')}</button>` : '')}</td>
       </tr>`).join('')}</tbody></table>`;
 }
 

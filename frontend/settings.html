@@ -150,7 +150,7 @@ $('settings-form').addEventListener('submit', async (e) => {
   const res = await apiFetch('/api/settings', { method: 'PUT', body: JSON.stringify(payload) });
   const note = $('save-note');
   if (!res.ok) {
-    alert(errorMessage(res, await readJson(res), 'Nem sikerült menteni.'));
+    await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült menteni.'), { title: 'Mentés sikertelen' });
     return;
   }
   note.classList.add('show');

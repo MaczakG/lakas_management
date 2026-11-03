@@ -119,7 +119,7 @@ function renderInvoices() {
 }
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
-  if (!confirm(`Biztosan törlöd a bérlőt: ${tenant.name}?`)) return;
+  if (!(await uiConfirm(`Biztosan törlöd a bérlőt: ${tenant.name}?`, { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/tenants/${tenantId}`, { method: 'DELETE' });
   if (res.ok) { location.href = 'tenants.html'; return; }
   showError(errorMessage(res, await readJson(res), 'Nem sikerült törölni.'));
@@ -141,3 +141,12 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
   setupTabs('tenantDetailTab', 'invoices');
   layoutMasonry();
 })();
+
+// Újrapróbálás / törlés után a számlák és az összegzés frissül.
+document.addEventListener('invoices-changed', async () => {
+  const res = await apiFetch(`/api/tenants/${tenantId}/invoices`);
+  if (!res.ok) return;
+  invoices = await readJson(res);
+  renderSummary();
+  renderInvoices();
+});

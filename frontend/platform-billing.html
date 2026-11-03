@@ -142,7 +142,7 @@ $('billing-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   show('page-error', ''); show('page-success', '');
   const enabling = $('p-enabled').checked && !current.billingEnabled;
-  if (enabling && !confirm('A díjszedés be lesz kapcsolva: minden cég próbaidővel indul, a lejárta után fizetnie kell. Folytatod?')) return;
+  if (enabling && !(await uiConfirm('A díjszedés be lesz kapcsolva: minden cég próbaidővel indul, a lejárta után fizetnie kell. Folytatod?', { title: 'Díjszedés bekapcsolása', confirmText: 'Bekapcsolás' }))) return;
   const block = $('p-billingo-block').value;
   try {
     await savePlatformSettings(current, {

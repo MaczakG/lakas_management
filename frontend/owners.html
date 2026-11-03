@@ -142,7 +142,7 @@ window.editOwner = (id) => {
 };
 
 window.deleteOwner = async (id) => {
-  if (!confirm('Biztosan törlöd ezt a tulajdonost?')) return;
+  if (!(await uiConfirm('Biztosan törlöd ezt a tulajdonost?', { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/owners/${id}`, { method: 'DELETE' });
   if (res.ok || res.status === 204) loadOwners();
 };

@@ -276,9 +276,10 @@ async function savePlan(cancelAtPeriodEnd) {
   await load();
 }
 document.getElementById('interval-btn').addEventListener('click', () => savePlan(data.state.cancelAtPeriodEnd));
-document.getElementById('cancel-btn').addEventListener('click', () => {
+document.getElementById('cancel-btn').addEventListener('click', async () => {
   const cancelling = !data.state.cancelAtPeriodEnd;
-  if (cancelling && !confirm(`Biztosan lemondod? ${day(data.state.paidUntil)}-ig használható marad, utána csak olvasható lesz.`)) return;
+  if (cancelling && !(await uiConfirm(`${day(data.state.paidUntil)}-ig használható marad, utána csak olvasható lesz.`,
+    { title: 'Előfizetés lemondása', confirmText: 'Lemondás', cancelText: 'Mégsem mondom le', danger: true }))) return;
   savePlan(cancelling);
 });
 

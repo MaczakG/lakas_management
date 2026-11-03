@@ -112,7 +112,8 @@ async function load() {
 }
 
 window.extendCompany = async (id, name) => {
-  const input = prompt(`Hány díjmentes napot írjunk jóvá: ${name}?\n(Próbaidőben a próbaidőt, fizetőnél a kifizetett időszakot hosszabbítja; zárolt cégnél újraindítja.)`, '14');
+  const input = await uiPrompt('Próbaidőben a próbaidőt, fizetőnél a kifizetett időszakot hosszabbítja; zárolt cégnél újraindítja.',
+    { title: `Díjmentes napok — ${name}`, confirmText: 'Jóváírás', input: { label: 'Napok száma', type: 'number', value: '14' } });
   if (!input) return;
   const res = await apiFetch(`/api/platform/companies/${id}/extend`, { method: 'POST', body: JSON.stringify({ days: parseInt(input, 10) }) });
   const body = await readJson(res);
