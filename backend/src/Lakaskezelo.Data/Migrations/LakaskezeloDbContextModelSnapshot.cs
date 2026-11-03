@@ -156,6 +156,95 @@ namespace Lakaskezelo.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Document", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.ToTable("Documents");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentContent", b =>
+                {
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("DocumentId");
+
+                    b.HasIndex("CompanyId");
+
+                    b.ToTable("DocumentContents");
+                });
+
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.ExchangeRate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1089,6 +1178,58 @@ namespace Lakaskezelo.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Document", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Owner", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.User", "UploadedBy")
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("Property");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("UploadedBy");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentContent", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Document", null)
+                        .WithOne("Content")
+                        .HasForeignKey("Lakaskezelo.Domain.Entities.DocumentContent", "DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Invoice", b =>
                 {
                     b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
@@ -1281,6 +1422,11 @@ namespace Lakaskezelo.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Property");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Document", b =>
+                {
+                    b.Navigation("Content");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Invoice", b =>

@@ -133,6 +133,16 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
   renderProperties();
   renderInvoices();
   setupTabs('ownerDetailTab', 'properties');
+  mountDocuments({
+    scope: { ownerId },
+    container: '#documents-body',
+    count: '#count-documents',
+    links: async (doc) => {
+      const options = ownedProperties.map((p) => ({ value: p.propertyId, label: p.name }));
+      if (doc?.propertyId && !options.some((o) => o.value === doc.propertyId)) options.push({ value: doc.propertyId, label: doc.propertyName });
+      return [{ key: 'propertyId', label: 'Ingatlanhoz is tartozik', options, value: '', hint: 'Így az ingatlan adatlapján is megjelenik.' }];
+    },
+  });
   layoutMasonry();
 })();
 

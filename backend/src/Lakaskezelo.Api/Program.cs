@@ -217,6 +217,7 @@ builder.Services.AddHostedService<Lakaskezelo.Api.Subscriptions.SubscriptionScan
 // ---------- Számla-PDF tárhely (Amazon S3) ----------
 builder.Services.AddScoped<S3InvoiceStorage>();
 builder.Services.AddScoped<InvoicePdfStore>();
+builder.Services.AddScoped<Lakaskezelo.Api.Documents.DocumentStorage>();
 
 // ---------- Számlázás ----------
 builder.Services.AddScoped<InvoiceGenerationService>();
