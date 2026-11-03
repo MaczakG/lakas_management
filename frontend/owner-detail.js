@@ -48,14 +48,14 @@ function showError(message) { const el = document.getElementById('load-error'); 
 function hideError() { document.getElementById('load-error').classList.remove('show'); }
 
 function renderHeader() {
-  document.title = `Lakáskezelő — ${owner.name}`;
+  document.title = `${owner.name} | Lakáskezelő`;
   document.getElementById('p-name').textContent = owner.name;
   document.getElementById('crumb-name').textContent = owner.name;
   const active = ownedProperties.filter((p) => p.isActive).length;
   document.getElementById('p-status').innerHTML = ownedProperties.length
     ? `<span class="status-tag ok">${ownedProperties.length} ingatlan</span>` : '<span class="status-tag inactive">Nincs ingatlana</span>';
   document.getElementById('p-sub').textContent = [owner.email, owner.phone, active !== ownedProperties.length ? `${active} aktív ingatlan` : null]
-    .filter(Boolean).join(' · ') || 'Add meg az elérhetőségeket és a bankszámlaszámot.';
+    .filter(Boolean).join(', ') || 'Add meg az elérhetőségeket és a bankszámlaszámot.';
 }
 
 // A tulajdoni hányad "1/2" alakú tört; üresen egyenlő arány az ingatlan tulajdonosai között (itt nem számoljuk).
@@ -72,7 +72,7 @@ function renderSummary() {
   const rented = active.filter((p) => p.tenantName).length;
   document.getElementById('summary').innerHTML = [
     detailRow('Ingatlanok', `${ownedProperties.length} db${active.length !== ownedProperties.length ? ` (${active.length} aktív)` : ''}`),
-    detailRow('Kiadva', active.length ? `${rented} / ${active.length}` : '<span class="dim">—</span>'),
+    detailRow('Kiadva', active.length ? `${rented} / ${active.length}` : '<span class="dim">–</span>'),
     detailRow(`Számlázva ${year}-ben`, `${formatCurrency(thisYear)} <span class="dim">(az ingatlanok teljes összege)</span>`),
     detailRow('Számlák', `${issued.length} db`),
   ].join('');
@@ -89,7 +89,7 @@ function renderProperties() {
   document.getElementById('count-properties').textContent = ownedProperties.length || '';
   const body = document.getElementById('properties-body');
   if (!ownedProperties.length) {
-    body.innerHTML = '<div class="panel-empty">Ehhez a tulajdonoshoz még nincs ingatlan rendelve — az ingatlan adatlapján, a Tulajdonosok panelen adhatod hozzá.</div>';
+    body.innerHTML = '<div class="panel-empty">Ehhez a tulajdonoshoz még nincs ingatlan rendelve. Az ingatlan adatlapján, a Tulajdonosok panelen adhatod hozzá.</div>';
     return;
   }
   body.innerHTML = `<table>
@@ -98,9 +98,9 @@ function renderProperties() {
       const share = shareValue(p.share);
       return `<tr class="clickable" onclick="location.href='property-detail.html?id=${encodeURIComponent(p.propertyId)}'">
         <td class="cell-main">${escapeHtml(p.name)}</td>
-        <td>${escapeHtml(p.city || '—')}</td>
+        <td>${escapeHtml(p.city || '–')}</td>
         <td>${p.share ? `${escapeHtml(p.share)}${share != null ? ` <span class="dim">(${Math.round(share * 100)}%)</span>` : ''}` : '<span class="dim">egyenlő arány</span>'}</td>
-        <td>${escapeHtml(p.tenantName || '—')}</td>
+        <td>${escapeHtml(p.tenantName || '–')}</td>
         <td class="num">${formatNumber(p.rentAmount, p.rentAmount % 1 ? 2 : 0)}</td>
         <td>${p.isActive ? '<span class="status-tag ok">Aktív</span>' : '<span class="status-tag inactive">Inaktív</span>'}</td>
       </tr>`;

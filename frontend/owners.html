@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Tulajdonosok</title>
+<title>Tulajdonosok | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -16,7 +16,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Partnerek</div>
         <h1>Tulajdonosok</h1>
         <div class="page-state" id="page-state"></div>
       </div>
@@ -100,9 +99,9 @@ function renderOwners() {
   tbody.innerHTML = filtered.map((o) => `
     <tr class="clickable" title="Adatlap megnyitása" onclick="location.href='owner-detail.html?id=${encodeURIComponent(o.id)}'">
       <td class="cell-main"><a class="link" href="owner-detail.html?id=${encodeURIComponent(o.id)}" onclick="event.stopPropagation()">${escapeHtml(o.name)}</a></td>
-      <td>${escapeHtml(o.email || '—')}${o.phone ? `<div class="cell-sub">${escapeHtml(o.phone)}</div>` : ''}</td>
-      <td>${escapeHtml(o.taxId || '—')}</td>
-      <td>${o.propertyNames.length ? escapeHtml(o.propertyNames.join(', ')) : '—'}</td>
+      <td>${escapeHtml(o.email || '–')}${o.phone ? `<div class="cell-sub">${escapeHtml(o.phone)}</div>` : ''}</td>
+      <td>${escapeHtml(o.taxId || '–')}</td>
+      <td>${o.propertyNames.length ? escapeHtml(o.propertyNames.join(', ')) : '–'}</td>
       <td class="row-actions">
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); editOwner('${o.id}')">Szerkesztés</button>
         <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteOwner('${o.id}')">Törlés</button>

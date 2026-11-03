@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Ingatlanok</title>
+<title>Ingatlanok | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <style>
@@ -32,7 +32,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Ingatlanok</div>
         <h1>Ingatlanok</h1>
         <div class="page-state" id="page-state"></div>
       </div>
@@ -80,7 +79,7 @@
           <div class="field"><label for="f-name">Név / cím *</label><input type="text" id="f-name" required></div>
           <div class="field-row">
             <div class="field"><label for="f-rent">Bérleti díj</label><input type="number" id="f-rent" min="0" step="0.01" required>
-              <span class="hint">A bérlőnél beállított devizanemben (alapértelmezetten Ft) — ld. Bérlők oldal.</span>
+              <span class="hint">A bérlőnél beállított devizanemben (alapértelmezetten Ft), ld. Bérlők oldal.</span>
             </div>
             <div class="field">
               <label for="f-invoice-prefix">Számla előtag</label>
@@ -100,7 +99,7 @@
           <div class="field">
             <label>Tulajdonosok és tulajdoni hányaduk</label>
             <div id="owner-rows"></div>
-            <span class="hint" style="display:block;margin:-2px 0 8px;">A hányad tört alakban (pl. 1/2) — a számlán így jelenik meg. Vagy mindenkinél add meg (összesen 1), vagy hagyd mindenkinél üresen (ekkor egyenlő arány).</span>
+            <span class="hint" style="display:block;margin:-2px 0 8px;">A hányad tört alakban (pl. 1/2), a számlán így jelenik meg. Vagy mindenkinél add meg (összesen 1), vagy hagyd mindenkinél üresen (ekkor egyenlő arány).</span>
             <button class="btn btn-ghost btn-sm" type="button" id="add-owner-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#plus"/></svg>Tulajdonos hozzáadása</button>
           </div>
         </form>
@@ -179,12 +178,12 @@ function renderProperties() {
   tbody.innerHTML = filtered.map((p) => `
     <tr class="clickable" onclick="location.href='property-detail.html?id=${p.id}'">
       <td class="cell-main">${escapeHtml(p.name)}${!p.isActive ? ' <span class="cell-sub">(inaktív)</span>' : ''}</td>
-      <td>${escapeHtml(p.ownerNames || '—')}</td>
-      <td>${escapeHtml(p.tenantNames || '—')}</td>
+      <td>${escapeHtml(p.ownerNames || '–')}</td>
+      <td>${escapeHtml(p.tenantNames || '–')}</td>
       <td>${formatMoney(p.rentAmount, p.rentCurrency)}</td>
       <td title="A következő számla (${p.nextPeriodYear}. ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}) rezsije"><span class="status-tag ${p.utilityComplete ? 'ok' : 'missing'}">${p.utilityComplete ? 'Rendben' : 'Hiányzik'}</span><div class="cell-sub">${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}i számlához</div></td>
       <td>${String(p.billingDayOfMonth).padStart(2, '0')}. nap ${String(p.billingHour).padStart(2, '0')}:${String(p.billingMinute).padStart(2, '0')}</td>
-      <td>${p.isActive ? formatNextBilling(p.nextBillingAt, p.billingDayOfMonth) : '—'}</td>
+      <td>${p.isActive ? formatNextBilling(p.nextBillingAt, p.billingDayOfMonth) : '–'}</td>
     </tr>
   `).join('');
 }

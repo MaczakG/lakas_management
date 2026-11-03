@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Előfizetés</title>
+<title>Előfizetés | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <style>
@@ -39,7 +39,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Fiók</div>
         <h1>Előfizetés</h1>
         <div class="page-state" id="page-state"></div>
       </div>
@@ -60,12 +59,12 @@
           <div class="plans">
             <label class="plan"><input type="radio" name="interval" value="Monthly" checked>
               <span class="plan-name">Havi</span>
-              <div class="plan-price" id="price-monthly">—</div>
+              <div class="plan-price" id="price-monthly">–</div>
               <div class="plan-sub" id="sub-monthly"></div>
             </label>
             <label class="plan"><input type="radio" name="interval" value="Yearly">
               <span class="plan-name">Éves <span class="plan-save" id="save-yearly"></span></span>
-              <div class="plan-price" id="price-yearly">—</div>
+              <div class="plan-price" id="price-yearly">–</div>
               <div class="plan-sub" id="sub-yearly"></div>
             </label>
           </div>
@@ -76,7 +75,7 @@
               <span>Elfogadom az <a class="link" href="aszf.html" target="_blank">ÁSZF</a>-et, és kérem a szolgáltatás azonnali megkezdését. Tudomásul veszem, hogy elállás esetén az addig igénybe vett időszak arányos díját meg kell fizetnem.</span></label>
             <button class="btn btn-primary" type="button" id="pay-btn">Fizetés bankkártyával</button>
             <span class="muted-note" id="pay-note"></span>
-            <img class="barion-banner" src="assets/barion-banner.svg" alt="Biztonságos fizetés: Barion — elfogadott kártyák: Mastercard, Maestro, Visa, American Express">
+            <img class="barion-banner" src="assets/barion-banner.svg" alt="Biztonságos fizetés: Barion. Elfogadott kártyák: Mastercard, Maestro, Visa, American Express">
           </div>
 
           <div id="manage-row" hidden>
@@ -127,7 +126,7 @@ const STATUS = {
 };
 const PAYMENT_STATUS = { Pending: ['Folyamatban', 'warn'], Succeeded: ['Sikeres', 'ok'], Failed: ['Sikertelen', 'missing'] };
 const huf = (n) => `${Math.round(n).toLocaleString('hu-HU')} Ft`;
-const day = (d) => (d ? new Date(d).toLocaleDateString('hu-HU') : '—');
+const day = (d) => (d ? new Date(d).toLocaleDateString('hu-HU') : '–');
 let data = null;
 
 function show(id, text) {
@@ -152,7 +151,7 @@ function render() {
   if (st.status === 'Trial') parts.push(`<span>Ingyenes próbaidő: <strong>${day(st.trialEndsAt)}-ig</strong></span>`);
   if (st.paidUntil) parts.push(`<span>Kifizetve: <strong>${day(st.paidUntil)}-ig</strong></span>`);
   if (st.status === 'PastDue' && st.graceEndsAt) parts.push(`<span>Türelmi idő: <strong>${day(st.graceEndsAt)}-ig</strong></span>`);
-  if (data.cardRegistered) parts.push(`<span>${st.cancelAtPeriodEnd ? 'Lemondva — nem újítjuk meg' : `Automatikus megújítás (${data.interval === 'Yearly' ? 'éves' : 'havi'})`}</span>`);
+  if (data.cardRegistered) parts.push(`<span>${st.cancelAtPeriodEnd ? 'Lemondva, nem újítjuk meg' : `Automatikus megújítás (${data.interval === 'Yearly' ? 'éves' : 'havi'})`}</span>`);
   document.getElementById('status-line').innerHTML = parts.join('<span aria-hidden="true">·</span>');
   document.getElementById('status-desc').textContent = st.locked
     ? 'Az adataid megvannak és megtekinthetők, de módosítani és számlát kiküldeni csak előfizetés után lehet.'
@@ -160,9 +159,9 @@ function render() {
 
   const m = data.monthlyQuote, y = data.yearlyQuote;
   document.getElementById('price-monthly').textContent = huf(m.grossAmount);
-  document.getElementById('sub-monthly').textContent = `havonta · ${vatText(m)}`;
+  document.getElementById('sub-monthly').textContent = `havonta, ${vatText(m)}`;
   document.getElementById('price-yearly').textContent = huf(y.grossAmount);
-  document.getElementById('sub-yearly').textContent = `évente · ${vatText(y)}`;
+  document.getElementById('sub-yearly').textContent = `évente, ${vatText(y)}`;
   document.getElementById('save-yearly').textContent = data.yearlyDiscountPercent > 0 ? `−${data.yearlyDiscountPercent}%` : '';
   document.getElementById('save-yearly').hidden = !(data.yearlyDiscountPercent > 0);
   document.getElementById('calc').textContent =
@@ -177,7 +176,7 @@ function render() {
     const btn = document.getElementById('pay-btn');
     btn.disabled = !data.paymentReady || missingDetails;
     document.getElementById('pay-note').textContent = !data.paymentReady
-      ? 'A kártyás fizetés még nincs bekapcsolva — hamarosan elérhető.'
+      ? 'A kártyás fizetés még nincs bekapcsolva, hamarosan elérhető.'
       : missingDetails ? 'Előbb add meg és mentsd a számlázási adatokat.'
       : st.status === 'Trial' ? `A próbaidő megmarad: a fizetett időszak ${day(st.trialEndsAt)}-án indul. A kártyádat a megújításokhoz elmentjük (Barion).`
       : 'A fizetett időszak most indul. A kártyádat a megújításokhoz elmentjük (Barion).';
@@ -186,7 +185,7 @@ function render() {
     document.getElementById('cancel-btn').textContent = st.cancelAtPeriodEnd ? 'Lemondás visszavonása' : 'Lemondás';
     document.getElementById('manage-note').textContent = st.cancelAtPeriodEnd
       ? `Lemondtad: ${day(st.paidUntil)}-ig használható, utána nem terhelünk.`
-      : `Következő terhelés: ${day(st.paidUntil)} — az akkor aktív ingatlanok száma alapján. A gyakoriság váltása a következő terheléstől érvényes.`;
+      : `Következő terhelés: ${day(st.paidUntil)}, az akkor aktív ingatlanok száma alapján. A gyakoriság váltása a következő terheléstől érvényes.`;
   }
 
   const bd = data.billingDetails;
@@ -203,7 +202,7 @@ function render() {
     const [pl, pt] = PAYMENT_STATUS[p.status] || [p.status, ''];
     const invoice = p.invoiceUrl
       ? `<a class="link" href="${escapeHtml(p.invoiceUrl)}" target="_blank" rel="noopener">Letöltés</a>`
-      : p.invoicePending ? '<span class="hint">Készül…</span>' : '<span class="hint">—</span>';
+      : p.invoicePending ? '<span class="hint">Készül…</span>' : '<span class="hint">–</span>';
     return `<tr>
       <td>${day(p.createdAt)}</td>
       <td>${day(p.periodStart)} – ${day(new Date(new Date(p.periodEnd).getTime() - 86400000))}</td>
@@ -245,7 +244,7 @@ async function syncReturn() {
   if (!res.ok) { show('page-error', errorMessage(res, p, 'Nem sikerült ellenőrizni a fizetést.')); return; }
   if (p.status === 'Succeeded') show('page-success', `Sikeres fizetés: ${huf(p.grossAmount)}. Köszönjük! A számlát e-mailben is elküldjük.`);
   else if (p.status === 'Failed') show('page-error', `A fizetés nem sikerült${p.errorMessage ? ': ' + p.errorMessage : '.'} Próbáld újra, vagy használj másik kártyát.`);
-  else show('page-success', 'A fizetés feldolgozása folyamatban — néhány perc múlva frissítsd az oldalt.');
+  else show('page-success', 'A fizetés feldolgozása folyamatban. Néhány perc múlva frissítsd az oldalt.');
 }
 
 document.getElementById('pay-btn').addEventListener('click', async () => {

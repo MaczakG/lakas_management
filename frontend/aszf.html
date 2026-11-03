@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — ÁSZF</title>
+<title>ÁSZF | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <style>
@@ -34,7 +34,7 @@
 </div>
 <article class="legal">
   <h1>Általános Szerződési Feltételek</h1>
-  <p class="meta">Hatályos: <span data-legal="version"></span> · <span data-legal="product" data-fallback="Lakáskezelő"></span> — <span data-legal="website"></span></p>
+  <p class="meta">Hatályos: <span data-legal="version"></span><br><span data-legal="product" data-fallback="Lakáskezelő"></span>, <span data-legal="website"></span></p>
 
   <h2>1. A Szolgáltató</h2>
   <ul>
@@ -74,7 +74,7 @@
   <p>Ha a megújító terhelés nem sikerül, a Szolgáltató e-mailben értesíti az Előfizetőt, és <strong><span data-legal="graceDays"></span> nap</strong> türelmi időt biztosít, amely alatt a Szolgáltatás változatlanul használható, és a díj más kártyával is megfizethető. A türelmi idő eredménytelen elteltével (valamint lejárt próbaidő vagy lemondás után) a fiók <strong>csak olvasható</strong> lesz: az adatok megtekinthetők és letölthetők, de nem módosíthatók, és a rendszer nem küld ki bérlői számlát vagy emlékeztetőt. A díj megfizetésével a korlátozás azonnal megszűnik.</p>
 
   <h2>8. Lemondás, a szerződés megszűnése</h2>
-  <p>Az Előfizető az előfizetést bármikor lemondhatja; a lemondás a már kifizetett időszak végén lép hatályba, addig a Szolgáltatás használható. A már megfizetett időszak díja — a 9. pontban írt elállás kivételével — nem jár vissza. A fiók és az adatok végleges törlését az Előfizető adminisztrátora a Szolgáltató e-mail címén (<span data-legal="operator.email"></span>) kérheti; a Szolgáltató a kérést 30 napon belül teljesíti, kivéve azokat az adatokat (számlák), amelyek megőrzését jogszabály írja elő.</p>
+  <p>Az Előfizető az előfizetést bármikor lemondhatja; a lemondás a már kifizetett időszak végén lép hatályba, addig a Szolgáltatás használható. A már megfizetett időszak díja – a 9. pontban írt elállás kivételével – nem jár vissza. A fiók és az adatok végleges törlését az Előfizető adminisztrátora a Szolgáltató e-mail címén (<span data-legal="operator.email"></span>) kérheti; a Szolgáltató a kérést 30 napon belül teljesíti, kivéve azokat az adatokat (számlák), amelyek megőrzését jogszabály írja elő.</p>
   <p>A Szolgáltató a szerződést 30 napos határidővel, súlyos szerződésszegés (pl. jogellenes használat, a rendszer biztonságának veszélyeztetése) esetén azonnali hatállyal felmondhatja.</p>
 
   <h2>9. Fogyasztók elállási joga</h2>
@@ -83,7 +83,7 @@
   <h2>10. Az Előfizető kötelezettségei</h2>
   <ul>
     <li>A Szolgáltatást jogszerűen, a bérbeadási tevékenységével összefüggő célra használja.</li>
-    <li>A rendszerben rögzített adatok (különösen a bérlők, tulajdonosok személyes adatai) valóságáért és kezelésük jogszerűségéért (jogalap, tájékoztatás) az Előfizető felel — ezek tekintetében ő az adatkezelő (ld. 11. pont).</li>
+    <li>A rendszerben rögzített adatok (különösen a bérlők, tulajdonosok személyes adatai) valóságáért és kezelésük jogszerűségéért (jogalap, tájékoztatás) az Előfizető felel – ezek tekintetében ő az adatkezelő (ld. 11. pont).</li>
     <li>A számlák tartalmáért és a rá vonatkozó adó- és számviteli kötelezettségek teljesítéséért az Előfizető felel; a rendszer ehhez eszközt biztosít, adótanácsadást nem nyújt.</li>
     <li>A saját e-mail és tárhely beállításaiért (SMTP, Mailgun, S3) az Előfizető felel.</li>
   </ul>
@@ -91,19 +91,19 @@
   <h2>11. Adatfeldolgozás (GDPR 28. cikk)</h2>
   <p>Az Előfizető által a rendszerben rögzített személyes adatok (bérlők, tulajdonosok, kapcsolattartók adatai, számlák) tekintetében az <strong>Előfizető az adatkezelő</strong>, a <strong>Szolgáltató adatfeldolgozó</strong>. A jelen pont a felek adatfeldolgozási megállapodása:</p>
   <ul>
-    <li><strong>Tárgy és cél:</strong> a Szolgáltatás nyújtása — az adatok tárolása, megjelenítése, a számlák elkészítése és az Előfizető utasítására történő kiküldése. Időtartam: a szerződés fennállása.</li>
+    <li><strong>Tárgy és cél:</strong> a Szolgáltatás nyújtása – az adatok tárolása, megjelenítése, a számlák elkészítése és az Előfizető utasítására történő kiküldése. Időtartam: a szerződés fennállása.</li>
     <li><strong>Utasítás:</strong> a Szolgáltató az adatokat kizárólag az Előfizető (a rendszer használatával adott) utasításai alapján kezeli, saját célra nem használja, harmadik félnek nem adja át, kivéve jogszabályi kötelezettség esetén.</li>
     <li><strong>Titoktartás:</strong> az adatokhoz hozzáférő személyek titoktartásra kötelezettek.</li>
     <li><strong>Biztonság:</strong> titkosított adatkapcsolat (TLS) és titkosított tárolás, kétlépcsős belépés, jelszavak egyirányú (hash) tárolása, cégek közötti szigorú adat-elkülönítés, rendszeres mentés, hozzáférés-naplózás.</li>
     <li><strong>További adatfeldolgozók:</strong> Amazon Web Services EMEA SARL (tárhely, Frankfurt, EU). Az Előfizető által beállított e-mail és tárhely szolgáltatókat (SMTP, Mailgun, S3) az Előfizető választja. Új további adatfeldolgozó bevonásáról a Szolgáltató előzetesen értesít; az Előfizető ez ellen tiltakozhat, és a szerződést felmondhatja.</li>
     <li><strong>Közreműködés:</strong> a Szolgáltató segíti az Előfizetőt az érintetti kérelmek teljesítésében (az adatok a rendszerben megtekinthetők, javíthatók, törölhetők) és az adatbiztonsági kötelezettségeiben.</li>
     <li><strong>Adatvédelmi incidens:</strong> a Szolgáltató az incidensről a tudomásszerzést követően indokolatlan késedelem nélkül, legkésőbb 48 órán belül értesíti az Előfizetőt.</li>
-    <li><strong>Megszűnés:</strong> a szerződés megszűnése után a Szolgáltató az adatokat — az Előfizető kérésére előzetes exportot követően — legkésőbb 90 napon belül törli (a mentésekből a mentések megőrzési idejének lejártával).</li>
+    <li><strong>Megszűnés:</strong> a szerződés megszűnése után a Szolgáltató az adatokat – az Előfizető kérésére előzetes exportot követően – legkésőbb 90 napon belül törli (a mentésekből a mentések megőrzési idejének lejártával).</li>
     <li><strong>Ellenőrzés:</strong> a Szolgáltató a megfelelés igazolásához szükséges információkat az Előfizető kérésére rendelkezésre bocsátja.</li>
   </ul>
 
   <h2>12. Rendelkezésre állás, felelősség</h2>
-  <p>A Szolgáltató törekszik a Szolgáltatás folyamatos, hibamentes működésére, de a rendelkezésre állásra garanciát nem vállal; a tervezett karbantartásokat lehetőség szerint munkaidőn kívül végzi. A Szolgáltató nem felel a külső szolgáltatások (internet, e-mail szolgáltatók, Barion, Billingo, MNB) hibájából eredő károkért. A Szolgáltató felelőssége — a szándékosan, súlyos gondatlansággal, illetve életben, testi épségben, egészségben okozott kár kivételével — az adott Előfizető által a kárt megelőző 12 hónapban megfizetett díj összegéig terjed.</p>
+  <p>A Szolgáltató törekszik a Szolgáltatás folyamatos, hibamentes működésére, de a rendelkezésre állásra garanciát nem vállal; a tervezett karbantartásokat lehetőség szerint munkaidőn kívül végzi. A Szolgáltató nem felel a külső szolgáltatások (internet, e-mail szolgáltatók, Barion, Billingo, MNB) hibájából eredő károkért. A Szolgáltató felelőssége – a szándékosan, súlyos gondatlansággal, illetve életben, testi épségben, egészségben okozott kár kivételével – az adott Előfizető által a kárt megelőző 12 hónapban megfizetett díj összegéig terjed.</p>
 
   <h2>13. Szellemi tulajdon</h2>
   <p>A Szolgáltatás (szoftver, megjelenés, dokumentáció) a Szolgáltató szellemi tulajdona; az Előfizető a szerződés időtartamára, saját bérbeadási tevékenységéhez kap nem kizárólagos, át nem ruházható használati jogot. Az Előfizető által rögzített adatok az Előfizetőéi.</p>

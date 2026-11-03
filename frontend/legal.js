@@ -39,5 +39,5 @@
     }
   });
   document.querySelectorAll('[data-legal-if]').forEach((el) => { el.hidden = !values[el.dataset.legalIf]; });
-  document.title = `${info.productName} — ${document.querySelector('h1')?.textContent || ''}`;
+  document.title = `${document.querySelector('h1')?.textContent || ''} | ${info.productName}`;
 })();

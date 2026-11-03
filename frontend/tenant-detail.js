@@ -23,7 +23,7 @@ const FIELDS = {
     { path: 'propertyId', label: 'Ingatlan', type: 'select', options: properties.map((p) => ({ value: p.id, label: p.name })) },
     { path: 'moveInDate', label: 'Beköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
     { path: 'moveOutDate', label: 'Kiköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
-    { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: [{ value: 'HUF', label: 'Forint (Ft)' }, { value: 'EUR', label: 'Euró (EUR) — MNB árfolyamon számlázva' }] },
+    { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: [{ value: 'HUF', label: 'Forint (Ft)' }, { value: 'EUR', label: 'Euró (EUR), MNB-árfolyamon számlázva' }] },
   ],
   notes: [
     { path: 'notes', label: 'Megjegyzés', type: 'textarea', wide: true, placeholder: 'Bármi, amit a bérlőről tudni kell (szerződés, kaució, kulcsok…)' },
@@ -59,14 +59,14 @@ function isCurrent() {
 }
 
 function renderHeader() {
-  document.title = `Lakáskezelő — ${tenant.name}`;
+  document.title = `${tenant.name} | Lakáskezelő`;
   document.getElementById('p-name').textContent = tenant.name;
   document.getElementById('crumb-name').textContent = tenant.name;
   document.getElementById('p-status').innerHTML = !tenant.propertyId
     ? '<span class="status-tag inactive">Nincs ingatlanhoz rendelve</span>'
     : isCurrent() ? '<span class="status-tag ok">Jelenlegi bérlő</span>' : '<span class="status-tag inactive">Kiköltözött</span>';
-  document.getElementById('p-sub').textContent = [tenant.propertyName, tenant.email, tenant.phone].filter(Boolean).join(' · ')
-    || 'Add meg az elérhetőségeket — a számla az e-mail címre megy.';
+  document.getElementById('p-sub').textContent = [tenant.propertyName, tenant.email, tenant.phone].filter(Boolean).join(', ')
+    || 'Add meg az elérhetőségeket, a számla az e-mail címre megy.';
 }
 
 function renderProperty() {
@@ -75,7 +75,7 @@ function renderProperty() {
   const body = document.getElementById('property-body');
   if (!prop) {
     link.hidden = true;
-    body.innerHTML = '<div class="panel-empty">Nincs ingatlanhoz rendelve — a Bérlet panelen választhatsz.</div>';
+    body.innerHTML = '<div class="panel-empty">Nincs ingatlanhoz rendelve. A Bérlet panelen választhatsz.</div>';
     return;
   }
   link.hidden = false;
@@ -97,11 +97,11 @@ function renderSummary() {
   const last = issued[0];
   const failed = invoices.length - issued.length;
   document.getElementById('summary').innerHTML = [
-    detailRow('Bérlet kezdete', tenant.moveInDate ? formatDate(tenant.moveInDate) : '<span class="dim">—</span>'),
+    detailRow('Bérlet kezdete', tenant.moveInDate ? formatDate(tenant.moveInDate) : '<span class="dim">–</span>'),
     detailRow('Kiszámlázva összesen', formatCurrency(total)),
     detailRow(`Kiszámlázva ${year}-ben`, formatCurrency(thisYear)),
     detailRow('Számlák', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
-    detailRow('Utolsó számla', last ? `${escapeHtml(last.number)} · ${formatCurrency(last.amountTotal)}` : '<span class="dim">—</span>'),
+    detailRow('Utolsó számla', last ? `${escapeHtml(last.number)}, ${formatCurrency(last.amountTotal)}` : '<span class="dim">–</span>'),
   ].join('');
 }
 

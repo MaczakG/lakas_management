@@ -178,7 +178,7 @@
   // hogy be kellene zárni a popupot).
   window.openUtilityModal = async function (propertyId, propertyName, year, month, opts = {}) {
     state = { propertyId, year, month, onClose: opts.onClose, onSaved: opts.onSaved };
-    document.getElementById('um-title').textContent = `Rezsi — ${propertyName}`;
+    document.getElementById('um-title').textContent = `Rezsi: ${propertyName}`;
     document.getElementById('um-subtitle').textContent = `${year}. ${MONTH_NAMES[month - 1]}`;
     document.getElementById('um-form-error').classList.remove('show');
     document.getElementById('um-form-success').classList.remove('show');
