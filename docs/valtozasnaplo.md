@@ -4,6 +4,10 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.4** — Számla generálása folyamatjelzővel (Számlázás: „Számla generálása most”, „Újrapróbálás”):
+  a sáv a valós lépéseket követi (adatok, PDF, tárhely, e-mail, rögzítés), a végén az eredménnyel. A számlán a
+  rezsi tételesen látszik (minden rögzített tétel külön sor, pl. Áram, Gáz, Közös költség), alatta „Összesen”
+  sorral; a sorok sorrendje rögzített (migráció: InvoiceLines.Position). A már kiküldött számlák nem változnak.
 - **2026.11.03.3** — A Beállítások oldal tetején „Előfizetés” rész: állapot (díjmentes / üzemeltető / próbaidő /
   aktív / fizetés sikertelen / csak olvasható), érvényesség, aktív ingatlanok, díj, mentett kártya, és gomb az
   Előfizetés oldalra (fizetés, kártya, számlák).

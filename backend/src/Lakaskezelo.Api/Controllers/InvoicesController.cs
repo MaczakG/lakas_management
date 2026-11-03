@@ -5,13 +5,16 @@ using Lakaskezelo.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace Lakaskezelo.Api.Controllers;
 
 [Authorize]
 [ApiController]
 [Route("api/invoices")]
-public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationService generator, InvoicePdfStore pdfStore) : ControllerBase
+public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationService generator, InvoicePdfStore pdfStore,
+    IOptions<JsonOptions> jsonOptions, ILogger<InvoicesController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<InvoiceDto>>> List(CancellationToken ct)
@@ -54,6 +57,54 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         return Ok(ToDto(invoice));
     }
 
+    // Ugyanaz, mint a Generate, de folyamatjelzővel: a válasz soronként egy JSON (application/x-ndjson) —
+    // {"type":"plan","steps":[...]}, {"type":"step","step":"pdf"}, …, végül {"type":"done","invoice":{…}}
+    // vagy {"type":"error","message":"…"}. A generálás a böngésző bezárásakor sem szakad félbe (különben pl. a
+    // kiküldött e-mail után a mentés elmaradhatna), ezért nem a kérés CancellationTokenjét kapja.
+    [HttpPost("generate/stream")]
+    public async Task GenerateWithProgress(GenerateInvoiceRequest request)
+    {
+        var json = jsonOptions.Value.JsonSerializerOptions;
+        var property = await db.Properties.FindAsync([request.PropertyId], HttpContext.RequestAborted);
+        if (property is null)
+        {
+            Response.StatusCode = StatusCodes.Status404NotFound;
+            await Response.WriteAsJsonAsync(new { message = "Az ingatlan nem található." }, json);
+            return;
+        }
+
+        Response.ContentType = "application/x-ndjson; charset=utf-8";
+        Response.Headers.CacheControl = "no-cache";
+        Response.Headers["X-Accel-Buffering"] = "no"; // nginx: ne pufferelje, hogy a lépések azonnal átérjenek
+
+        async Task Write(object message)
+        {
+            if (HttpContext.RequestAborted.IsCancellationRequested) return;
+            await Response.WriteAsync(JsonSerializer.Serialize(message, json) + "\n");
+            await Response.Body.FlushAsync();
+        }
+
+        try
+        {
+            var invoice = await generator.GenerateAndSendAsync(property, request.Year, request.Month, CancellationToken.None,
+                progress => progress.Step == GenerationSteps.Plan
+                    ? Write(new { type = "plan", steps = progress.Plan })
+                    : Write(new { type = "step", step = progress.Step }));
+
+            await db.Entry(invoice).Reference(i => i.Property).LoadAsync();
+            await db.Entry(invoice).Reference(i => i.Tenant).LoadAsync();
+            await db.Entry(invoice).Collection(i => i.Lines).LoadAsync();
+            await Write(new { type = "done", invoice = ToDto(invoice) });
+        }
+        catch (Exception ex)
+        {
+            // A válasz már elindult, státuszkódot nem lehet váltani — a hibát a folyam utolsó sora jelzi.
+            logger.LogError(ex, "Invoice generation with progress failed for property {PropertyId}", request.PropertyId);
+            try { await Write(new { type = "error", message = "Hiba történt a generálás során." }); }
+            catch (Exception writeEx) { logger.LogDebug(writeEx, "Could not report the generation error to the client"); }
+        }
+    }
+
     // Csak a még ki nem küldött (Generated/Failed) számlák törölhetők — pl. téves/teszt generálás
     // után, hogy az adott időszak rezsi tételei újra szerkeszthetők legyenek (ld.
     // PropertiesController.IsPeriodLockedAsync). Egy ténylegesen kiküldött (Sent) számlát a
@@ -78,5 +129,5 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         invoice.Id, invoice.PropertyId, invoice.Property?.Name ?? "", invoice.Tenant?.Name,
         invoice.PeriodYear, invoice.PeriodMonth, invoice.Number, invoice.IssuedAt, invoice.DueDate,
         invoice.AmountTotal, invoice.Status, invoice.SentAt, invoice.ErrorMessage,
-        [.. invoice.Lines.Select(l => new InvoiceLineDto(l.Label, l.Amount))]);
+        [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))]);
 }
