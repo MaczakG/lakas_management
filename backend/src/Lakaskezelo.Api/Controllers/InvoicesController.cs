@@ -39,7 +39,10 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         var cancelledBy = invoice.CancelledByUserId is { } uid
             ? await db.Users.Where(u => u.Id == uid).Select(u => u.FullName).FirstOrDefaultAsync(ct)
             : null;
-        return Ok(new InvoiceDetailDto(ToDto(invoice), cancelledBy, invoice.RentConversionNote, [.. related.Select(ToDto)]));
+        var payments = await db.TenantPayments.Where(p => p.InvoiceId == id).OrderBy(p => p.Date).ThenBy(p => p.CreatedAt)
+            .Select(p => new TenantPaymentDto(p.Id, p.Date, p.Amount, p.Note, p.CreatedAt))
+            .ToListAsync(ct);
+        return Ok(new InvoiceDetailDto(ToDto(invoice), cancelledBy, invoice.RentConversionNote, [.. related.Select(ToDto)], payments));
     }
 
     [HttpGet("{id:guid}/pdf")]
@@ -164,49 +167,53 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         return Ok(ToDto(storno));
     }
 
-    // Fizetettre állítás dátummal: a bizonylat végösszegével befizetés is rögzül a bérlőnél (egyenleg). Csak kiállított,
-    // nem sztornó bizonylat lehet fizetett; a már sztornózott is (ha a sztornó előtt kifizették).
-    [HttpPost("{id:guid}/paid")]
-    public async Task<ActionResult<InvoiceDto>> MarkPaid(Guid id, MarkInvoicePaidRequest request, CancellationToken ct)
+    // Befizetés rögzítése a bizonylatra (dátum + összeg, részletekben is): a bérlő egyenlegébe is bekerül, és ha a
+    // befizetések elérik a végösszeget, a bizonylat fizetett lesz. A felajánlott összeg a hátralék; SZJA-t fizető
+    // bérlőnél a végösszeg már az SZJA-mentes összeg (a bizonylaton „SZJA levonás” sor van).
+    [HttpPost("{id:guid}/payments")]
+    public async Task<ActionResult<InvoiceDto>> AddPayment(Guid id, InvoicePaymentRequest request, CancellationToken ct)
     {
         var invoice = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
             .FirstOrDefaultAsync(i => i.Id == id, ct);
         if (invoice is null) return NotFound();
-        if (invoice.IsStorno) return BadRequest(new { message = "Sztornó bizonylatot nem lehet fizetettre állítani." });
-        if (invoice.Status == Domain.Enums.InvoiceStatus.Failed) return BadRequest(new { message = "Sikertelen bizonylatot nem lehet fizetettre állítani: nem lett kiállítva." });
-        if (invoice.PaidAt is not null) return Conflict(new { message = $"Ez a bizonylat már fizetett ({invoice.PaidAt:yyyy. MM. dd.})." });
+        if (invoice.IsStorno) return BadRequest(new { message = "Sztornó bizonylatra nem lehet befizetést rögzíteni." });
+        if (invoice.Status == Domain.Enums.InvoiceStatus.Failed) return BadRequest(new { message = "Sikertelen bizonylatra nem lehet befizetést rögzíteni: nem lett kiállítva." });
         if (invoice.TenantId is null) return BadRequest(new { message = "A bizonylathoz nincs bérlő rendelve, így a befizetést nincs kinek elszámolni." });
+        if (request.Amount <= 0) return BadRequest(new { message = "A befizetett összegnek nagyobbnak kell lennie nullánál." });
+        if (request.Amount > 1_000_000_000m) return BadRequest(new { message = "Túl nagy összeg." });
         var today = DateOnly.FromDateTime(BudapestClock.Now);
         if (request.Date > today.AddDays(1)) return BadRequest(new { message = "A fizetés dátuma nem lehet a jövőben." });
         if (request.Date < today.AddYears(-10)) return BadRequest(new { message = "Érvénytelen dátum." });
+        var note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+        if (note?.Length > 500) return BadRequest(new { message = "A megjegyzés legfeljebb 500 karakter lehet." });
 
-        invoice.PaidAt = request.Date;
-        if (invoice.AmountTotal > 0)
+        db.TenantPayments.Add(new TenantPayment
         {
-            db.TenantPayments.Add(new TenantPayment
-            {
-                Id = Guid.NewGuid(),
-                TenantId = invoice.TenantId.Value,
-                InvoiceId = invoice.Id,
-                Date = request.Date,
-                Amount = invoice.AmountTotal,
-                CreatedAt = DateTime.UtcNow,
-                CreatedByUserId = User.GetUserId(),
-            });
-        }
+            Id = Guid.NewGuid(),
+            TenantId = invoice.TenantId.Value,
+            InvoiceId = invoice.Id,
+            Date = request.Date,
+            Amount = Math.Round(request.Amount, 2),
+            Note = note,
+            CreatedAt = DateTime.UtcNow,
+            CreatedByUserId = User.GetUserId(),
+        });
+        await db.SaveChangesAsync(ct);
+        await InvoicePayments.RecalculateAsync(db, invoice, ct);
         await db.SaveChangesAsync(ct);
         return Ok(ToDto(invoice));
     }
 
-    // Fizetett jelölés visszavonása: a hozzá kötött befizetés is törlődik.
-    [HttpDelete("{id:guid}/paid")]
-    public async Task<ActionResult<InvoiceDto>> UnmarkPaid(Guid id, CancellationToken ct)
+    // A bizonylat összes befizetésének visszavonása (a bérlő egyenlegéből is törlődnek).
+    [HttpDelete("{id:guid}/payments")]
+    public async Task<ActionResult<InvoiceDto>> RemovePayments(Guid id, CancellationToken ct)
     {
         var invoice = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
             .FirstOrDefaultAsync(i => i.Id == id, ct);
         if (invoice is null) return NotFound();
-        invoice.PaidAt = null;
         db.TenantPayments.RemoveRange(await db.TenantPayments.Where(p => p.InvoiceId == id).ToListAsync(ct));
+        await db.SaveChangesAsync(ct);
+        await InvoicePayments.RecalculateAsync(db, invoice, ct);
         await db.SaveChangesAsync(ct);
         return Ok(ToDto(invoice));
     }
@@ -216,5 +223,5 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         invoice.PeriodYear, invoice.PeriodMonth, invoice.Number, invoice.IssuedAt, invoice.DueDate,
         invoice.AmountTotal, invoice.Status, invoice.SentAt, invoice.ErrorMessage,
         [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))], invoice.CancelledAt, invoice.CancelsInvoiceId, invoice.Provider,
-        invoice.PaidAt);
+        invoice.PaidAt, invoice.PaidAmount);
 }
