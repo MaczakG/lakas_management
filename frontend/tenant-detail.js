@@ -155,11 +155,11 @@ function renderLedger() {
         <td>${formatDate(e.date)}</td>
         <td>${e.kind === 'invoice'
           ? `<a class="mono link" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}&from=${encodeURIComponent(`tenant:${tenantId}`)}">${escapeHtml(e.invoiceNumber)}</a> <span class="dim">${escapeHtml(e.label)}</span>${e.isCancelled ? ' <span class="status-tag cancelled">Sztornózott</span>' : ''}`
-          : `${escapeHtml(e.label)}${e.note ? ` <span class="dim">${escapeHtml(e.note)}</span>` : ''}`}</td>
+          : `${escapeHtml(e.label)}${e.invoiceId ? ` <a class="mono link" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}&from=${encodeURIComponent(`tenant:${tenantId}`)}">${escapeHtml(e.invoiceNumber || '')}</a>` : ''}${e.note ? ` <span class="dim">${escapeHtml(e.note)}</span>` : ''}`}</td>
         <td class="num">${e.kind === 'invoice' ? formatCurrency(e.amount) : ''}</td>
         <td class="num">${e.kind === 'payment' ? formatCurrency(-e.amount) : ''}</td>
         <td class="num">${formatCurrency(e.balance)}</td>
-        <td class="num">${e.kind === 'payment' ? `<button class="icon-btn" type="button" title="Befizetés törlése" aria-label="Befizetés törlése" data-del-payment="${escapeHtml(e.id)}">${DETAIL_ICON('trash')}</button>` : ''}</td>
+        <td class="num">${e.kind === 'payment' ? `<button class="icon-btn" type="button" title="${e.invoiceId ? 'Befizetés törlése (a bizonylat fizetett jelölése is megszűnik)' : 'Befizetés törlése'}" aria-label="Befizetés törlése" data-del-payment="${escapeHtml(e.id)}">${DETAIL_ICON('trash')}</button>` : ''}</td>
       </tr>`).join('')}</tbody></table>`;
   body.querySelectorAll('[data-del-payment]').forEach((b) => b.addEventListener('click', () => deletePayment(b.dataset.delPayment)));
 }
@@ -175,7 +175,8 @@ async function deletePayment(id) {
   if (!(await uiConfirm('Biztosan törlöd ezt a befizetést?', { title: 'Befizetés törlése', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/tenants/${tenantId}/payments/${id}`, { method: 'DELETE' });
   if (!res.ok && res.status !== 204) { await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült törölni.'), { title: 'Törlés sikertelen' }); return; }
-  await loadLedger();
+  // A bizonylathoz kötött befizetés törlése a bizonylat fizetett jelölését is megszünteti → a bizonylatok is frissülnek.
+  document.dispatchEvent(new CustomEvent('invoices-changed'));
 }
 
 // Befizetés rögzítése: dátum (alapból ma), összeg (alapból a tartozás), megjegyzés.

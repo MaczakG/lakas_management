@@ -49,6 +49,8 @@ function render() {
   $('download-btn').hidden = invoice.status === 'Failed';
   $('retry-btn').hidden = !(active && invoice.status === 'Failed');
   $('cancel-btn').hidden = !(active && invoice.status !== 'Failed');
+  $('paid-btn').hidden = !invoiceCanBePaid(invoice);
+  $('unpaid-btn').hidden = !invoice.paidAt;
 
   const original = detail.related.find((r) => r.id === invoice.cancelsInvoiceId);
   const storno = detail.related.find((r) => r.cancelsInvoiceId === invoice.id);
@@ -68,6 +70,7 @@ function render() {
     detailRow('Időszak', periodText(invoice)),
     detailRow('Kiállítva', formatDate(invoice.issuedAt)),
     detailRow('Fizetési határidő', formatDate(invoice.dueDate)),
+    detailRow('Fizetve', invoice.paidAt ? `<b>${formatDate(invoice.paidAt)}</b>` : (invoice.cancelsInvoiceId ? '<span class="dim">–</span>' : '<span class="dim">Nincs fizetve</span>')),
     detailRow('Kiküldve', invoice.sentAt ? Docs.formatDateTime(invoice.sentAt) : '<span class="dim">–</span>'),
     detailRow('Összeg', `<b>${formatCurrency(invoice.amountTotal)}</b>`),
   ];
@@ -125,6 +128,8 @@ function showPdf() {
 
 $('download-btn').addEventListener('click', () => downloadFile(`/api/invoices/${invoiceId}/pdf`, `${invoice.number}.pdf`));
 $('retry-btn').addEventListener('click', () => invoiceRetry(invoice.propertyId, invoice.periodYear, invoice.periodMonth, invoice.propertyName));
+$('paid-btn').addEventListener('click', () => invoiceMarkPaid(invoice.id, invoice.number, invoice.amountTotal));
+$('unpaid-btn').addEventListener('click', () => invoiceUnmarkPaid(invoice.id, invoice.number));
 $('cancel-btn').addEventListener('click', () => invoiceCancel(invoice.id, invoice.number, invoice.status === 'Sent'));
 document.addEventListener('invoices-changed', () => load());
 
@@ -137,7 +142,7 @@ async function load() {
   }
   if (!res.ok) { showError(errorMessage(res, await readJson(res), 'Nem sikerült betölteni a bizonylatot.')); return; }
   detail = await res.json();
-  const changed = !invoice || invoice.status !== detail.invoice.status;
+  const changed = !invoice || invoice.status !== detail.invoice.status;  // a PDF csak állapotváltáskor töltődik újra
   invoice = detail.invoice;
   render();
   if (changed) showPdf();

@@ -4,6 +4,14 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.18** — A bizonylat fizetettre állítható, dátummal.
+  - A bizonylattáblákban pipa gomb, a bizonylat adatlapján „Fizetettre állítás” gomb. A fizetés napja alapból a mai
+    nap, átírható; jövőbeli dátum nem adható meg.
+  - A fizetett bizonylat állapota „Fizetve ÉÉÉÉ. HH. NN.”, az adatlapon külön „Fizetve” sor is van.
+  - A bizonylat végösszege befizetésként a bérlő egyenlegébe is bekerül, a bizonylatra hivatkozva.
+  - Visszavonás: az adatlapon a „Fizetés visszavonása” gombbal, vagy a befizetés törlésével az Egyenleg fülön. Mindkét
+    esetben a jelölés és a befizetés is megszűnik.
+  - Migráció: InvoicePaid. Csak új oszlopok kerülnek be; meglévő adatot nem módosít.
 - **2026.11.03.17** — Egyenlegkövetés, lakbérfizetés módja és SZJA a bérlőnél, tételenkénti rezsi-zárolás.
   - Rezsi: a bizonylatra került tétel zárolt, amíg a bizonylatot nem sztornózzák. Sztornó után újra szerkeszthető, és a
     következő bizonylatra kerül. Zárolt tételnél látszik, melyik bizonylaton szerepel.

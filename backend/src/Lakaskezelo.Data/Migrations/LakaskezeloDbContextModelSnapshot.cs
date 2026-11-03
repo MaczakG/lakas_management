@@ -464,6 +464,9 @@ namespace Lakaskezelo.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<DateOnly?>("PaidAt")
+                        .HasColumnType("date");
+
                     b.Property<string>("PdfStorageKey")
                         .HasColumnType("text");
 
@@ -1213,6 +1216,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -1223,6 +1229,8 @@ namespace Lakaskezelo.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyId");
+
+                    b.HasIndex("InvoiceId");
 
                     b.HasIndex("TenantId", "Date");
 
@@ -1676,11 +1684,18 @@ namespace Lakaskezelo.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Lakaskezelo.Domain.Entities.Invoice", "Invoice")
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Lakaskezelo.Domain.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Invoice");
 
                     b.Navigation("Tenant");
                 });

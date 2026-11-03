@@ -300,6 +300,41 @@ window.invoiceCancel = async (id, number, sent) => {
   return true;
 };
 
+// Fizetettre állítható: kiállított, aktív, még nem fizetett bizonylat, amelynek van bérlője.
+window.invoiceCanBePaid = (i) => invoiceIsActive(i) && i.status !== 'Failed' && !i.paidAt && !!i.tenantName;
+
+// Fizetettre állítás dátummal (alapból ma). A bizonylat végösszege befizetésként a bérlő egyenlegébe is bekerül.
+window.invoiceMarkPaid = async (id, number, amount) => {
+  const t = new Date();
+  const today = `${t.getFullYear()}. ${String(t.getMonth() + 1).padStart(2, '0')}. ${String(t.getDate()).padStart(2, '0')}.`;
+  let value = today;
+  for (;;) {
+    const input = await uiPrompt(`A(z) ${number} bizonylat (${formatCurrency(amount)}) kifizetésének napja. Az összeg befizetésként a bérlő egyenlegébe is bekerül.`,
+      { title: 'Fizetettre állítás', confirmText: 'Fizetett', input: { label: 'Fizetés dátuma', value, placeholder: 'ÉÉÉÉ. HH. NN.' } });
+    if (input == null) return false;
+    value = input;
+    const m = /^(\d{4})[.\-/ ]\s*(\d{1,2})[.\-/ ]\s*(\d{1,2})\.?$/.exec(String(input).trim());
+    if (!m) { await uiAlert('A dátumot ÉÉÉÉ. HH. NN. alakban add meg.', { title: 'Érvénytelen dátum' }); continue; }
+    const date = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+    const res = await apiFetch(`/api/invoices/${id}/paid`, { method: 'POST', body: JSON.stringify({ date }) });
+    if (!res.ok) {
+      await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült fizetettre állítani.'), { title: 'Sikertelen' });
+      return false;
+    }
+    document.dispatchEvent(new CustomEvent('invoices-changed'));
+    return true;
+  }
+};
+
+window.invoiceUnmarkPaid = async (id, number) => {
+  if (!(await uiConfirm(`Visszavonod a(z) ${number} bizonylat fizetett jelölését? A hozzá rögzített befizetés is törlődik a bérlő egyenlegéből.`,
+    { title: 'Fizetés visszavonása', confirmText: 'Visszavonás', danger: true }))) return false;
+  const res = await apiFetch(`/api/invoices/${id}/paid`, { method: 'DELETE' });
+  if (!res.ok) { await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült visszavonni.'), { title: 'Sikertelen' }); return false; }
+  document.dispatchEvent(new CustomEvent('invoices-changed'));
+  return true;
+};
+
 // A bizonylat adatlapjának címe; a from paraméterrel tér vissza oda, ahonnan megnyitották.
 window.invoiceDetailUrl = (i, from) => `invoice-detail.html?id=${encodeURIComponent(i.id)}${from ? `&from=${encodeURIComponent(from)}` : ''}`;
 
@@ -312,6 +347,9 @@ window.invoiceActionButtons = function (i) {
   } else if (invoiceIsActive(i)) {
     buttons.push(`<button class="icon-btn" type="button" title="Újrapróbálás" aria-label="Újrapróbálás" onclick="invoiceRetry(${jsArg(i.propertyId)}, ${i.periodYear}, ${i.periodMonth}, ${jsArg(i.propertyName)})">${icon('rotate-ccw')}</button>`);
   }
+  if (invoiceCanBePaid(i)) {
+    buttons.push(`<button class="icon-btn" type="button" title="Fizetettre állítás" aria-label="Fizetettre állítás" onclick="invoiceMarkPaid(${jsArg(i.id)}, ${jsArg(i.number)}, ${Number(i.amountTotal)})">${icon('check')}</button>`);
+  }
   if (invoiceIsActive(i) && i.status !== 'Failed') {
     buttons.push(`<button class="icon-btn danger" type="button" title="Sztornózás" aria-label="Bizonylat sztornózása" onclick="invoiceCancel(${jsArg(i.id)}, ${jsArg(i.number)}, ${i.status === 'Sent'})">${icon('file-minus')}</button>`);
   }
@@ -322,5 +360,6 @@ window.invoiceActionButtons = function (i) {
 window.invoiceStatusTag = function (i, labels) {
   if (i.cancelsInvoiceId) return '<span class="status-tag storno">Sztornó</span>';
   if (i.cancelledAt) return '<span class="status-tag cancelled" title="Sztornózva: ' + escapeHtml(formatDate(i.cancelledAt)) + '">Sztornózott</span>';
+  if (i.paidAt) return `<span class="status-tag paid" title="${escapeHtml(labels[i.status] || i.status)}">Fizetve ${escapeHtml(formatDate(i.paidAt))}</span>`;
   return `<span class="status-tag ${escapeHtml(i.status)}">${labels[i.status] || escapeHtml(i.status)}</span>`;
 };

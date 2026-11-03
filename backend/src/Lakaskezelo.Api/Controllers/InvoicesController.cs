@@ -164,9 +164,57 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         return Ok(ToDto(storno));
     }
 
+    // Fizetettre állítás dátummal: a bizonylat végösszegével befizetés is rögzül a bérlőnél (egyenleg). Csak kiállított,
+    // nem sztornó bizonylat lehet fizetett; a már sztornózott is (ha a sztornó előtt kifizették).
+    [HttpPost("{id:guid}/paid")]
+    public async Task<ActionResult<InvoiceDto>> MarkPaid(Guid id, MarkInvoicePaidRequest request, CancellationToken ct)
+    {
+        var invoice = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
+            .FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (invoice is null) return NotFound();
+        if (invoice.IsStorno) return BadRequest(new { message = "Sztornó bizonylatot nem lehet fizetettre állítani." });
+        if (invoice.Status == Domain.Enums.InvoiceStatus.Failed) return BadRequest(new { message = "Sikertelen bizonylatot nem lehet fizetettre állítani: nem lett kiállítva." });
+        if (invoice.PaidAt is not null) return Conflict(new { message = $"Ez a bizonylat már fizetett ({invoice.PaidAt:yyyy. MM. dd.})." });
+        if (invoice.TenantId is null) return BadRequest(new { message = "A bizonylathoz nincs bérlő rendelve, így a befizetést nincs kinek elszámolni." });
+        var today = DateOnly.FromDateTime(BudapestClock.Now);
+        if (request.Date > today.AddDays(1)) return BadRequest(new { message = "A fizetés dátuma nem lehet a jövőben." });
+        if (request.Date < today.AddYears(-10)) return BadRequest(new { message = "Érvénytelen dátum." });
+
+        invoice.PaidAt = request.Date;
+        if (invoice.AmountTotal > 0)
+        {
+            db.TenantPayments.Add(new TenantPayment
+            {
+                Id = Guid.NewGuid(),
+                TenantId = invoice.TenantId.Value,
+                InvoiceId = invoice.Id,
+                Date = request.Date,
+                Amount = invoice.AmountTotal,
+                CreatedAt = DateTime.UtcNow,
+                CreatedByUserId = User.GetUserId(),
+            });
+        }
+        await db.SaveChangesAsync(ct);
+        return Ok(ToDto(invoice));
+    }
+
+    // Fizetett jelölés visszavonása: a hozzá kötött befizetés is törlődik.
+    [HttpDelete("{id:guid}/paid")]
+    public async Task<ActionResult<InvoiceDto>> UnmarkPaid(Guid id, CancellationToken ct)
+    {
+        var invoice = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
+            .FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (invoice is null) return NotFound();
+        invoice.PaidAt = null;
+        db.TenantPayments.RemoveRange(await db.TenantPayments.Where(p => p.InvoiceId == id).ToListAsync(ct));
+        await db.SaveChangesAsync(ct);
+        return Ok(ToDto(invoice));
+    }
+
     public static InvoiceDto ToDto(Invoice invoice) => new(
         invoice.Id, invoice.PropertyId, invoice.Property?.Name ?? "", invoice.Tenant?.Name,
         invoice.PeriodYear, invoice.PeriodMonth, invoice.Number, invoice.IssuedAt, invoice.DueDate,
         invoice.AmountTotal, invoice.Status, invoice.SentAt, invoice.ErrorMessage,
-        [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))], invoice.CancelledAt, invoice.CancelsInvoiceId, invoice.Provider);
+        [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))], invoice.CancelledAt, invoice.CancelsInvoiceId, invoice.Provider,
+        invoice.PaidAt);
 }
