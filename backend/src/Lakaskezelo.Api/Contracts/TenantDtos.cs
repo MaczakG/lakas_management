@@ -13,9 +13,11 @@ public record UpsertTenantRequest(string Name, string? Email, string? Phone, str
     RentPaymentTiming? RentPaymentTiming = null, bool? TenantPaysSzja = null);
 
 // Egyenleg: a bérlőnek kiállított bizonylatok (a sztornó negatív) és a rögzített befizetések. Pozitív egyenleg = tartozás.
-public record TenantLedgerDto(decimal Balance, decimal ChargedTotal, decimal PaidTotal, List<TenantLedgerEntryDto> Entries);
+// UnbilledTotal: a felvett, de még bizonylatra nem került rezsitételek (a Balance-ben már benne vannak).
+public record TenantLedgerDto(decimal Balance, decimal ChargedTotal, decimal PaidTotal, List<TenantLedgerEntryDto> Entries,
+    decimal UnbilledTotal = 0);
 
-// Kind: "invoice" | "payment". Amount: a bizonylatnál a terhelés (sztornónál negatív), befizetésnél a befizetett összeg
+// Kind: "invoice" | "payment" | "utility" (bizonylatra még nem került rezsitétel). Amount: a bizonylatnál a terhelés (sztornónál negatív), befizetésnél a befizetett összeg
 // negatívan — így a Balance a sorok futó összege.
 public record TenantLedgerEntryDto(string Kind, Guid Id, DateOnly Date, string Label, decimal Amount, decimal Balance,
     Guid? InvoiceId, string? InvoiceNumber, bool IsStorno, bool IsCancelled, string? Note);
