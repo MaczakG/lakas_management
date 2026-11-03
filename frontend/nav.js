@@ -29,7 +29,7 @@
       ${item('tenants.html', 'users', 'Bérlők')}
 
       <div class="nav-label">Pénzügy</div>
-      ${item('invoice-bundles.html', 'package', 'Számla csomagok')}
+      ${item('invoice-bundles.html', 'file-invoice', 'Számlák')}
       ${item('exchange-rates.html', 'arrow-left-right', 'Árfolyamok')}
 
       <div class="nav-label">Fiók</div>
@@ -49,9 +49,11 @@
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.
   const page = location.pathname.split('/').pop() || 'dashboard.html';
   // A dokumentum adatlapja ahhoz a menüponthoz tartozik, ahonnan megnyitották (?from=property:…).
-  const docFrom = page === 'document-detail.html' ? (new URLSearchParams(location.search).get('from') || 'property').split(':')[0] : null;
+  // A számla adatlapja is (?from=…; alapból a Számlák menüpont).
+  const from = (new URLSearchParams(location.search).get('from') || '').split(':')[0];
+  const fromPage = { property: 'properties.html', tenant: 'tenants.html', owner: 'owners.html', bundles: 'invoice-bundles.html' }[from];
   const activePage = { 'property-detail.html': 'properties.html', 'tenant-detail.html': 'tenants.html', 'owner-detail.html': 'owners.html',
-    'document-detail.html': { tenant: 'tenants.html', owner: 'owners.html' }[docFrom] || 'properties.html' }[page] || page;
+    'document-detail.html': fromPage || 'properties.html', 'invoice-detail.html': fromPage || 'invoice-bundles.html' }[page] || page;
   window.__currentPage = page;
   document.querySelectorAll('.sidebar .nav-item[href]').forEach((a) => {
     if (a.getAttribute('href') === activePage) a.classList.add('active');

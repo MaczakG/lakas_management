@@ -66,7 +66,7 @@ function shareValue(share) {
 
 function renderSummary() {
   const year = new Date().getFullYear();
-  const issued = invoices.filter((i) => i.status !== 'Failed' && !i.archivedAt);
+  const issued = invoices.filter((i) => i.status !== 'Failed' && (!i.cancelledAt && !i.cancelsInvoiceId));
   const thisYear = issued.filter((i) => i.periodYear === year).reduce((s, i) => s + Number(i.amountTotal), 0);
   const active = ownedProperties.filter((p) => p.isActive);
   const rented = active.filter((p) => p.tenantName).length;
@@ -109,7 +109,7 @@ function renderProperties() {
 
 function renderInvoices() {
   document.getElementById('count-invoices').textContent = invoices.length || '';
-  document.getElementById('invoices-body').innerHTML = renderInvoiceTable(invoices, 'A tulajdonos ingatlanaihoz még nincs számla.');
+  document.getElementById('invoices-body').innerHTML = renderInvoiceTable(invoices, 'A tulajdonos ingatlanaihoz még nincs számla.', { from: `owner:${ownerId}` });
 }
 
 document.getElementById('delete-btn').addEventListener('click', async () => {

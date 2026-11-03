@@ -36,12 +36,14 @@ public class InvoiceGenerationService(
             catch (Exception ex) { logger.LogDebug(ex, "Invoice progress callback failed"); }
         }
 
-        // Csak az aktív (nem archivált) számlát frissítjük; archivált mellé új számla készül.
+        // Csak az aktív (nem sztornózott, nem sztornó) számlát frissítjük; sztornózott mellé új számla készül.
         var existing = await db.Invoices
             .Include(i => i.Lines)
-            .FirstOrDefaultAsync(i => i.PropertyId == property.Id && i.PeriodYear == year && i.PeriodMonth == month && i.ArchivedAt == null, ct);
-        var archivedCount = existing is null
-            ? await db.Invoices.CountAsync(i => i.PropertyId == property.Id && i.PeriodYear == year && i.PeriodMonth == month && i.ArchivedAt != null, ct)
+            .FirstOrDefaultAsync(i => i.PropertyId == property.Id && i.PeriodYear == year && i.PeriodMonth == month
+                && i.CancelledAt == null && i.CancelsInvoiceId == null, ct);
+        var cancelledCount = existing is null
+            ? await db.Invoices.CountAsync(i => i.PropertyId == property.Id && i.PeriodYear == year && i.PeriodMonth == month
+                && i.CancelledAt != null && i.CancelsInvoiceId == null, ct)
             : 0;
 
         var settings = await settingsService.GetAsync(ct);
@@ -66,9 +68,9 @@ public class InvoiceGenerationService(
         invoice.TenantId = tenant?.Id;
         invoice.IssuedAt = DateTime.UtcNow;
         invoice.DueDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(8);
-        // Ha az időszakra már van archivált számla, az új a „/2”, „/3”… utótagot kapja, hogy a sorszám egyedi maradjon.
+        // Ha az időszakra már van sztornózott számla, az új a „/2”, „/3”… utótagot kapja, hogy a sorszám egyedi maradjon.
         invoice.Number = existing?.Number
-            ?? BuildInvoiceNumber(property, year, month) + (archivedCount > 0 ? $"/{archivedCount + 1}" : "");
+            ?? BuildInvoiceNumber(property, year, month) + (cancelledCount > 0 ? $"/{cancelledCount + 1}" : "");
 
         try
         {
@@ -176,6 +178,90 @@ public class InvoiceGenerationService(
         if (existing is null) db.Invoices.Add(invoice);
         await db.SaveChangesAsync(ct);
         return invoice;
+    }
+
+    // Sztornózás: a kiállított (legenerált vagy kiküldött) bizonylatról sztornó bizonylat készül az eredeti sorok
+    // negatív összegeivel, saját sorszámmal („…-S”), az eredetire hivatkozva. Az eredeti „sztornózott” lesz; mindkettő
+    // megmarad, és a havi csomagba is bekerül. Ha az eredeti ki volt küldve, a sztornó is kimegy a bérlőnek.
+    // Ezután az időszak rezsije szerkeszthető, és új számla készíthető rá.
+    public async Task<Invoice> CancelAsync(Invoice original, Guid userId, CancellationToken ct)
+    {
+        if (original.IsStorno) throw new InvalidOperationException("Sztornó bizonylatot nem lehet sztornózni.");
+        if (original.CancelledAt is not null) throw new InvalidOperationException("Ezt a bizonylatot már sztornózták.");
+        if (original.Status == InvoiceStatus.Failed) throw new InvalidOperationException("Sikertelen számlát nem kell sztornózni: nem lett kiállítva. Próbáld újra.");
+
+        await db.Entry(original).Collection(i => i.Lines).LoadAsync(ct);
+        await db.Entry(original).Reference(i => i.Property).LoadAsync(ct);
+        await db.Entry(original).Reference(i => i.Tenant).LoadAsync(ct);
+        var property = original.Property!;
+        await db.Entry(property).Collection(p => p.PropertyOwners).Query().Include(po => po.Owner).LoadAsync(ct);
+        var settings = await settingsService.GetAsync(ct);
+        var now = DateTime.UtcNow;
+
+        var storno = new Invoice
+        {
+            Id = Guid.NewGuid(),
+            CompanyId = original.CompanyId,
+            PropertyId = original.PropertyId,
+            TenantId = original.TenantId,
+            PeriodYear = original.PeriodYear,
+            PeriodMonth = original.PeriodMonth,
+            Number = $"{original.Number}-S",
+            IssuedAt = now,
+            DueDate = DateOnly.FromDateTime(now),
+            CancelsInvoiceId = original.Id,
+            Status = InvoiceStatus.Generated,
+        };
+        var lines = InvoiceLine.InDisplayOrder(original.Lines).Select((l, i) => new InvoiceLine
+        {
+            Id = Guid.NewGuid(), CompanyId = original.CompanyId, InvoiceId = storno.Id, Label = l.Label, Amount = -l.Amount, Position = i,
+        }).ToList();
+        storno.AmountTotal = lines.Sum(l => l.Amount);
+
+        var pdf = InvoicePdfGenerator.Generate(storno, property, original.Tenant, settings, lines, original.Number);
+        if (await storage.IsConfiguredAsync(ct))
+        {
+            try
+            {
+                var key = InvoicePdfStore.StorageKey(storno);
+                await storage.UploadAsync(key, pdf, "application/pdf", ct);
+                storno.PdfStorageKey = key;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Storing storno PDF {Number} in S3 failed", storno.Number);
+            }
+        }
+
+        var tenant = original.Tenant;
+        if (original.Status == InvoiceStatus.Sent && !string.IsNullOrWhiteSpace(tenant?.Email))
+        {
+            var subject = $"Sztornó bizonylat — {property.Name}";
+            var text = $"A(z) {original.Number} számú bizonylatot ({original.PeriodYear}.{original.PeriodMonth:D2}) sztornóztuk. "
+                + $"A sztornó bizonylatot ({storno.Number}) mellékeltük.\n\nKérjük, az eredeti bizonylatot tekintsd érvénytelennek.";
+            var html = string.Concat(text.Split("\n\n").Select(p => $"""<p style="margin:0 0 12px;">{System.Net.WebUtility.HtmlEncode(p)}</p>"""));
+            var body = EmailTemplate.Render(preheader: subject, heading: subject, bodyHtml: html);
+            try
+            {
+                if (await emailSender.SendAsync(tenant.Email!, EmailTemplate.UniqueSubject(subject), body, text,
+                        new EmailAttachment($"{storno.Number}.pdf", pdf, "application/pdf"), ct))
+                {
+                    storno.Status = InvoiceStatus.Sent;
+                    storno.SentAt = DateTime.UtcNow;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Sending storno {Number} failed", storno.Number);
+            }
+        }
+
+        original.CancelledAt = now;
+        original.CancelledByUserId = userId;
+        db.Invoices.Add(storno);
+        db.InvoiceLines.AddRange(lines);
+        await db.SaveChangesAsync(ct);
+        return storno;
     }
 
     private async Task<(decimal AmountHuf, string? ConversionNote)> ResolveRentAmountAsync(Property property, Tenant? tenant, CancellationToken ct)

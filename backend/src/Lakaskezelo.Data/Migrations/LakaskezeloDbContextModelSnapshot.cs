@@ -399,10 +399,13 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<decimal>("AmountTotal")
                         .HasColumnType("numeric(12,2)");
 
-                    b.Property<DateTime?>("ArchivedAt")
+                    b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("ArchivedByUserId")
+                    b.Property<Guid?>("CancelledByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CancelsInvoiceId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("CompanyId")
@@ -448,13 +451,15 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CancelsInvoiceId");
+
                     b.HasIndex("CompanyId");
 
                     b.HasIndex("TenantId");
 
                     b.HasIndex("PropertyId", "PeriodYear", "PeriodMonth")
                         .IsUnique()
-                        .HasFilter("\"ArchivedAt\" IS NULL");
+                        .HasFilter("\"CancelledAt\" IS NULL AND \"CancelsInvoiceId\" IS NULL");
 
                     b.ToTable("Invoices");
                 });
@@ -1411,6 +1416,11 @@ namespace Lakaskezelo.Data.Migrations
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Invoice", b =>
                 {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Invoice", "CancelsInvoice")
+                        .WithMany()
+                        .HasForeignKey("CancelsInvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
                         .WithMany()
                         .HasForeignKey("CompanyId")
@@ -1427,6 +1437,8 @@ namespace Lakaskezelo.Data.Migrations
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CancelsInvoice");
 
                     b.Navigation("Property");
 

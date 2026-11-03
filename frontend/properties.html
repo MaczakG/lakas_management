@@ -364,7 +364,7 @@ async function loadUtilityCosts(propertyId) {
   const entries = await entriesRes.json();
   const invoices = await invoicesRes.json();
   const lockedPeriods = new Set(
-    invoices.filter((i) => !i.archivedAt && (i.status === 'Sent' || i.status === 'Generated')).map((i) => `${i.periodYear}-${i.periodMonth}`)
+    invoices.filter((i) => (!i.cancelledAt && !i.cancelsInvoiceId) && (i.status === 'Sent' || i.status === 'Generated')).map((i) => `${i.periodYear}-${i.periodMonth}`)
   );
 
   const periodKeys = [...new Set(entries.map((e) => `${e.year}-${e.month}`))]
@@ -416,10 +416,10 @@ async function loadPropertyInvoices(propertyId) {
 
   tbody.innerHTML = invoices.map((i) => `
     <tr>
-      <td class="mono">${escapeHtml(i.number)}</td>
+      <td class="mono"><a class="link" href="invoice-detail.html?id=${encodeURIComponent(i.id)}">${escapeHtml(i.number)}</a></td>
       <td>${i.periodYear}.${String(i.periodMonth).padStart(2, '0')}</td>
       <td>${formatCurrency(i.amountTotal)}</td>
-      <td>${i.archivedAt ? '<span class="status-tag inactive">Archivált</span>' : `<span class="status-tag ${i.status}">${propInvoiceStatusLabels[i.status] || i.status}</span>`}</td>
+      <td>${i.cancelsInvoiceId ? '<span class="status-tag storno">Sztornó</span>' : i.cancelledAt ? '<span class="status-tag cancelled">Sztornózott</span>' : `<span class="status-tag ${i.status}">${propInvoiceStatusLabels[i.status] || i.status}</span>`}</td>
       <td>${i.status !== 'Failed' ? `<button class="btn btn-ghost btn-sm" type="button" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">PDF</button>` : ''}</td>
     </tr>
   `).join('');

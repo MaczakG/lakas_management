@@ -315,7 +315,15 @@
       if (onDownload) stage.querySelector('button').addEventListener('click', onDownload);
     }
 
-    async function show(doc, version) {
+    // Dokumentum (adott verziójának) megjelenítése.
+    function show(doc, version) {
+      const v = version || { number: doc.currentVersion, fileName: doc.fileName, contentType: doc.contentType };
+      return showFile({ ...doc, fileName: v.fileName, contentType: v.contentType },
+        () => fetchContent(doc, v.number, 'view'), () => downloadDocument(doc, v.number, v.fileName));
+    }
+
+    // Tetszőleges fájl megjelenítése: file = { name, fileName, contentType }, load() → Promise<Blob>.
+    async function showFile(file, load, download) {
       cleanup();
       cleanup = () => {};
       applyZoom = () => {};
@@ -325,9 +333,6 @@
       emit();
       stage.innerHTML = '<div class="dv-loading"><span class="dv-spinner"></span>Betöltés…</div>';
       stage.scrollTop = 0;
-      const v = version || { number: doc.currentVersion, fileName: doc.fileName, contentType: doc.contentType };
-      const file = { ...doc, fileName: v.fileName, contentType: v.contentType };
-      const download = () => downloadDocument(doc, v.number, v.fileName);
 
       const kind = kindOf(file);
       if (kind === 'sheet' || kind === 'word' || kind === 'file') {
@@ -336,7 +341,7 @@
       }
       let blob;
       try {
-        blob = await fetchContent(doc, v.number, 'view');
+        blob = await load();
       } catch (e) {
         if (my === token) message('triangle-alert', 'Nem sikerült betölteni', e.message);
         return;
@@ -482,6 +487,7 @@
 
     return {
       show,
+      showFile,
       setZoom,
       zoomIn: () => setZoom(zoom >= 1 ? zoom + 0.25 : zoom + 0.1),
       zoomOut: () => setZoom(zoom > 1 ? zoom - 0.25 : zoom - 0.1),

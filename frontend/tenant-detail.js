@@ -91,7 +91,7 @@ function renderProperty() {
 
 function renderSummary() {
   const year = new Date().getFullYear();
-  const issued = invoices.filter((i) => i.status !== 'Failed' && !i.archivedAt);
+  const issued = invoices.filter((i) => i.status !== 'Failed' && (!i.cancelledAt && !i.cancelsInvoiceId));
   const total = issued.reduce((s, i) => s + Number(i.amountTotal), 0);
   const thisYear = issued.filter((i) => i.periodYear === year).reduce((s, i) => s + Number(i.amountTotal), 0);
   const last = issued[0];
@@ -115,7 +115,7 @@ function renderPanels() {
 
 function renderInvoices() {
   document.getElementById('count-invoices').textContent = invoices.length || '';
-  document.getElementById('invoices-body').innerHTML = renderInvoiceTable(invoices, 'Ennek a bérlőnek még nincs számlája.', { showTenant: false });
+  document.getElementById('invoices-body').innerHTML = renderInvoiceTable(invoices, 'Ennek a bérlőnek még nincs számlája.', { showTenant: false, from: `tenant:${tenantId}` });
 }
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
