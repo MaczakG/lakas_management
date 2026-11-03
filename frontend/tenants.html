@@ -32,10 +32,10 @@
     <div class="card-table">
       <table>
         <thead>
-          <tr><th>Név</th><th>Elérhetőség</th><th>Ingatlan</th><th>Díj alapja</th><th>Beköltözés</th><th>Kiköltözés</th><th></th></tr>
+          <tr><th>Név</th><th>Elérhetőség</th><th>Ingatlan</th><th class="num">Egyenleg</th><th>Díj alapja</th><th>Beköltözés</th><th>Kiköltözés</th><th></th></tr>
         </thead>
         <tbody id="tenants-tbody">
-          <tr class="empty-row"><td colspan="7">Betöltés...</td></tr>
+          <tr class="empty-row"><td colspan="8">Betöltés...</td></tr>
         </tbody>
       </table>
     </div>
@@ -118,7 +118,7 @@ function renderTenants() {
   const tbody = document.getElementById('tenants-tbody');
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">Nincs találat.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">Nincs találat.</td></tr>`;
     return;
   }
 
@@ -127,6 +127,7 @@ function renderTenants() {
       <td class="cell-main"><a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}" onclick="event.stopPropagation()">${escapeHtml(t.name)}</a></td>
       <td>${escapeHtml(t.email || '–')}${t.phone ? `<div class="cell-sub">${escapeHtml(t.phone)}</div>` : ''}</td>
       <td>${escapeHtml(t.propertyName || '–')}</td>
+      <td class="num">${Number(t.balance) > 0 ? `<span class="bal-due" title="Tartozás">${formatCurrency(t.balance)}</span>` : Number(t.balance) < 0 ? `<span class="bal-over" title="Túlfizetés">${formatCurrency(t.balance)}</span>` : '<span class="dim">–</span>'}</td>
       <td>${t.rentCurrency === 'HUF' ? 'Ft' : t.rentCurrency}</td>
       <td>${formatDate(t.moveInDate)}</td>
       <td>${formatDate(t.moveOutDate)}</td>

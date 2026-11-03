@@ -19,6 +19,13 @@ public class Tenant : ICompanyOwned
     public string? Notes { get; set; }
     // A bérlő partner-azonosítója a cég Billingo-fiókjában (az első kiállított számlakor jön létre).
     public int? BillingoPartnerId { get; set; }
+
+    // A lakbér előre (a bizonylat hónapjára) vagy utólag (az előző hónapra) fizetendő — a bizonylat bérleti díj
+    // sorának időszaka ezt követi.
+    public RentPaymentTiming RentPaymentTiming { get; set; } = RentPaymentTiming.Advance;
+    // A bérlő (kifizetőként) vonja le és fizeti be a bérbeadó SZJA-ját: a bérleti díjból levonódik (magánszemély
+    // bérbeadónál; ld. Billing.Szja).
+    public bool TenantPaysSzja { get; set; }
     public DateTime CreatedAt { get; set; }
 
     // Milyen devizanemben van megadva az ingatlan bérleti díja ennél a bérlőnél — a számlán

@@ -4,6 +4,21 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.17** — Egyenlegkövetés, lakbérfizetés módja és SZJA a bérlőnél, tételenkénti rezsi-zárolás.
+  - Rezsi: a bizonylatra került tétel zárolt, amíg a bizonylatot nem sztornózzák. Sztornó után újra szerkeszthető, és a
+    következő bizonylatra kerül. Zárolt tételnél látszik, melyik bizonylaton szerepel.
+  - Utólagos tétel: már bizonylatolt hónapra is felvehető tétel, legfeljebb 36 hónapra visszamenőleg. Nem zárolt, és a
+    következő bizonylatra kerül külön sorként, a hónapjával, pl. „Víz (2026. szeptember)”.
+  - Bérlő adatlap → Bérlet:
+    - „Lakbér fizetése”: előre (a bizonylaton a tárgyhónap) vagy utólag (az előző hónap), pl. „Bérleti díj (2026. október)”;
+    - „SZJA-t fizeti” (csak magánszemély bérbeadónál): ha a bérlő, a bizonylaton „SZJA levonás (15%)” sor csökkenti a lakbért.
+  - Egyenleg: a bérlő adatlapján új „Egyenleg” fül a kiállított bizonylatokkal (a sztornó negatív), a befizetésekkel és
+    futó egyenleggel. „Befizetés rögzítése” gomb (dátum, összeg, megjegyzés), befizetés törölhető. Az egyenleg az
+    Összegzés panelen és a Bérlők listában is látszik (tartozás pirossal, túlfizetés zölddel).
+  - Javítás: a bizonylat az időszakban ott lakó bérlőé; korábban a kiköltözött bérlő is megkaphatta.
+  - Migráció: BalanceAndLateUtilities. Új oszlopok és TenantPayments tábla. A meglévő rezsitételek az időszakuk aktív
+    bizonylatához kötődnek (zároltak). A korábbi hónapok soha nem bizonylatolt tételei nem kerülnek utólag a következő
+    bizonylatra; a sztornózott időszakéi igen.
 - **2026.11.03.16** — Cégeknek: Számlázz.hu vagy Billingo összekötés.
   - Regisztrációkor választható: magánszemélyként vagy cégként / egyéni vállalkozóként adsz bérbe. A Beállításokban később is átállítható.
   - Cégnél a Beállítások → „Bérbeadó és számlázó” részben köthető össze a számlázó:
