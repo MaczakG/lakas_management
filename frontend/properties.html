@@ -161,7 +161,7 @@ async function loadProperties() {
   setPageState([
     { n: active.length, label: 'aktív', tone: 'ok' },
     { n: properties.length - active.length, label: 'inaktív' },
-    { n: active.filter((p) => !p.utilityComplete).length, label: 'hiányzó rezsi a hónapban', tone: 'warn' },
+    { n: active.filter((p) => !p.utilityComplete).length, label: 'hiányzó rezsi a következő számlához', tone: 'warn' },
   ]);
   renderProperties();
 }
@@ -182,7 +182,7 @@ function renderProperties() {
       <td>${escapeHtml(p.ownerNames || '—')}</td>
       <td>${escapeHtml(p.tenantNames || '—')}</td>
       <td>${formatMoney(p.rentAmount, p.rentCurrency)}</td>
-      <td><span class="status-tag ${p.utilityComplete ? 'ok' : 'missing'}">${p.utilityComplete ? 'Rendben' : 'Hiányzik'}</span></td>
+      <td title="A következő számla (${p.nextPeriodYear}. ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}) rezsije"><span class="status-tag ${p.utilityComplete ? 'ok' : 'missing'}">${p.utilityComplete ? 'Rendben' : 'Hiányzik'}</span><div class="cell-sub">${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}i számlához</div></td>
       <td>${String(p.billingDayOfMonth).padStart(2, '0')}. nap ${String(p.billingHour).padStart(2, '0')}:${String(p.billingMinute).padStart(2, '0')}</td>
       <td>${p.isActive ? formatNextBilling(p.nextBillingAt, p.billingDayOfMonth) : '—'}</td>
     </tr>
@@ -352,9 +352,11 @@ const utilityMonthSelect = document.getElementById('u-month');
 utilityMonthSelect.innerHTML = MONTH_NAMES.map((name, idx) => `<option value="${idx + 1}">${name}</option>`).join('');
 
 async function loadUtilityCosts(propertyId) {
+  // Alapból a következő kiküldés időszaka (annak a rezsije kerül a számlára), nem az aktuális hónap.
   const now = new Date();
-  document.getElementById('u-year').value = now.getFullYear();
-  utilityMonthSelect.value = now.getMonth() + 1;
+  const listed = properties.find((p) => p.id === propertyId);
+  document.getElementById('u-year').value = listed?.nextPeriodYear ?? now.getFullYear();
+  utilityMonthSelect.value = listed?.nextPeriodMonth ?? now.getMonth() + 1;
 
   const [entriesRes, invoicesRes] = await Promise.all([
     apiFetch(`/api/properties/${propertyId}/utility-costs`),

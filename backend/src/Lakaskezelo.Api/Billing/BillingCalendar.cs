@@ -44,14 +44,19 @@ public static class BillingCalendar
     }
 
     // A következő ütemezett kiküldés (budapesti helyi idő) a megadott időpont után.
-    public static DateTime NextBillingAt(DateTime nowLocal, int billingDayOfMonth, int hour, int minute)
+    public static DateTime NextBillingAt(DateTime nowLocal, int billingDayOfMonth, int hour, int minute) =>
+        NextBilling(nowLocal, billingDayOfMonth, hour, minute).At;
+
+    // A következő kiküldés és az, hogy melyik időszak (év, hónap) számlája megy ki akkor. A számlára az
+    // időszak rezsi-tételei kerülnek (ld. InvoiceGenerationService), ezért a „van-e rezsi” jelzés is ezt nézi.
+    public static (DateOnly Period, DateTime At) NextBilling(DateTime nowLocal, int billingDayOfMonth, int hour, int minute)
     {
         // Az előző hónap számlája is még előttünk lehet, ha a kiküldése átcsúszott ebbe a hónapba.
         var period = new DateOnly(nowLocal.Year, nowLocal.Month, 1).AddMonths(-1);
         while (true)
         {
             var at = EffectiveBillingDate(period.Year, period.Month, billingDayOfMonth).ToDateTime(new TimeOnly(hour, minute));
-            if (at > nowLocal) return at;
+            if (at > nowLocal) return (period, at);
             period = period.AddMonths(1);
         }
     }

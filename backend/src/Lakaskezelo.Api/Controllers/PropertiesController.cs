@@ -25,11 +25,18 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
             .OrderBy(p => p.Name)
             .ToListAsync(ct);
 
-        var propertiesWithEntries = await db.UtilityCostEntries
-            .Where(u => u.Year == now.Year && u.Month == now.Month)
-            .Select(u => u.PropertyId)
-            .Distinct()
-            .ToListAsync(ct);
+        // A rezsi-jelzés ingatlanonként a következő kiküldés időszakát nézi (nem az aktuális hónapot): pl. ha a
+        // következő számla dec. 5-én megy ki, akkor a decemberi rezsinek kell meglennie — akár már november végén.
+        var next = properties.ToDictionary(p => p.Id,
+            p => BillingCalendar.NextBilling(now, p.BillingDayOfMonth, p.BillingHour, p.BillingMinute));
+        var periods = next.Values.Select(n => n.Period.Year * 100 + n.Period.Month).Distinct().ToList();
+        var periodsWithEntries = (await db.UtilityCostEntries
+                .Where(u => periods.Contains(u.Year * 100 + u.Month))
+                .Select(u => new { u.PropertyId, u.Year, u.Month })
+                .Distinct()
+                .ToListAsync(ct))
+            .Select(u => (u.PropertyId, u.Year, u.Month))
+            .ToHashSet();
 
         return Ok(properties.Select(p => new PropertyListItemDto(
             p.Id, p.Name, p.RentAmount,
@@ -37,9 +44,9 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
             p.IsActive,
             string.Join(", ", p.PropertyOwners.Select(po => po.Owner!.Name)),
             string.Join(", ", p.Tenants.Where(t => t.MoveOutDate == null).Select(t => t.Name)),
-            propertiesWithEntries.Contains(p.Id),
+            periodsWithEntries.Contains((p.Id, next[p.Id].Period.Year, next[p.Id].Period.Month)),
             p.BillingDayOfMonth, p.BillingHour, p.BillingMinute,
-            BillingCalendar.NextBillingAt(now, p.BillingDayOfMonth, p.BillingHour, p.BillingMinute))));
+            next[p.Id].At, next[p.Id].Period.Year, next[p.Id].Period.Month)));
     }
 
     [HttpGet("{id:guid}")]
@@ -281,7 +288,10 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
             : null;
     }
 
-    private static PropertyDetailDto ToDetailDto(Property property) => new(
+    private static PropertyDetailDto ToDetailDto(Property property)
+    {
+        var next = BillingCalendar.NextBilling(BudapestClock.Now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute);
+        return new(
         property.Id, property.Name, property.RentAmount, property.InvoicePrefix,
         property.BillingDayOfMonth, property.BillingHour, property.BillingMinute, property.IsActive,
         [.. property.PropertyOwners.Select(po => new PropertyOwnerDto(po.OwnerId, po.Owner!.Name, po.Share))],
@@ -289,7 +299,8 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
         new PropertySheetDto(property.PropertyType, property.PostalCode, property.City, property.Street, property.FloorDoor, property.Hrsz,
             property.FloorArea, property.Rooms, property.BuildYear, property.ElectricityMeter, property.GasMeter, property.WaterMeter,
             property.Deposit, property.Notes),
-        BillingCalendar.NextBillingAt(BudapestClock.Now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute));
+        next.At, next.Period.Year, next.Period.Month);
+    }
 
     private static UtilityCostEntryDto ToDto(UtilityCostEntry entry, bool isLocked) => new(entry.Id, entry.Year, entry.Month, entry.Label, entry.Amount, entry.CreatedAt, isLocked);
 }
