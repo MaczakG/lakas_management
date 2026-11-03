@@ -27,9 +27,16 @@
     if (/^image\//.test(ct)) return 'image-other';
     if (/^text\//.test(ct)) return 'text';
     if (/sheet|excel/.test(ct)) return 'sheet';
+    if (/word|opendocument\.text/.test(ct)) return 'word';
     return 'file';
   };
-  const iconOf = (doc) => ({ pdf: 'file-text', image: 'image', 'image-other': 'image', text: 'file-text', sheet: 'file-spreadsheet' }[kindOf(doc)] || 'file');
+  // Kiválasztott (még fel nem töltött) fájl típusa a kiterjesztésből — a böngésző által adott MIME-típus gyakran üres.
+  const typeFromName = (name) => ({ pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+    heic: 'image/heic', heif: 'image/heif', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    odt: 'application/vnd.oasis.opendocument.text', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ods: 'application/vnd.oasis.opendocument.spreadsheet', txt: 'text/plain', csv: 'text/csv' }[ext(name)] || '');
+  const iconOf = (doc) => (doc.contentType === 'text/csv' ? 'file-csv'
+    : { pdf: 'file-pdf', image: 'file-image', 'image-other': 'file-image', text: 'file-text', sheet: 'file-excel', word: 'file-word' }[kindOf(doc)] || 'file');
   const typeLabel = (doc) => (ext(doc.fileName) || 'fájl').toUpperCase();
 
   function formatSize(bytes) {
@@ -245,7 +252,7 @@
       stage.scrollTop = 0;
 
       const kind = kindOf(doc);
-      if (kind === 'sheet' || kind === 'file') {
+      if (kind === 'sheet' || kind === 'word' || kind === 'file') {
         message(iconOf(doc), 'Ehhez a fájltípushoz nincs előnézet', `${typeLabel(doc)} fájl. Töltsd le, és nyisd meg a gépeden.`, true);
         return;
       }
@@ -528,7 +535,7 @@
 
       const rowsHtml = () => items.map((it, i) => `
         <div class="doc-up-row${it.done ? ' done' : ''}" data-row="${i}">
-          <span class="doc-ico k-${kindOf({ contentType: it.file.type })}">${ICO(/^image\//.test(it.file.type) ? 'image' : 'file-text')}<i>${escapeHtml(ext(it.file.name).toUpperCase())}</i></span>
+          <span class="doc-ico k-${kindOf({ contentType: typeFromName(it.file.name) })}">${ICO(iconOf({ contentType: typeFromName(it.file.name) }))}<i>${escapeHtml(ext(it.file.name).toUpperCase())}</i></span>
           <div class="doc-up-main">
             <input type="text" value="${escapeHtml(it.name)}" maxlength="200" aria-label="Név" data-name="${i}"${it.done ? ' disabled' : ''}>
             <div class="doc-up-meta"><span>${escapeHtml(it.file.name)}, ${formatSize(it.file.size)}</span><span class="doc-up-state" data-state="${i}">${it.done ? 'Feltöltve' : ''}</span></div>

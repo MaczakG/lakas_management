@@ -43,7 +43,7 @@
       <div class="who"><span id="who-name">–</span><small id="who-company"></small></div>
     </div>
     <button class="btn btn-secondary btn-sm logout-btn" type="button" id="logout-link">${icon('log-out')}Kilépés</button>
-    <span class="sidebar-version"><span id="version-tag"></span><br><a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelés</a></span>
+    <span class="sidebar-version"><span id="version-tag"></span><br><a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelés</a><br><span class="credit">Uicons by <a href="https://www.flaticon.com/uicons" target="_blank" rel="noopener">Flaticon</a></span></span>
   </aside>`);
 
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.
@@ -129,7 +129,7 @@
     if (isAdmin() && window.__currentPage !== 'subscription.html') {
       const link = document.createElement('a');
       link.href = 'subscription.html';
-      link.textContent = 'Előfizetés →';
+      link.innerHTML = 'Előfizetés<svg class="inline-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#arrow-right"/></svg>';
       banner.appendChild(link);
     }
     main.prepend(banner);

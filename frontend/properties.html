@@ -40,7 +40,7 @@
 
     <div class="toolbar">
       <div class="search-box">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#search"/></svg>
         <input type="text" id="search-input" placeholder="Keresés név alapján...">
       </div>
     </div>
@@ -63,7 +63,7 @@
   <div class="modal modal-lg">
     <div class="modal-head">
       <div><h2 id="modal-title">Új ingatlan</h2></div>
-      <button class="modal-close" id="modal-close">✕</button>
+      <button aria-label="Bezárás" class="modal-close" id="modal-close"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
     </div>
     <div class="modal-body">
       <div class="tabs" id="modal-tabs">
@@ -231,7 +231,7 @@ function addOwnerRow(ownerId, share) {
   row.innerHTML = `
     <select class="owner-select">${ownerOptionsHtml(ownerId)}</select>
     <input type="text" class="owner-share" placeholder="pl. 1/2" title="Tulajdoni hányad" value="${escapeHtml(share || '')}">
-    <button type="button" class="remove-owner-row">✕</button>
+    <button type="button" class="remove-owner-row" aria-label="Eltávolítás"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
   `;
   row.querySelector('.remove-owner-row').addEventListener('click', () => row.remove());
   document.getElementById('owner-rows').appendChild(row);
