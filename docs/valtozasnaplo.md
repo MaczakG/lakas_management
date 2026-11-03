@@ -4,6 +4,9 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.3** — A Beállítások oldal tetején „Előfizetés” rész: állapot (díjmentes / üzemeltető / próbaidő /
+  aktív / fizetés sikertelen / csak olvasható), érvényesség, aktív ingatlanok, díj, mentett kártya, és gomb az
+  Előfizetés oldalra (fizetés, kártya, számlák).
 - **2026.11.03.2** — A „Rezsi: Rendben / Hiányzik” jelzés a következő számla időszakát nézi, nem az aktuális
   hónapot (pl. dec. 5-i számlázásnál a decemberi rezsinek kell meglennie — akár már november végén rögzítve).
   Az ingatlanlistán látszik, melyik hónap számlájához; az adatlapon és a Rezsi felvételben is ez az alapértelmezett
