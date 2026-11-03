@@ -15,6 +15,7 @@
 <div class="app">
   <script src="app.js"></script>
   <script src="nav.js"></script>
+  <script src="invoice-progress.js"></script>
 
   <main class="main">
     <div class="page-header">
@@ -131,9 +132,9 @@ document.getElementById('search-input').addEventListener('input', renderInvoices
 document.getElementById('status-filter').addEventListener('change', renderInvoices);
 
 window.retryInvoice = async (propertyId, year, month) => {
-  const res = await apiFetch('/api/invoices/generate', { method: 'POST', body: JSON.stringify({ propertyId, year, month }) });
-  if (res.ok) loadInvoices();
-  else alert('Nem sikerült újrapróbálni a számla generálását.');
+  const propertyName = invoices.find((i) => i.propertyId === propertyId)?.propertyName;
+  await generateInvoiceWithProgress({ propertyId, year, month, propertyName });
+  loadInvoices();
 };
 
 // Kiküldött számla törlése csak szándékos felülbírálással (pl. téves teszt-küldés) — ehhez a
@@ -188,15 +189,11 @@ document.getElementById('generate-form').addEventListener('submit', async (e) =>
     month: Number(monthSelect.value),
   };
 
-  const res = await apiFetch('/api/invoices/generate', { method: 'POST', body: JSON.stringify(payload) });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    errorEl.textContent = data.message || 'Hiba történt a generálás során.';
-    errorEl.classList.add('show');
-    return;
-  }
-
+  // A választó ablak bezárul, és a folyamatjelző veszi át (invoice-progress.js).
+  const select = document.getElementById('g-property');
+  const propertyName = select.options[select.selectedIndex]?.text;
   document.getElementById('generate-modal-overlay').classList.remove('open');
+  await generateInvoiceWithProgress({ ...payload, propertyName });
   loadInvoices();
 });
 
