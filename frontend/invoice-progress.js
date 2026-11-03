@@ -252,7 +252,7 @@
     }
     // Ha az időszakra már van számla, a generálás azt frissíti (ugyanazzal a sorszámmal) — ezt előbb jóvá kell hagyni.
     const invRes = await apiFetch(`/api/properties/${propertyId}/invoices`);
-    const existing = invRes.ok ? (await invRes.json()).find((i) => i.periodYear === year && i.periodMonth === month) : null;
+    const existing = invRes.ok ? (await invRes.json()).find((i) => i.periodYear === year && i.periodMonth === month && !i.archivedAt) : null;
     if (existing && existing.status !== 'Failed') {
       const sent = existing.status === 'Sent';
       const ok = await uiConfirm(
@@ -274,24 +274,20 @@ window.invoiceRetry = async (propertyId, year, month, propertyName) => {
   document.dispatchEvent(new CustomEvent('invoices-changed'));
 };
 
-// Kiküldött számla törlése csak szándékos felülbírálással (pl. téves teszt-küldés) — a sorszámot be kell gépelni.
-window.invoiceDelete = async (id, number, status) => {
-  const sent = status === 'Sent';
-  if (sent) {
-    const typed = await uiPrompt(
-      `Ez a számla már ki lett küldve a bérlőnek. Csak téves vagy teszt számlát törölj!\n\nA törléshez gépeld be a sorszámát: ${number}`,
-      { title: 'Kiküldött számla törlése', confirmText: 'Végleges törlés', danger: true, input: { placeholder: number } });
-    if (typed === null) return;
-    if (typed.trim() !== number) {
-      await uiAlert('A beírt sorszám nem egyezik, a számla nem lett törölve.', { title: 'Törlés megszakítva' });
-      return;
-    }
-  } else if (!(await uiConfirm(`Biztosan törlöd a(z) ${number} számlát? Ez nem vonható vissza.`, { title: 'Számla törlése', confirmText: 'Törlés', danger: true }))) {
-    return;
-  }
-  const res = await apiFetch(`/api/invoices/${id}${sent ? '?force=true' : ''}`, { method: 'DELETE' });
-  if (!res.ok && res.status !== 204) {
-    await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült törölni a számlát.'), { title: 'Törlés sikertelen' });
+// A kiállított bizonylat nem törölhető, csak archiválható. Az archivált számla megmarad (PDF-je letölthető), de nem
+// számít bele az összesítőkbe és a csomagba, az időszak rezsi tételei újra szerkeszthetők, és új számla készíthető.
+window.invoiceArchive = async (id, number) => {
+  const ok = await uiConfirm(
+    `A(z) ${number} számla archiválása után:\n\n`
+    + '• a bizonylat megmarad, a PDF továbbra is letölthető;\n'
+    + '• nem számít bele az összesítőkbe és a havi csomagba;\n'
+    + '• az időszak rezsi tételei újra szerkeszthetők, és új számla készíthető rá.\n\n'
+    + 'Az archiválás nem vonható vissza.',
+    { title: 'Számla archiválása', confirmText: 'Archiválás' });
+  if (!ok) return;
+  const res = await apiFetch(`/api/invoices/${id}/archive`, { method: 'POST' });
+  if (!res.ok) {
+    await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült archiválni a számlát.'), { title: 'Archiválás sikertelen' });
     return;
   }
   document.dispatchEvent(new CustomEvent('invoices-changed'));
@@ -303,9 +299,17 @@ window.invoiceActionButtons = function (i) {
   const buttons = [];
   if (i.status !== 'Failed') {
     buttons.push(`<button class="icon-btn" type="button" title="PDF letöltése" aria-label="PDF letöltése" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">${icon('download')}</button>`);
-  } else {
+  } else if (!i.archivedAt) {
     buttons.push(`<button class="icon-btn" type="button" title="Újrapróbálás" aria-label="Újrapróbálás" onclick="invoiceRetry(${jsArg(i.propertyId)}, ${i.periodYear}, ${i.periodMonth}, ${jsArg(i.propertyName)})">${icon('rotate-ccw')}</button>`);
   }
-  buttons.push(`<button class="icon-btn danger" type="button" title="Számla törlése" aria-label="Számla törlése" onclick="invoiceDelete(${jsArg(i.id)}, ${jsArg(i.number)}, ${jsArg(i.status)})">${icon('trash')}</button>`);
+  if (!i.archivedAt) {
+    buttons.push(`<button class="icon-btn" type="button" title="Archiválás" aria-label="Számla archiválása" onclick="invoiceArchive(${jsArg(i.id)}, ${jsArg(i.number)})">${icon('archive')}</button>`);
+  }
   return `<span class="invoice-actions">${buttons.join('')}</span>`;
+};
+
+// Állapotcímke a számlatáblákhoz — az archivált számla „Archivált” címkét kap.
+window.invoiceStatusTag = function (i, labels) {
+  if (i.archivedAt) return '<span class="status-tag inactive" title="Archiválva: ' + escapeHtml(formatDate(i.archivedAt)) + '">Archivált</span>';
+  return `<span class="status-tag ${escapeHtml(i.status)}">${labels[i.status] || escapeHtml(i.status)}</span>`;
 };

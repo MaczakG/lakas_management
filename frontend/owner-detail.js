@@ -66,7 +66,7 @@ function shareValue(share) {
 
 function renderSummary() {
   const year = new Date().getFullYear();
-  const issued = invoices.filter((i) => i.status !== 'Failed');
+  const issued = invoices.filter((i) => i.status !== 'Failed' && !i.archivedAt);
   const thisYear = issued.filter((i) => i.periodYear === year).reduce((s, i) => s + Number(i.amountTotal), 0);
   const active = ownedProperties.filter((p) => p.isActive);
   const rented = active.filter((p) => p.tenantName).length;

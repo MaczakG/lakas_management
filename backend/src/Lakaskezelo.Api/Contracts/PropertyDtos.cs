@@ -35,3 +35,4 @@ public record UpsertPropertyRequest(
 
 public record UtilityCostEntryDto(Guid Id, int Year, int Month, string Label, decimal Amount, DateTime CreatedAt, bool IsLocked);
 public record UpsertUtilityCostEntryRequest(int Year, int Month, string Label, decimal Amount);
+public record UpdateUtilityCostEntryRequest(string Label, decimal Amount);

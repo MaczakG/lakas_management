@@ -118,7 +118,7 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
         if (!await db.Properties.AnyAsync(p => p.Id == id, ct)) return NotFound();
         if (await IsPeriodLockedAsync(id, request.Year, request.Month, ct))
         {
-            return Conflict(new { message = "Ez az időszak már számlázva lett, a rezsi tételek nem módosíthatók." });
+            return Conflict(new { message = LockedMessage });
         }
 
         var entry = new UtilityCostEntry
@@ -137,6 +137,24 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
         return Ok(ToDto(entry, isLocked: false));
     }
 
+    private const string LockedMessage = "Erre az időszakra már van számla, ezért a rezsi tételek nem módosíthatók. Ha javítani kell, archiváld a számlát, utána a tételek szerkeszthetők.";
+
+    // Meglévő tétel javítása (megnevezés, összeg) — csak ha az időszakra nincs aktív (nem archivált) számla.
+    [HttpPut("{id:guid}/utility-costs/{entryId:guid}")]
+    public async Task<ActionResult<UtilityCostEntryDto>> UpdateUtilityCost(Guid id, Guid entryId, UpdateUtilityCostEntryRequest request, CancellationToken ct)
+    {
+        var entry = await db.UtilityCostEntries.FirstOrDefaultAsync(u => u.Id == entryId && u.PropertyId == id, ct);
+        if (entry is null) return NotFound();
+        if (await IsPeriodLockedAsync(id, entry.Year, entry.Month, ct)) return Conflict(new { message = LockedMessage });
+        var label = (request.Label ?? "").Trim();
+        if (label.Length is 0 or > 200) return BadRequest(new { message = "Add meg a tétel megnevezését." });
+        if (request.Amount < 0) return BadRequest(new { message = "Az összeg nem lehet negatív." });
+        entry.Label = label;
+        entry.Amount = request.Amount;
+        await db.SaveChangesAsync(ct);
+        return Ok(ToDto(entry, isLocked: false));
+    }
+
     [HttpDelete("{id:guid}/utility-costs/{entryId:guid}")]
     public async Task<IActionResult> DeleteUtilityCost(Guid id, Guid entryId, CancellationToken ct)
     {
@@ -144,7 +162,7 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
         if (entry is null) return NotFound();
         if (await IsPeriodLockedAsync(id, entry.Year, entry.Month, ct))
         {
-            return Conflict(new { message = "Ez az időszak már számlázva lett, a rezsi tételek nem módosíthatók." });
+            return Conflict(new { message = LockedMessage });
         }
 
         db.UtilityCostEntries.Remove(entry);
@@ -156,11 +174,11 @@ public class PropertiesController(LakaskezeloDbContext db) : ControllerBase
     // sikeresen legenerált vagy kiküldött számla — a Failed státuszú próbálkozás szándékosan nem
     // zár le semmit, hogy a hiányzó/hibás adat javítható és a generálás újrapróbálható legyen.
     private async Task<bool> IsPeriodLockedAsync(Guid propertyId, int year, int month, CancellationToken ct) =>
-        await db.Invoices.AnyAsync(i => i.PropertyId == propertyId && i.PeriodYear == year && i.PeriodMonth == month
+        await db.Invoices.AnyAsync(i => i.PropertyId == propertyId && i.PeriodYear == year && i.PeriodMonth == month && i.ArchivedAt == null
             && (i.Status == Domain.Enums.InvoiceStatus.Sent || i.Status == Domain.Enums.InvoiceStatus.Generated), ct);
 
     private async Task<HashSet<(int Year, int Month)>> LockedPeriodsAsync(Guid propertyId, CancellationToken ct) =>
-        (await db.Invoices.Where(i => i.PropertyId == propertyId
+        (await db.Invoices.Where(i => i.PropertyId == propertyId && i.ArchivedAt == null
                 && (i.Status == Domain.Enums.InvoiceStatus.Sent || i.Status == Domain.Enums.InvoiceStatus.Generated))
             .Select(i => new { i.PeriodYear, i.PeriodMonth })
             .ToListAsync(ct))

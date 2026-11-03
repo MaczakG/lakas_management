@@ -71,6 +71,7 @@ public class BillingSchedulerService(IServiceScopeFactory scopeFactory, ILogger<
                 logger.LogInformation("Skipping invoice for property {PropertyId}: company subscription is locked", property.Id);
                 continue;
             }
+            // Archivált számla esetén sem generál újra magától: az újat a felhasználó készíti el, amikor a rezsi rendben van.
             var alreadyInvoiced = await db.Invoices.AnyAsync(
                 i => i.PropertyId == property.Id && i.PeriodYear == period.Year && i.PeriodMonth == period.Month, ct);
             if (alreadyInvoiced) continue;

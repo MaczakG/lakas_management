@@ -8,7 +8,10 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="detail.css">
 <style>
-  .year-field{max-width:160px;}
+  /* Évszűrő: háttér nélkül, csak a lista — azokkal az évekkel, amelyekhez van számla. */
+  .year-filter{display:flex;align-items:center;gap:10px;margin:0 0 14px;}
+  .year-filter label{font-size:13px;font-weight:600;color:var(--ink-soft);}
+  .year-filter select{width:120px;height:40px;}
   .failed-note{font-size:12px;color:var(--coral);}
   /* Lenyíló hónap-sorok: a kattintott sor alatt egy külön sorban jelennek meg a csomag számlái. */
   .bundle-row{cursor:pointer;}
@@ -50,9 +53,10 @@
       <button class="btn btn-primary" type="button" id="create-invoice-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#file-plus"/></svg>Számla készítése</button>
     </div>
 
-    <section class="section">
-      <div class="field year-field"><label for="year-input">Év</label><input type="number" id="year-input"></div>
-    </section>
+    <div class="year-filter" id="year-filter" hidden>
+      <label for="year-select">Év</label>
+      <select id="year-select"></select>
+    </div>
 
     <div class="card-table">
       <table>
@@ -64,19 +68,34 @@
         </tbody>
       </table>
     </div>
-    <p class="hint" style="margin-top:10px;">A sikertelen számlák nem kerülnek a csomagba, mert nem mentek ki. A hónap sorát lenyitva újrapróbálhatók vagy törölhetők.</p>
+    <p class="hint" style="margin-top:10px;">A sikertelen számlák nem kerülnek a csomagba, mert nem mentek ki, az archiváltak pedig érvénytelenek. A hónap sorát lenyitva ezek is láthatók.</p>
   </main>
 </div>
 
 <script>
 requireAuth();
 
-const yearInput = document.getElementById('year-input');
-yearInput.value = new Date().getFullYear();
+const yearSelect = document.getElementById('year-select');
+
+// Csak azok az évek, amelyekhez van legalább egy számla; alapból a folyó év, ha van benne számla, különben a legutóbbi.
+async function loadYears() {
+  const res = await apiFetch('/api/invoice-bundles/years');
+  const years = res.ok ? await res.json() : [];
+  const previous = Number(yearSelect.value);
+  const now = new Date().getFullYear();
+  const pick = years.includes(previous) ? previous : years.includes(now) ? now : years[0];
+  yearSelect.innerHTML = years.map((y) => `<option value="${y}"${y === pick ? ' selected' : ''}>${y}</option>`).join('');
+  document.getElementById('year-filter').hidden = years.length === 0;
+  return years.length > 0;
+}
 
 async function loadBundles() {
-  const year = Number(yearInput.value);
   const tbody = document.getElementById('bundles-tbody');
+  if (!yearSelect.value) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Még nincs számla. A „Számla készítése” gombbal készíthetsz egyet.</td></tr>`;
+    return;
+  }
+  const year = Number(yearSelect.value);
   const res = await apiFetch(`/api/invoice-bundles?year=${year}`);
   const months = await res.json();
 
@@ -90,11 +109,11 @@ async function loadBundles() {
     const fileName = `szamlak-${m.year}-${String(m.month).padStart(2, '0')}.zip`;
     const key = `${m.year}-${m.month}`;
     // Lenyitható minden hónap, amiben van számla (a sikertelenek is látszanak, hogy újrapróbálhatók legyenek).
-    const expandable = m.invoiceCount + m.failedCount > 0;
+    const expandable = m.invoiceCount + m.failedCount + (m.archivedCount || 0) > 0;
     return `
       <tr${expandable ? ` class="bundle-row" data-key="${key}" data-year="${m.year}" data-month="${m.month}" tabindex="0" aria-expanded="false"` : ''}>
         <td class="cell-main">${expandable ? `<span class="chev">${DETAIL_ICON('chevron-right')}</span>` : ''}${label}</td>
-        <td>${m.invoiceCount} db${m.failedCount > 0 ? `<div class="failed-note">+ ${m.failedCount} sikertelen</div>` : ''}</td>
+        <td>${m.invoiceCount} db${m.failedCount > 0 ? `<div class="failed-note">+ ${m.failedCount} sikertelen</div>` : ''}${m.archivedCount > 0 ? `<div class="cell-sub">+ ${m.archivedCount} archivált</div>` : ''}</td>
         <td>${formatCurrency(m.totalAmount)}</td>
         <td class="row-actions">${m.invoiceCount > 0
           ? `<button class="btn btn-primary btn-sm" type="button" onclick="event.stopPropagation(); exportBundle(this, ${m.year}, ${m.month}, '${fileName}')">Exportálás (ZIP)</button>`
@@ -153,12 +172,12 @@ window.exportBundle = async (button, year, month, fileName) => {
   }
 };
 
-yearInput.addEventListener('input', () => { loadedMonths.clear(); loadBundles(); });
+yearSelect.addEventListener('change', () => { loadedMonths.clear(); loadBundles(); });
 
 // Számla készítése, újrapróbálás vagy törlés után a lista frissül (a nyitott hónapok újra lenyithatók).
 document.getElementById('create-invoice-btn').addEventListener('click', () => openInvoiceCreateDialog());
-document.addEventListener('invoices-changed', () => { loadedMonths.clear(); loadBundles(); });
-loadBundles();
+document.addEventListener('invoices-changed', async () => { loadedMonths.clear(); await loadYears(); loadBundles(); });
+loadYears().then(loadBundles);
 </script>
 </body>
 </html>

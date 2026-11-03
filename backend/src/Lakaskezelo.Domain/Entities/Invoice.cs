@@ -30,6 +30,11 @@ public class Invoice : ICompanyOwned
     public string? PdfStorageKey { get; set; }
     public DateTime? SentAt { get; set; }
     public string? ErrorMessage { get; set; }
+    // A kiállított bizonylat nem törölhető, csak archiválható: az archivált számla megmarad (PDF-je letölthető),
+    // de nem számít bele az összesítőkbe és a csomagokba, nem zárja az időszak rezsijét, és új számla készíthető
+    // ugyanarra az időszakra.
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedByUserId { get; set; }
 
     public List<InvoiceLine> Lines { get; set; } = [];
 }
