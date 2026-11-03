@@ -4,6 +4,10 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.6** — Új arculat: Midnight Black (#02070A) szöveg, sötét oldalsáv és elsődleges gombok; Electric
+  Blue (#0297DE) aktív elemek, fókusz és diagramok; Cantaloupe Orange (#FC734D) kiemelés (márkajel, aktív
+  menüpont jelölője). Új betűtípus: Geist és Geist Mono (saját szerverről, magyar ékezetekkel). A színek
+  kontrasztja WCAG AA szerint ellenőrizve.
 - **2026.11.03.5** — A „Számlázás” menüpont megszűnt: számlát az ingatlan adatlapján és a Számla csomagok oldalon a
   „Számla készítése” gombbal lehet készíteni (alapból a következő számla időszakára; meglévő számlánál előbb
   rákérdez). A sikertelen számlák a Számla csomagok hónap-sorát lenyitva újrapróbálhatók, és minden számlatáblából
