@@ -4,6 +4,9 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.7** — Arculat-finomítás: fekete és narancs helyett zafírkék (#2257E6) fő szín (gombok, linkek, aktív
+  elemek, márkajel, diagramok), sötét tengerészkék (#13233F) szöveg, hideg kékesszürke felületek és világos
+  oldalsáv. A diagramok kategóriaszínei narancs és citromsárga nélkül (színtévesztésre ellenőrizve).
 - **2026.11.03.6** — Új arculat: Midnight Black (#02070A) szöveg, sötét oldalsáv és elsődleges gombok; Electric
   Blue (#0297DE) aktív elemek, fókusz és diagramok; Cantaloupe Orange (#FC734D) kiemelés (márkajel, aktív
   menüpont jelölője). Új betűtípus: Geist és Geist Mono (saját szerverről, magyar ékezetekkel). A színek
