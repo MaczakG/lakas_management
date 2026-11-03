@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bizonylat | Lakáskezelő</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="detail.css">
+<link rel="stylesheet" href="documents.css">
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+  <script src="invoice-progress.js"></script>
+
+  <main class="main">
+    <!-- A bizonylat adatlapja: bal oldalon az adatai, a tételei és a kapcsolódó bizonylatok (eredeti, sztornó, új bizonylat),
+         jobb oldalon a PDF előnézete. -->
+    <div class="detail-page doc-detail-page">
+      <div class="detail-head">
+        <div class="detail-head-text">
+          <ol class="crumbs" id="crumbs"></ol>
+          <div class="title-row">
+            <h1 id="i-number">Betöltés…</h1>
+            <span id="i-status"></span>
+          </div>
+          <p class="detail-sub" id="i-sub"></p>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-secondary btn-sm" type="button" id="download-btn" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#download"/></svg>PDF letöltése</button>
+          <button class="btn btn-secondary btn-sm" type="button" id="retry-btn" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#rotate-ccw"/></svg>Újrapróbálás</button>
+          <button class="btn btn-primary btn-sm" type="button" id="paid-btn" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#check"/></svg>Fizetés rögzítése</button>
+          <button class="btn btn-secondary btn-sm" type="button" id="unpaid-btn" hidden>Befizetések visszavonása</button>
+          <button class="btn btn-danger btn-sm" type="button" id="cancel-btn" hidden>Sztornózás</button>
+        </div>
+      </div>
+
+      <div class="form-error" id="load-error"></div>
+
+      <div class="doc-detail">
+        <div class="doc-side">
+          <section class="panel">
+            <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#file-invoice"/></svg>Adatok</h2></div>
+            <dl class="panel-body props" id="props"></dl>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Tételek</h2></div>
+            <div class="panel-table" id="lines"></div>
+          </section>
+          <section class="panel" id="related-panel" hidden>
+            <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#history"/></svg>Kapcsolódó bizonylatok <span class="panel-count" id="count-related"></span></h2></div>
+            <div class="inv-related" id="related"></div>
+          </section>
+        </div>
+
+        <section class="panel doc-preview">
+          <div class="panel-head">
+            <h2 class="panel-title doc-preview-title" id="pv-title">Előnézet</h2>
+            <div class="pv-zoom" id="pv-zoom" hidden>
+              <button class="icon-btn" type="button" id="zoom-out" title="Kicsinyítés" aria-label="Kicsinyítés"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#minus"/></svg></button>
+              <button class="pv-zoom-val" type="button" id="zoom-val" title="Vissza 60%-ra">60%</button>
+              <button class="icon-btn" type="button" id="zoom-in" title="Nagyítás" aria-label="Nagyítás"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#plus"/></svg></button>
+            </div>
+          </div>
+          <div class="dv-stage" id="pv-stage"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="record-detail.js"></script>
+<script src="documents.js"></script>
+<script src="invoice-detail.js"></script>
+</body>
+</html>

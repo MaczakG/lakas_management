@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Platform admin — Cégek</title>
+<title>Cégek | Platform admin</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <style>
@@ -30,7 +30,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Platform admin</div>
         <h1>Cégek</h1>
         <div class="page-state" id="page-state"></div>
       </div>
@@ -55,11 +54,11 @@
 requireAuth();
 const $ = (id) => document.getElementById(id);
 const huf = (n) => `${Math.round(n).toLocaleString('hu-HU')} Ft`;
-const day = (d) => (d ? new Date(d).toLocaleDateString('hu-HU') : '—');
+const day = (d) => (d ? new Date(d).toLocaleDateString('hu-HU') : '–');
 function show(id, text) { $(id).textContent = text; $(id).classList.toggle('show', !!text); }
 function secret(id, isSet) {
   $(id).value = '';
-  $(id).placeholder = isSet ? '•••••••• (beállítva — üresen hagyva nem változik)' : 'nincs beállítva';
+  $(id).placeholder = isSet ? '•••••••• (beállítva, üresen hagyva nem változik)' : 'nincs beállítva';
 }
 // A platform beállítás-sora egyben mentődik: betöltjük, a lap a saját mezőit átírja, és visszaküldjük
 // (a titkos kulcsok üresen maradva nem változnak).
@@ -88,7 +87,7 @@ async function load() {
   const companies = await readJson(cres);
   if (!cres.ok) { show('page-error', errorMessage(cres, companies, 'Nem sikerült betölteni.')); return; }
   $('billing-note').textContent = settings && !settings.billingEnabled
-    ? 'A díjszedés ki van kapcsolva (Díjak és fizetés) — most minden cég ingyen használja a rendszert.' : '';
+    ? 'A díjszedés ki van kapcsolva (Díjak és fizetés), most minden cég ingyen használja a rendszert.' : '';
   setPageState([
     { n: companies.length, label: 'cég' },
     { n: companies.filter((c) => c.status === 'Active').length, label: 'fizető', tone: 'ok' },
@@ -96,7 +95,7 @@ async function load() {
     { n: companies.filter((c) => c.status === 'Locked').length, label: 'csak olvasható' },
   ]);
   $('companies-tbody').innerHTML = companies.map((c) => {
-    const [label, tone] = c.isOperator ? ['Üzemeltető', 'ok'] : (STATUS[c.status] || ['—', '']);
+    const [label, tone] = c.isOperator ? ['Üzemeltető', 'ok'] : (STATUS[c.status] || ['–', '']);
     const until = c.status === 'Trial' ? c.trialEndsAt : c.paidUntil;
     return `<tr>
       <td class="cell-main">${escapeHtml(c.name)}</td>
@@ -104,7 +103,7 @@ async function load() {
       <td class="num">${c.users}</td>
       <td class="num">${c.activeProperties}</td>
       <td><span class="status-tag ${tone}">${escapeHtml(label)}</span>${c.interval ? ` <span class="hint">${c.interval === 'Yearly' ? 'éves' : 'havi'}</span>` : ''}</td>
-      <td>${c.isOperator ? '—' : day(until)}</td>
+      <td>${c.isOperator ? '–' : day(until)}</td>
       <td class="num">${huf(c.paidTotal)}</td>
       <td class="row-actions">${c.isOperator ? '' : `<button class="btn btn-ghost btn-sm" type="button" onclick="extendCompany(${jsArg(c.id)}, ${jsArg(c.name)})">+ díjmentes napok</button>`}</td>
     </tr>`;
@@ -112,7 +111,8 @@ async function load() {
 }
 
 window.extendCompany = async (id, name) => {
-  const input = prompt(`Hány díjmentes napot írjunk jóvá: ${name}?\n(Próbaidőben a próbaidőt, fizetőnél a kifizetett időszakot hosszabbítja; zárolt cégnél újraindítja.)`, '14');
+  const input = await uiPrompt('Próbaidőben a próbaidőt, fizetőnél a kifizetett időszakot hosszabbítja; zárolt cégnél újraindítja.',
+    { title: `Díjmentes napok: ${name}`, confirmText: 'Jóváírás', input: { label: 'Napok száma', type: 'number', value: '14' } });
   if (!input) return;
   const res = await apiFetch(`/api/platform/companies/${id}/extend`, { method: 'POST', body: JSON.stringify({ days: parseInt(input, 10) }) });
   const body = await readJson(res);

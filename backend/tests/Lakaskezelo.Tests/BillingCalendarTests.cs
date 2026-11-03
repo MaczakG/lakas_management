@@ -22,4 +22,15 @@ public class BillingCalendarTests
         Assert.Equal(new DateOnly(year, month, 1), next.Period);
         Assert.Equal(DateTime.Parse(at), next.At);
     }
+
+    // A rezsi emlékeztető a számlázás előtti utolsó, a határnappal megegyező napon esedékes.
+    [Theory]
+    [InlineData("2026-12-01", 25, "2026-11-25")]
+    [InlineData("2026-12-07", 3, "2026-12-03")]
+    [InlineData("2026-12-07", 7, "2026-12-07")]
+    [InlineData("2027-01-05", 28, "2026-12-28")]
+    public void Reminder_date_is_the_last_deadline_day_before_billing(string billing, int deadlineDay, string expected)
+    {
+        Assert.Equal(DateOnly.Parse(expected), BillingCalendar.ReminderDate(DateOnly.Parse(billing), deadlineDay));
+    }
 }

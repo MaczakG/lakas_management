@@ -3,15 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Tulajdonos adatlap</title>
+<title>Tulajdonos adatlap | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="detail.css">
+<link rel="stylesheet" href="documents.css">
 </head>
 <body>
 <div class="app">
   <script src="app.js"></script>
   <script src="nav.js"></script>
+  <script src="invoice-progress.js"></script>
   <main class="main">
     <div class="detail-page">
       <div class="detail-head">
@@ -25,7 +27,7 @@
             <span id="p-status"></span>
           </div>
           <p class="detail-sub" id="p-sub"></p>
-          <p class="detail-hint">Kattints egy adatra, és írd át — a változás azonnal mentődik.</p>
+          <p class="detail-hint">Kattints egy adatra, és írd át. A változás azonnal mentődik.</p>
         </div>
         <div class="detail-actions">
           <button class="btn btn-danger btn-sm" type="button" id="delete-btn">Tulajdonos törlése</button>
@@ -51,13 +53,14 @@
         </section>
       </div>
       <section class="record-tabs">
-        <div class="record-tabbar"><div class="record-tablist" role="tablist"><button class="record-tab" type="button" role="tab" data-tab="properties"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#house"/></svg>Ingatlanok <span class="panel-count" id="count-properties"></span></button><button class="record-tab" type="button" role="tab" data-tab="invoices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Számlák <span class="panel-count" id="count-invoices"></span></button></div></div>
-        <div class="record-tab-body"><div class="record-tab-pane" data-pane="properties" role="tabpanel" hidden><div class="panel-table" id="properties-body"><div class="panel-empty">Betöltés…</div></div></div><div class="record-tab-pane" data-pane="invoices" role="tabpanel" hidden><div class="panel-table" id="invoices-body"><div class="panel-empty">Betöltés…</div></div></div></div>
+        <div class="record-tabbar"><div class="record-tablist" role="tablist"><button class="record-tab" type="button" role="tab" data-tab="properties"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#house"/></svg>Ingatlanok <span class="panel-count" id="count-properties"></span></button><button class="record-tab" type="button" role="tab" data-tab="invoices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Bizonylatok <span class="panel-count" id="count-invoices"></span></button><button class="record-tab" type="button" role="tab" data-tab="documents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#paperclip"/></svg>Dokumentumok <span class="panel-count" id="count-documents"></span></button></div><div class="record-tab-actions"><button class="btn btn-secondary" type="button" id="upload-doc" data-tab-action="documents" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#upload"/></svg>Feltöltés</button></div></div>
+        <div class="record-tab-body"><div class="record-tab-pane" data-pane="properties" role="tabpanel" hidden><div class="panel-table" id="properties-body"><div class="panel-empty">Betöltés…</div></div></div><div class="record-tab-pane" data-pane="invoices" role="tabpanel" hidden><div class="panel-table" id="invoices-body"><div class="panel-empty">Betöltés…</div></div></div><div class="record-tab-pane" data-pane="documents" role="tabpanel" hidden><div id="documents-body"></div></div></div>
       </section>
     </div>
   </main>
 </div>
 <script src="record-detail.js"></script>
+<script src="documents.js"></script>
 <script src="owner-detail.js"></script>
 </body>
 </html>

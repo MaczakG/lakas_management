@@ -6,7 +6,7 @@ using Lakaskezelo.Api.Settings;
 
 namespace Lakaskezelo.Api.Storage;
 
-// A számla-PDF-ek tárhelye (Amazon S3) — platform-szintű: a bucket neve és régiója a Platform admin
+// A számla-PDF-ek és a feltöltött dokumentumok tárhelye (Amazon S3) — platform-szintű: a bucket neve és régiója a Platform admin
 // felületen állítható (az üzemeltető AppSettings sora), a cégek PDF-jei a companies/{cégId}/ előtag
 // alatt vannak. A hozzáférést élesben az EC2-höz rendelt IAM-szerep adja, kulcsot nem tárolunk.
 public class S3InvoiceStorage(AppSettingsService settingsService)
@@ -49,6 +49,15 @@ public class S3InvoiceStorage(AppSettingsService settingsService)
             {
                 return null;
             }
+        }
+    }
+
+    public async Task DeleteAsync(string key, CancellationToken ct = default)
+    {
+        var (client, bucket) = await CreateClientAsync(ct);
+        using (client)
+        {
+            await client.DeleteObjectAsync(bucket, key, ct);
         }
     }
 

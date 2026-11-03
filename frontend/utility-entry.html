@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Rezsi felvétel</title>
+<title>Rezsi felvétel | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="charts.css">
@@ -25,7 +25,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Ingatlanok</div>
         <h1>Rezsi felvétel</h1>
         <p>Válaszd ki az ingatlant és az évet, majd kattints egy hónapra a rezsi tételek felvételéhez vagy megtekintéséhez.</p>
       </div>
@@ -85,18 +84,10 @@ async function loadMonths() {
   if (!propertyId) return;
   const year = Number(yearInput.value);
 
-  const [entriesRes, invoicesRes] = await Promise.all([
-    apiFetch(`/api/properties/${propertyId}/utility-costs`),
-    apiFetch(`/api/properties/${propertyId}/invoices`),
-  ]);
-  const entries = await entriesRes.json();
-  const invoices = await invoicesRes.json();
+  const entries = await (await apiFetch(`/api/properties/${propertyId}/utility-costs`)).json();
 
-  const lockedMonths = new Set(
-    invoices.filter((i) => (i.status === 'Sent' || i.status === 'Generated') && i.periodYear === year).map((i) => i.periodMonth)
-  );
 
-  // A következő kiküldés időszaka (annak a rezsije kerül a számlára) — a táblázatban jelöljük.
+  // A következő kiküldés időszaka (annak a rezsije kerül a bizonylatra) — a táblázatban jelöljük.
   const property = properties.find((p) => p.id === propertyId);
   const isNext = (month) => property && property.isActive && property.nextPeriodYear === year && property.nextPeriodMonth === month;
 
@@ -105,16 +96,13 @@ async function loadMonths() {
     const month = idx + 1;
     const monthEntries = entries.filter((e) => e.year === year && e.month === month);
     const sum = monthEntries.reduce((acc, e) => acc + e.amount, 0);
-    const locked = lockedMonths.has(month);
-    const statusTag = locked
-      ? '<span class="status-tag ok">Lezárva</span>'
-      : (monthEntries.length > 0 ? '<span class="status-tag ok">Rögzítve</span>' : '<span class="status-tag missing">Nincs adat</span>');
+    const statusTag = utilityPeriodTag(monthEntries);
 
     return `
       <tr class="clickable" onclick="openMonth(${month})">
-        <td class="cell-main">${name}${isNext(month) ? '<span class="status-tag warn next-tag" title="Ennek a hónapnak a rezsije kerül a következő számlára">következő számla</span>' : ''}</td>
+        <td class="cell-main">${name}${isNext(month) ? '<span class="status-tag warn next-tag" title="Ennek a hónapnak a rezsije kerül a következő bizonylatra">következő bizonylat</span>' : ''}</td>
         <td>${monthEntries.length}</td>
-        <td>${monthEntries.length > 0 ? formatCurrency(sum) : '—'}</td>
+        <td>${monthEntries.length > 0 ? formatCurrency(sum) : '–'}</td>
         <td>${statusTag}</td>
       </tr>
     `;
@@ -159,7 +147,7 @@ function renderChart(allEntries, year) {
   const totals = MONTH_NAMES.map((_, m) => series.reduce((sum, s) => sum + s.values[m], 0));
   const yearTotal = totals.reduce((a, b) => a + b, 0);
 
-  document.getElementById('chart-title').textContent = `Havi rezsi bontás — ${year}`;
+  document.getElementById('chart-title').textContent = `Havi rezsi bontás (${year})`;
   document.getElementById('chart-total').innerHTML = yearTotal > 0
     ? `${escapeHtml(huf(yearTotal))}<small>összesen az évben</small>` : '';
   legend(document.getElementById('chart-legend'), series);
@@ -172,7 +160,7 @@ function renderChart(allEntries, year) {
     tooltip: (m) => ({
       title: `${MONTH_NAMES[m]} ${year}`,
       rows: series.slice().reverse().filter((s) => s.values[m] > 0).map((s) => ({ color: s.color, label: s.name, value: huf(s.values[m]) })),
-      foot: totals[m] > 0 ? `Összesen: ${huf(totals[m])} · kattints a tételekhez` : 'Nincs tétel · kattints a felvételhez',
+      foot: totals[m] > 0 ? `Összesen ${huf(totals[m])}. Kattints a tételekhez.` : 'Nincs tétel. Kattints a felvételhez.',
     }),
     onSelect: (m) => openMonth(m + 1),
   });

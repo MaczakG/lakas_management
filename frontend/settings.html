@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Beállítások</title>
+<title>Beállítások | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <style>
@@ -13,6 +13,8 @@
   .test-result{font-size:13px;font-weight:600;margin-top:10px;}
   .test-result.ok{color:var(--green);}
   .test-result.error{color:var(--coral);}
+  .test-row{display:flex;align-items:center;gap:12px;margin:0 0 16px;}
+  .test-row .test-result{margin-top:0;}
   .save-note{font-size:12.5px;color:var(--green);font-weight:600;margin-left:12px;display:none;}
   .save-note.show{display:inline;}
   .sub-wrap{max-width:640px;}
@@ -34,9 +36,8 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Fiók</div>
         <h1>Beállítások</h1>
-        <p>Előfizetés, rezsi-emlékeztető, a számlák kibocsátója és a bérlőknek küldött számla-levél szövege.</p>
+        <p>Előfizetés, rezsi-emlékeztető, a bizonylatok kiállítója és a bérlőknek küldött bizonylat-levél szövege.</p>
       </div>
     </div>
 
@@ -57,20 +58,60 @@
         <div class="section-head">
           <div>
             <h3>Rezsi emlékeztető</h3>
-            <p>Ha egy ingatlanhoz a határidőig nem kerül rezsi tétel rögzítésre, ide megy az értesítés.</p>
+            <p>Ha egy ingatlanhoz a következő bizonylat időszakára a határidőig nem kerül rezsi tétel rögzítésre, ide megy az értesítés. A határidő a kiállítás előtti utolsó ilyen sorszámú nap (pl. 25 → a december 1-jei kiállításnál november 25.).</p>
           </div>
         </div>
         <div class="field-row">
           <div class="field"><label for="utility-email">Rezsi kontakt e-mail</label><input type="email" id="utility-email"></div>
-          <div class="field"><label for="utility-deadline">Rögzítési határidő (a hónap napja)</label><input type="number" id="utility-deadline" min="1" max="28"></div>
+          <div class="field"><label for="utility-deadline">Rögzítési határidő (nap)</label><input type="number" id="utility-deadline" min="1" max="28"></div>
+        </div>
+      </section>
+
+      <section class="section" id="invoicing-section">
+        <div class="section-head">
+          <div>
+            <h3>Bérbeadó és számlázó</h3>
+            <p>Magánszemély bérbeadó bizonylatot állít ki. Cégként vagy egyéni vállalkozóként összekötheted a Számlázz.hu vagy a Billingo fiókodat: ilyenkor a havi díjról valódi számla készül a számlázódban (saját sorszámmal, NAV-bejelentéssel), és a Lakáskezelő küldi ki a bérlőnek.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="kind">Bérbeadó</label>
+            <select id="kind"><option value="private">Magánszemély</option><option value="business">Cég vagy egyéni vállalkozó</option></select></div>
+          <div class="field" id="provider-field" hidden><label for="provider">Számlázó</label>
+            <select id="provider"><option value="">Nincs összekötve (bizonylat készül)</option><option value="Billingo">Billingo</option><option value="Szamlazzhu">Számlázz.hu</option></select></div>
+        </div>
+        <div id="billingo-fields" hidden>
+          <div class="field-row">
+            <div class="field"><label for="billingo-key">Billingo API-kulcs</label><input type="password" id="billingo-key" autocomplete="off">
+              <span class="hint">Billingo → Beállítások → API kulcsok. <span id="billingo-key-state"></span></span></div>
+            <div class="field"><label for="billingo-block">Számlatömb</label><select id="billingo-block"><option value="">Előbb teszteld a kapcsolatot</option></select></div>
+          </div>
+        </div>
+        <div id="szamlazz-fields" hidden>
+          <div class="field-row">
+            <div class="field"><label for="szamlazz-key">Számla Agent kulcs</label><input type="password" id="szamlazz-key" autocomplete="off">
+              <span class="hint">Számlázz.hu → Beállítások → Számla Agent kulcsok. <span id="szamlazz-key-state"></span></span></div>
+            <div class="field"><label for="szamlazz-prefix">Számlaszám-előtag <span class="dim">(nem kötelező)</span></label><input type="text" id="szamlazz-prefix" maxlength="20"></div>
+          </div>
+        </div>
+        <div class="test-row" id="provider-test-row" hidden>
+          <button class="btn btn-secondary btn-sm" type="button" id="provider-test">Kapcsolat tesztelése</button>
+          <span class="test-result" id="provider-test-result"></span>
+        </div>
+        <div id="vat-fields" hidden>
+          <div class="field-row">
+            <div class="field"><label for="rent-vat">Bérleti díj áfája</label><select id="rent-vat"></select></div>
+            <div class="field"><label for="utility-vat">Rezsi áfája</label><select id="utility-vat"></select></div>
+          </div>
+          <span class="hint">Lakás bérbeadása általában tárgyi adómentes (TAM); ha bizonytalan vagy, kérdezd a könyvelődet. Ingatlanonként az adatlapon felülírható. A bérleti díj és a rezsi tételek összege bruttó, vagyis amit a bérlő fizet.</span>
         </div>
       </section>
 
       <section class="section">
         <div class="section-head">
           <div>
-            <h3>Számla-kibocsátó adatai</h3>
-            <p>Ezek az adatok jelennek meg a generált számlák fejlécében.</p>
+            <h3>Bizonylat-kiállító adatai</h3>
+            <p>Ezek az adatok jelennek meg a generált bizonylatok fejlécében.</p>
           </div>
         </div>
         <div class="field"><label for="issuer-name">Név</label><input type="text" id="issuer-name"></div>
@@ -80,25 +121,25 @@
           <div class="field"><label for="issuer-bank">Bankszámlaszám</label><input type="text" id="issuer-bank"></div>
         </div>
         <div class="field"><label for="issuer-email">Válaszcím (e-mail)</label><input type="email" id="issuer-email" maxlength="256">
-          <span class="hint">Ha a bérlő válaszol a számla-levélre, erre a címre érkezik. Üresen hagyva az első adminisztrátor címe.</span></div>
-        <span class="hint">A számla sorszáma az ingatlanon beállított előtagból épül fel (Ingatlanok oldal).</span>
+          <span class="hint">Ha a bérlő válaszol a bizonylat-levélre, erre a címre érkezik. Üresen hagyva az első adminisztrátor címe.</span></div>
+        <span class="hint">A bizonylat sorszáma az ingatlanon beállított előtagból épül fel (Ingatlanok oldal).</span>
       </section>
 
       <section class="section">
         <div class="section-head">
           <div>
-            <h3>Számla e-mail szövege</h3>
-            <p>Ez a szöveg megy ki a bérlőnek minden hónapban a számla-PDF melléklettel együtt. Üresen hagyva az alapértelmezett szöveget használja a rendszer.</p>
+            <h3>Bizonylat e-mail szövege</h3>
+            <p>Ez a szöveg megy ki a bérlőnek minden hónapban a bizonylat-PDF melléklettel együtt. Üresen hagyva az alapértelmezett szöveget használja a rendszer.</p>
           </div>
         </div>
         <div class="field">
           <label for="invoice-email-subject">Tárgy</label>
-          <input type="text" id="invoice-email-subject" placeholder="Számla — {ingatlan}">
+          <input type="text" id="invoice-email-subject" placeholder="Bizonylat: {ingatlan}">
         </div>
         <div class="field">
           <label for="invoice-email-body">Szöveg</label>
-          <textarea id="invoice-email-body" rows="5" placeholder="Elkészült a(z) {ingatlan} ingatlanhoz tartozó számlád a(z) {időszak} időszakra.&#10;&#10;Fizetendő összeg: {összeg}"></textarea>
-          <span class="hint">Használható helyőrzők: {ingatlan}, {időszak}, {összeg}, {számlaszám}. A bekezdéseket üres sor választja el.</span>
+          <textarea id="invoice-email-body" rows="5" placeholder="Elkészült a(z) {ingatlan} ingatlanhoz tartozó bizonylatod a(z) {időszak} időszakra.&#10;&#10;Fizetendő összeg: {összeg}"></textarea>
+          <span class="hint">Használható helyőrzők: {ingatlan}, {időszak}, {összeg}, {bizonylatszám}. A bekezdéseket üres sor választja el.</span>
         </div>
       </section>
 
@@ -118,7 +159,7 @@ const $ = (id) => document.getElementById(id);
 async function loadSettings() {
   const res = await apiFetch('/api/settings');
   if (res.status === 403) {
-    document.querySelector('.main').innerHTML = '<div class="page-header"><div><div class="page-eyebrow">Fiók</div><h1>Beállítások</h1></div></div><p>A Beállításokat csak a cég adminisztrátora módosíthatja.</p>';
+    document.querySelector('.main').innerHTML = '<div class="page-header"><div><h1>Beállítások</h1></div></div><p>A Beállításokat csak a cég adminisztrátora módosíthatja.</p>';
     return;
   }
   const s = await res.json();
@@ -131,7 +172,57 @@ async function loadSettings() {
   $('issuer-email').value = s.issuerEmail || '';
   $('invoice-email-subject').value = s.invoiceEmailSubject || '';
   $('invoice-email-body').value = s.invoiceEmailBody || '';
+  $('kind').value = s.isBusiness ? 'business' : 'private';
+  $('provider').value = s.invoiceProvider || '';
+  $('billingo-key-state').textContent = s.billingoApiKeySet ? 'Mentett kulcs van; csak cseréhez írj be újat.' : '';
+  $('szamlazz-key-state').textContent = s.szamlazzAgentKeySet ? 'Mentett kulcs van; csak cseréhez írj be újat.' : '';
+  $('billingo-block').innerHTML = s.billingoBlockId
+    ? `<option value="${s.billingoBlockId}">#${s.billingoBlockId} (mentett)</option>` : '<option value="">Előbb teszteld a kapcsolatot</option>';
+  $('szamlazz-prefix').value = s.szamlazzInvoicePrefix || '';
+  $('rent-vat').innerHTML = vatOptions(s.defaultRentVat || 'TAM');
+  $('utility-vat').innerHTML = vatOptions(s.defaultUtilityVat || 'TAM');
+  syncInvoicing();
 }
+
+// ---------- Bérbeadó és számlázó ----------
+const VAT_LABELS = { TAM: 'Tárgyi adómentes (TAM)', AAM: 'Alanyi adómentes (AAM)', 27: '27%', 18: '18%', 5: '5%', 0: '0%' };
+function vatOptions(value) {
+  return ['TAM', 'AAM', '27', '18', '5', '0'].map((c) => `<option value="${c}"${c === value ? ' selected' : ''}>${VAT_LABELS[c]}</option>`).join('');
+}
+function syncInvoicing() {
+  const business = $('kind').value === 'business';
+  const provider = business ? $('provider').value : '';
+  $('provider-field').hidden = !business;
+  $('billingo-fields').hidden = provider !== 'Billingo';
+  $('szamlazz-fields').hidden = provider !== 'Szamlazzhu';
+  $('provider-test-row').hidden = !provider;
+  $('vat-fields').hidden = !provider;
+}
+$('kind').addEventListener('change', syncInvoicing);
+$('provider').addEventListener('change', () => { $('provider-test-result').textContent = ''; syncInvoicing(); });
+$('provider-test').addEventListener('click', async () => {
+  const out = $('provider-test-result');
+  out.className = 'test-result';
+  out.textContent = 'Tesztelés…';
+  const res = await apiFetch('/api/settings/invoicing/test', {
+    method: 'POST',
+    body: JSON.stringify({ provider: $('provider').value, billingoApiKey: $('billingo-key').value.trim() || null, szamlazzAgentKey: $('szamlazz-key').value.trim() || null }),
+  });
+  const r = await readJson(res);
+  if (!res.ok || !r.success) {
+    out.className = 'test-result error';
+    out.textContent = r.error || errorMessage(res, r, 'A kapcsolat nem sikerült.');
+    return;
+  }
+  out.className = 'test-result ok';
+  out.textContent = 'A kapcsolat rendben.';
+  if (r.blocks) {
+    const current = $('billingo-block').value;
+    $('billingo-block').innerHTML = r.blocks.length
+      ? r.blocks.map((b) => `<option value="${b.id}"${String(b.id) === current ? ' selected' : ''}>${escapeHtml(b.name)}</option>`).join('')
+      : '<option value="">Nincs számlatömb a Billingo fiókban</option>';
+  }
+});
 
 $('settings-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -146,13 +237,24 @@ $('settings-form').addEventListener('submit', async (e) => {
     issuerEmail: val('issuer-email'),
     invoiceEmailSubject: val('invoice-email-subject'),
     invoiceEmailBody: val('invoice-email-body'),
+    isBusiness: $('kind').value === 'business',
+    invoiceProvider: $('kind').value === 'business' ? ($('provider').value || null) : null,
+    billingoApiKey: val('billingo-key'),
+    billingoBlockId: Number($('billingo-block').value) || null,
+    szamlazzAgentKey: val('szamlazz-key'),
+    szamlazzInvoicePrefix: val('szamlazz-prefix'),
+    defaultRentVat: $('rent-vat').value || 'TAM',
+    defaultUtilityVat: $('utility-vat').value || 'TAM',
   };
   const res = await apiFetch('/api/settings', { method: 'PUT', body: JSON.stringify(payload) });
   const note = $('save-note');
   if (!res.ok) {
-    alert(errorMessage(res, await readJson(res), 'Nem sikerült menteni.'));
+    await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült menteni.'), { title: 'Mentés sikertelen' });
     return;
   }
+  $('billingo-key').value = '';
+  $('szamlazz-key').value = '';
+  loadSettings();
   note.classList.add('show');
   setTimeout(() => note.classList.remove('show'), 2000);
 });
@@ -168,7 +270,7 @@ async function loadSubscription() {
   if (!res.ok) { body.innerHTML = `<p class="hint">${escapeHtml(errorMessage(res, d, 'Nem sikerült betölteni az előfizetést.'))}</p>`; return; }
   const st = d.state;
   // „2026. 11. 17-ig” (a rag előtt nem marad pont)
-  const day = (v) => (v ? new Date(v).toLocaleDateString('hu-HU').replace(/\.$/, '') : '—');
+  const day = (v) => (v ? new Date(v).toLocaleDateString('hu-HU').replace(/\.$/, '') : '–');
   const unit = `${formatCurrency(d.monthlyPricePerProperty)} / aktív ingatlan / hó${d.pricesIncludeVat ? ' (bruttó)' : ' + ÁFA'}`;
   const row = (label, value) => `<dt>${label}</dt><dd>${value}</dd>`;
   const props = `${d.activeProperties} db`;
@@ -185,32 +287,32 @@ async function loadSubscription() {
       ${row('Állapot', '<span class="status-tag ok">Díjmentes</span>')}
       ${row('Aktív ingatlanok', props)}
       ${row('Díj (bekapcsolás után)', unit)}
-      ${row('Ennyi lenne most', `${formatCurrency(d.monthlyQuote.grossAmount)} / hó <span class="dim">· éves fizetéssel ${formatCurrency(d.yearlyQuote.grossAmount)} / év (−${d.yearlyDiscountPercent}%)</span>`)}
-    </dl><p class="sub-note">A díjszedés még nincs bekapcsolva — a rendszert jelenleg díjmentesen használod.</p>`;
+      ${row('Ennyi lenne most', `${formatCurrency(d.monthlyQuote.grossAmount)} / hó<br><span class="dim">Éves fizetéssel ${formatCurrency(d.yearlyQuote.grossAmount)} / év (−${d.yearlyDiscountPercent}%)</span>`)}
+    </dl><p class="sub-note">A díjszedés még nincs bekapcsolva, a rendszert jelenleg díjmentesen használod.</p>`;
     return;
   }
 
   const [label, tone] = SUB_STATUS[st.locked ? 'Locked' : st.status] || [st.status, ''];
   const until = st.status === 'Trial'
     ? `Próbaidő ${day(st.trialEndsAt)}-ig`
-    : st.paidUntil ? `Kifizetve ${day(st.paidUntil)}-ig` : '—';
+    : st.paidUntil ? `Kifizetve ${day(st.paidUntil)}-ig` : '–';
   const yearly = d.interval === 'Yearly';
   const fee = yearly
     ? `${formatCurrency(d.yearlyQuote.grossAmount)} / év <span class="dim">(−${d.yearlyDiscountPercent}%)</span>`
     : `${formatCurrency(d.monthlyQuote.grossAmount)} / hó`;
   const card = d.cardRegistered
-    ? (st.cancelAtPeriodEnd ? 'Lemondva — a kifizetett időszak végén lejár' : `Bankkártya mentve — automatikus megújítás (${yearly ? 'éves' : 'havi'})`)
+    ? (st.cancelAtPeriodEnd ? 'Lemondva, a kifizetett időszak végén lejár' : `Bankkártya mentve, automatikus megújítás (${yearly ? 'éves' : 'havi'})`)
     : '<span class="dim">Nincs mentett kártya</span>';
   body.innerHTML = `<dl class="sub-grid">
     ${row('Állapot', `<span class="status-tag ${tone}">${label}</span>`)}
     ${row('Érvényes', until)}
     ${st.status === 'PastDue' && st.graceEndsAt ? row('Türelmi idő', `${day(st.graceEndsAt)}-ig`) : ''}
     ${row('Aktív ingatlanok', props)}
-    ${row('Díj', `${fee} <span class="dim">· ${unit}</span>`)}
+    ${row('Díj', `${fee}<br><span class="dim">${unit}</span>`)}
     ${row('Fizetés', card)}
   </dl>
   ${st.locked ? '<p class="sub-note">Az előfizetés lejárt, ezért a rendszer csak olvasható. Fizetés után azonnal újra szerkeszthető.</p>' : ''}
-  <div class="sub-actions"><a class="btn btn-secondary" href="subscription.html">Előfizetés kezelése →</a></div>`;
+  <div class="sub-actions"><a class="btn btn-secondary" href="subscription.html">Előfizetés kezelése<svg class="inline-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#arrow-right"/></svg></a></div>`;
 }
 
 loadSettings();

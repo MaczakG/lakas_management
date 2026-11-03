@@ -7,7 +7,19 @@ namespace Lakaskezelo.Api.Contracts;
 public record CompanySettingsDto(
     string? UtilityContactEmail, int UtilityDeadlineDay,
     string? IssuerName, string? IssuerAddress, string? IssuerTaxId, string? IssuerBankAccount, string? IssuerEmail,
-    string? InvoiceEmailSubject, string? InvoiceEmailBody);
+    string? InvoiceEmailSubject, string? InvoiceEmailBody,
+    // Cég / magánszemély és a számlázó összekötése. A kulcsok csak befelé jönnek: a GET üresen adja vissza őket,
+    // a *Set jelzi, van-e eltárolt; mentéskor az üres érték a meglévőt megtartja.
+    bool IsBusiness = false, string? InvoiceProvider = null,
+    string? BillingoApiKey = null, int? BillingoBlockId = null, string? SzamlazzAgentKey = null, string? SzamlazzInvoicePrefix = null,
+    string DefaultRentVat = "TAM", string DefaultUtilityVat = "TAM",
+    bool BillingoApiKeySet = false, bool SzamlazzAgentKeySet = false);
+
+// A számlázó kapcsolatpróbája: a beírt (vagy az eltárolt) kulccsal. Billingónál a számlatömbök is jönnek.
+public record TestInvoicingRequest(string Provider, string? BillingoApiKey, string? SzamlazzAgentKey);
+
+// A cég alapadatai minden felhasználónak (pl. az áfa-mezők megjelenítéséhez az ingatlan adatlapján).
+public record CompanyInfoDto(string Name, bool IsBusiness, string? InvoiceProvider, string DefaultRentVat, string DefaultUtilityVat);
 
 // A platform kézbesítési beállításai (Platform admin → E-mail és tárhely). A titkos mezők (MailgunApiKey,
 // SmtpPassword) csak befelé jönnek: a GET üresen adja vissza őket, a *Set jelzi, van-e eltárolt érték;

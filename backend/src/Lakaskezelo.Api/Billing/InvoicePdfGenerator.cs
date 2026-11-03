@@ -17,7 +17,9 @@ public static class InvoicePdfGenerator
 
     // A tételeket külön paraméterként kapja, nem az invoice.Lines navigációból olvassa — az
     // InvoiceGenerationService szándékosan nem tölti fel azt a listát (ld. ottani megjegyzés).
-    public static byte[] Generate(Invoice invoice, Property property, Tenant? tenant, AppSettings settings, List<InvoiceLine> lines)
+    // Sztornó bizonylatnál (invoice.IsStorno) a cancelsNumber az eredeti (sztornózott) bizonylat száma; a sorok
+    // ilyenkor az eredeti sorok negatív összegekkel.
+    public static byte[] Generate(Invoice invoice, Property property, Tenant? tenant, AppSettings settings, List<InvoiceLine> lines, string? cancelsNumber = null)
     {
         var periodLabel = $"{invoice.PeriodYear}.{MonthNames[invoice.PeriodMonth - 1]}";
         var issuerCity = ExtractCity(settings.IssuerAddress);
@@ -36,10 +38,11 @@ public static class InvoicePdfGenerator
 
                     col.Item().Row(row =>
                     {
-                        row.RelativeItem().Text("SZÁMVITELI BIZONYLAT").FontSize(16).Bold();
+                        row.RelativeItem().Text(invoice.IsStorno ? "SZTORNÓ SZÁMVITELI BIZONYLAT" : "SZÁMVITELI BIZONYLAT").FontSize(16).Bold();
                         row.RelativeItem().AlignRight().Column(c =>
                         {
                             c.Item().Text($"Bizonylat száma: {invoice.Number}");
+                            if (invoice.IsStorno) c.Item().Text($"Sztornózott bizonylat: {cancelsNumber}").Bold();
                             c.Item().Text($"Időszak: {periodLabel}");
                         });
                     });
@@ -62,7 +65,9 @@ public static class InvoicePdfGenerator
                         Cell($"Bérbe vevő adószáma: {tenant?.TaxId ?? "—"}");
                     });
 
-                    col.Item().Text($"Gazdasági esemény megnevezése: {property.Name} bérleti díja");
+                    col.Item().Text(invoice.IsStorno
+                        ? $"Gazdasági esemény megnevezése: {property.Name} bérleti díja — a(z) {cancelsNumber} számú bizonylat sztornója"
+                        : $"Gazdasági esemény megnevezése: {property.Name} bérleti díja");
 
                     col.Item().Table(table =>
                     {

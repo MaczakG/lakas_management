@@ -26,8 +26,8 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="avatar" id="avatar">··</div>
-      <div class="who"><span id="who-name">—</span><small>Platform üzemeltető</small></div>
+      <div class="avatar" id="avatar"></div>
+      <div class="who"><span id="who-name">–</span><small>Platform üzemeltető</small></div>
     </div>
     <button class="btn btn-secondary btn-sm logout-btn" type="button" id="logout-link">${icon('log-out')}Kilépés</button>
     <span class="sidebar-version" id="version-tag"></span>

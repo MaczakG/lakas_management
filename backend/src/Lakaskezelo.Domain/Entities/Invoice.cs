@@ -30,6 +30,28 @@ public class Invoice : ICompanyOwned
     public string? PdfStorageKey { get; set; }
     public DateTime? SentAt { get; set; }
     public string? ErrorMessage { get; set; }
+    // Ha a cég számlázójában készült (valódi számla): „Billingo” / „Szamlazzhu”, és ott a dokumentum azonosítója
+    // (Billingo: dokumentum-id; Számlázz.hu: a számlaszám). null: a rendszer saját bizonylata.
+    public string? Provider { get; set; }
+    public string? ProviderDocumentId { get; set; }
+
+    // Sztornózás: kiállított bizonylat nem törölhető és nem archiválható; helyette sztornó bizonylat készül
+    // (negatív összegekkel, az eredetire hivatkozva), és mindkettő megmarad.
+    // Az eredeti bizonylaton: mikor és ki sztornózta (sztornózott bizonylat).
+    public DateTime? CancelledAt { get; set; }
+    public Guid? CancelledByUserId { get; set; }
+    // A sztornó bizonylaton: melyik bizonylatot sztornózza.
+    public Guid? CancelsInvoiceId { get; set; }
+    public Invoice? CancelsInvoice { get; set; }
+
+    // Fizetés: a bizonylathoz kötött befizetések (TenantPayment.InvoiceId) összege — részletekben is jöhet. Ezek a bérlő
+    // egyenlegében is megjelennek. PaidAt: a teljes kifizetés napja (az utolsó, a végösszeget elérő befizetésé), addig null.
+    // A „teljes” összeg a végösszeg: ha a bérlő fizeti az SZJA-t, abban az „SZJA levonás” sor már benne van (SZJA-mentes).
+    public decimal PaidAmount { get; set; }
+    public DateOnly? PaidAt { get; set; }
+
+    // Sztornó bizonylat-e. (Aktív bizonylat: nem sztornó, és nem is sztornózták — ilyenből egy lehet időszakonként.)
+    public bool IsStorno => CancelsInvoiceId != null;
 
     public List<InvoiceLine> Lines { get; set; } = [];
 }

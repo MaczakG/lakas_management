@@ -13,7 +13,7 @@ public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);
 public record InviteUserRequest(string Email, string FullName, UserRole Role);
 public record UpdateUserRequest(string Email, string FullName, bool IsActive, UserRole Role);
-public record RegisterRequest(string CompanyName, string FullName, string Email, string Password, bool AcceptTerms);
+public record RegisterRequest(string CompanyName, string FullName, string Email, string Password, bool AcceptTerms, bool IsBusiness = false);
 public record TokenRequest(string Token);
 public record InviteInfoResponse(string Email, string FullName, string CompanyName);
 public record AcceptInviteRequest(string Token, string? FullName, string Password);

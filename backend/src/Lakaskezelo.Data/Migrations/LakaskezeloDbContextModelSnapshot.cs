@@ -28,8 +28,29 @@ namespace Lakaskezelo.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BillingoApiKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("BillingoBlockId")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("DefaultRentVat")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("TAM");
+
+                    b.Property<string>("DefaultUtilityVat")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("TAM");
 
                     b.Property<int>("EmailProvider")
                         .HasColumnType("integer");
@@ -39,6 +60,10 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<string>("InvoiceEmailSubject")
                         .HasColumnType("text");
+
+                    b.Property<string>("InvoiceProvider")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("IssuerAddress")
                         .HasColumnType("text");
@@ -95,6 +120,14 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<string>("SmtpUsername")
                         .HasColumnType("text");
 
+                    b.Property<string>("SzamlazzAgentKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SzamlazzInvoicePrefix")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -116,6 +149,8 @@ namespace Lakaskezelo.Data.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             CompanyId = new Guid("d0000000-0000-4000-8000-000000000001"),
+                            DefaultRentVat = "TAM",
+                            DefaultUtilityVat = "TAM",
                             EmailProvider = 0,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             UtilityDeadlineDay = 5
@@ -130,6 +165,12 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("DocumentTypesInitialized")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsBusiness")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -152,8 +193,212 @@ namespace Lakaskezelo.Data.Migrations
                         {
                             Id = new Guid("d0000000-0000-4000-8000-000000000001"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DocumentTypesInitialized = false,
+                            IsBusiness = false,
                             Name = "Alapértelmezett cég"
                         });
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Document", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("CurrentVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("DocumentTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("DocumentTypeId");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.ToTable("Documents");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentContent", b =>
+                {
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("VersionId");
+
+                    b.HasIndex("CompanyId");
+
+                    b.ToTable("DocumentContents");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("VersionNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("DocumentId", "At");
+
+                    b.ToTable("DocumentEvents");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.ToTable("DocumentTypes");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.HasIndex("DocumentId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("DocumentVersions");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.ExchangeRate", b =>
@@ -193,6 +438,15 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<decimal>("AmountTotal")
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CancelledByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CancelsInvoiceId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -210,6 +464,12 @@ namespace Lakaskezelo.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateOnly?>("PaidAt")
+                        .HasColumnType("date");
+
                     b.Property<string>("PdfStorageKey")
                         .HasColumnType("text");
 
@@ -221,6 +481,14 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<Guid>("PropertyId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ProviderDocumentId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("RentConversionNote")
                         .HasColumnType("text");
@@ -236,12 +504,15 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CancelsInvoiceId");
+
                     b.HasIndex("CompanyId");
 
                     b.HasIndex("TenantId");
 
                     b.HasIndex("PropertyId", "PeriodYear", "PeriodMonth")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"CancelledAt\" IS NULL AND \"CancelsInvoiceId\" IS NULL");
 
                     b.ToTable("Invoices");
                 });
@@ -624,12 +895,18 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<decimal>("RentAmount")
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<string>("RentVat")
+                        .HasColumnType("text");
+
                     b.Property<decimal?>("Rooms")
                         .HasColumnType("numeric(4,1)");
 
                     b.Property<string>("Street")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("UtilityVat")
+                        .HasColumnType("text");
 
                     b.Property<string>("WaterMeter")
                         .HasMaxLength(50)
@@ -868,6 +1145,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<string>("Address")
                         .HasColumnType("text");
 
+                    b.Property<int?>("BillingoPartnerId")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -900,8 +1180,14 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<int>("RentCurrency")
                         .HasColumnType("integer");
 
+                    b.Property<int>("RentPaymentTiming")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TaxId")
                         .HasColumnType("text");
+
+                    b.Property<bool>("TenantPaysSzja")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -910,6 +1196,48 @@ namespace Lakaskezelo.Data.Migrations
                     b.HasIndex("PropertyId");
 
                     b.ToTable("Tenants");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.TenantPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("TenantId", "Date");
+
+                    b.ToTable("TenantPayments");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.TwoFactorChallenge", b =>
@@ -1019,6 +1347,12 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("ExcludedFromBilling")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Label")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1036,6 +1370,8 @@ namespace Lakaskezelo.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyId");
+
+                    b.HasIndex("InvoiceId");
 
                     b.HasIndex("PropertyId", "Year", "Month");
 
@@ -1082,8 +1418,127 @@ namespace Lakaskezelo.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Document", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.DocumentType", "DocumentType")
+                        .WithMany()
+                        .HasForeignKey("DocumentTypeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Owner", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.User", "UploadedBy")
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("DocumentType");
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("Property");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("UploadedBy");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentContent", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.DocumentVersion", null)
+                        .WithOne("Content")
+                        .HasForeignKey("Lakaskezelo.Domain.Entities.DocumentContent", "VersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentEvent", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Document", null)
+                        .WithMany("Events")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentType", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentVersion", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Document", "Document")
+                        .WithMany("Versions")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.User", "UploadedBy")
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Document");
+
+                    b.Navigation("UploadedBy");
+                });
+
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Invoice", b =>
                 {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Invoice", "CancelsInvoice")
+                        .WithMany()
+                        .HasForeignKey("CancelsInvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
                         .WithMany()
                         .HasForeignKey("CompanyId")
@@ -1100,6 +1555,8 @@ namespace Lakaskezelo.Data.Migrations
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CancelsInvoice");
 
                     b.Navigation("Property");
 
@@ -1222,6 +1679,30 @@ namespace Lakaskezelo.Data.Migrations
                     b.Navigation("Property");
                 });
 
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.TenantPayment", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Invoice", "Invoice")
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.TwoFactorChallenge", b =>
                 {
                     b.HasOne("Lakaskezelo.Domain.Entities.User", "User")
@@ -1250,11 +1731,18 @@ namespace Lakaskezelo.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Lakaskezelo.Domain.Entities.Invoice", "Invoice")
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Lakaskezelo.Domain.Entities.Property", "Property")
                         .WithMany("UtilityCostEntries")
                         .HasForeignKey("PropertyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Invoice");
 
                     b.Navigation("Property");
                 });
@@ -1274,6 +1762,18 @@ namespace Lakaskezelo.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Property");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.Document", b =>
+                {
+                    b.Navigation("Events");
+
+                    b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentVersion", b =>
+                {
+                    b.Navigation("Content");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Invoice", b =>

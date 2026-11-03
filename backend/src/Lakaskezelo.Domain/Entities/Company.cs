@@ -15,4 +15,13 @@ public class Company
     // Regisztrációkor elfogadott ÁSZF / adatkezelési tájékoztató változata és ideje.
     public string? TermsVersion { get; set; }
     public DateTime? TermsAcceptedAt { get; set; }
+
+    // Létrejöttek-e már a cég alapértelmezett dokumentumtípusai (az első lekéréskor jönnek létre; ha a cég
+    // később mindet törli, nem jönnek vissza).
+    public bool DocumentTypesInitialized { get; set; }
+
+    // Cég (vagy egyéni vállalkozó) — csak ilyen köthet össze számlázót (Billingo, Számlázz.hu), és akkor a havi
+    // bizonylat helyett valódi számla készül. Magánszemély bérbeadó csak bizonylatot állít ki. Regisztrációkor
+    // választható, később a Beállításokban átállítható.
+    public bool IsBusiness { get; set; }
 }

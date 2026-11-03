@@ -3,15 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Bérlő adatlap</title>
+<title>Bérlő adatlap | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="detail.css">
+<link rel="stylesheet" href="documents.css">
 </head>
 <body>
 <div class="app">
   <script src="app.js"></script>
   <script src="nav.js"></script>
+  <script src="invoice-progress.js"></script>
   <main class="main">
     <div class="detail-page">
       <div class="detail-head">
@@ -25,13 +27,14 @@
             <span id="p-status"></span>
           </div>
           <p class="detail-sub" id="p-sub"></p>
-          <p class="detail-hint">Kattints egy adatra, és írd át — a változás azonnal mentődik.</p>
+          <p class="detail-hint">Kattints egy adatra, és írd át. A változás azonnal mentődik.</p>
         </div>
         <div class="detail-actions">
           <button class="btn btn-danger btn-sm" type="button" id="delete-btn">Bérlő törlése</button>
         </div>
       </div>
       <div class="form-error" id="load-error"></div>
+      <section class="balance-band" id="balance-band" hidden aria-label="Egyenleg"></section>
       <div class="masonry" id="masonry">
         <section class="panel">
           <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#user"/></svg>Alapadatok</h2></div>
@@ -55,13 +58,32 @@
         </section>
       </div>
       <section class="record-tabs">
-        <div class="record-tabbar"><div class="record-tablist" role="tablist"><button class="record-tab" type="button" role="tab" data-tab="invoices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Számlák <span class="panel-count" id="count-invoices"></span></button></div></div>
-        <div class="record-tab-body"><div class="record-tab-pane" data-pane="invoices" role="tabpanel" hidden><div class="panel-table" id="invoices-body"><div class="panel-empty">Betöltés…</div></div></div></div>
+        <div class="record-tabbar"><div class="record-tablist" role="tablist"><button class="record-tab" type="button" role="tab" data-tab="invoices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Bizonylatok <span class="panel-count" id="count-invoices"></span></button><button class="record-tab" type="button" role="tab" data-tab="balance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#circle-dollar-sign"/></svg>Egyenleg <span class="panel-count" id="count-balance"></span></button><button class="record-tab" type="button" role="tab" data-tab="documents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#paperclip"/></svg>Dokumentumok <span class="panel-count" id="count-documents"></span></button></div><div class="record-tab-actions"><button class="btn btn-secondary" type="button" id="add-payment" data-tab-action="balance" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#plus"/></svg>Befizetés rögzítése</button><button class="btn btn-secondary" type="button" id="upload-doc" data-tab-action="documents" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#upload"/></svg>Feltöltés</button></div></div>
+        <div class="record-tab-body"><div class="record-tab-pane" data-pane="invoices" role="tabpanel" hidden><div class="panel-table" id="invoices-body"><div class="panel-empty">Betöltés…</div></div></div><div class="record-tab-pane" data-pane="balance" role="tabpanel" hidden><div class="panel-table" id="balance-body"><div class="panel-empty">Betöltés…</div></div></div><div class="record-tab-pane" data-pane="documents" role="tabpanel" hidden><div id="documents-body"></div></div></div>
       </section>
     </div>
   </main>
 </div>
+<div class="modal-overlay" id="pay-overlay">
+  <form class="modal" id="pay-form" role="dialog" aria-modal="true" aria-labelledby="pay-title" novalidate>
+    <div class="modal-head">
+      <div><h2 id="pay-title">Befizetés rögzítése</h2><p>A bérlő egyenlegéből levonódik.</p></div>
+      <button aria-label="Bezárás" class="modal-close" id="pay-close" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label for="pay-date">Dátum</label><input id="pay-date" type="text" inputmode="numeric" placeholder="ÉÉÉÉ. HH. NN." autocomplete="off"></div>
+      <div class="field"><label for="pay-amount">Összeg (Ft)</label><input id="pay-amount" type="text" inputmode="decimal" autocomplete="off"></div>
+      <div class="field"><label for="pay-note">Megjegyzés</label><input id="pay-note" type="text" maxlength="500" placeholder="pl. átutalás, készpénz" autocomplete="off"></div>
+      <div class="form-error" id="pay-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="pay-cancel" type="button">Mégse</button>
+      <button class="btn btn-primary" id="pay-save" type="submit">Rögzítés</button>
+    </div>
+  </form>
+</div>
 <script src="record-detail.js"></script>
+<script src="documents.js"></script>
 <script src="tenant-detail.js"></script>
 </body>
 </html>

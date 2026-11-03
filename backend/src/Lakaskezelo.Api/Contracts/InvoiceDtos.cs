@@ -8,8 +8,16 @@ public record InvoiceDto(
     Guid Id, Guid PropertyId, string PropertyName, string? TenantName,
     int PeriodYear, int PeriodMonth, string Number, DateTime IssuedAt, DateOnly DueDate,
     decimal AmountTotal, InvoiceStatus Status, DateTime? SentAt, string? ErrorMessage,
-    List<InvoiceLineDto> Lines);
+    List<InvoiceLineDto> Lines, DateTime? CancelledAt = null, Guid? CancelsInvoiceId = null, string? Provider = null,
+    DateOnly? PaidAt = null, decimal PaidAmount = 0);
+
+public record InvoicePaymentRequest(DateOnly Date, decimal Amount, string? Note = null);
 
 public record GenerateInvoiceRequest(Guid PropertyId, int Year, int Month);
 
-public record InvoiceBundleMonthDto(int Year, int Month, int InvoiceCount, int FailedCount, decimal TotalAmount);
+// A számla adatlapjához: a számla, a sztornózó felhasználó neve, és ugyanannak az ingatlannak ugyanarra az időszakra
+// szóló többi bizonylata (az eredeti, a sztornó és az új számla) sorszám szerint.
+public record InvoiceDetailDto(InvoiceDto Invoice, string? CancelledByName, string? RentConversionNote, List<InvoiceDto> Related,
+    List<TenantPaymentDto> Payments);
+
+public record InvoiceBundleMonthDto(int Year, int Month, int InvoiceCount, int FailedCount, decimal TotalAmount, int StornoCount = 0);

@@ -3,21 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Ingatlan adatlap</title>
+<title>Ingatlan adatlap | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="detail.css">
+<link rel="stylesheet" href="documents.css">
 </head>
 <body>
 
 <div class="app">
   <script src="app.js"></script>
   <script src="nav.js"></script>
+  <script src="invoice-progress.js"></script>
   <script src="utility-modal.js"></script>
 
   <main class="main">
     <!-- Minden ingatlannak saját adatlapja van, a Yardly jármű-adatlapjának mintájára: fent a helyben
-         szerkeszthető adatai panelekben, alatta minden, ami hozzá tartozik (számlák, rezsi, bérlők)
+         szerkeszthető adatai panelekben, alatta minden, ami hozzá tartozik (bizonylatok, rezsi, bérlők)
          egy füles listában. -->
     <div class="detail-page">
       <div class="detail-head">
@@ -31,9 +33,10 @@
             <span id="p-status"></span>
           </div>
           <p class="detail-sub" id="p-sub"></p>
-          <p class="detail-hint">Kattints egy adatra, és írd át — a változás azonnal mentődik.</p>
+          <p class="detail-hint">Kattints egy adatra, és írd át. A változás azonnal mentődik.</p>
         </div>
         <div class="detail-actions">
+          <button class="btn btn-primary btn-sm" type="button" id="create-invoice-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#file-plus"/></svg>Bizonylat készítése</button>
           <button class="btn btn-secondary btn-sm" type="button" id="toggle-active-btn"></button>
           <button class="btn btn-danger btn-sm" type="button" id="delete-btn">Ingatlan törlése</button>
         </div>
@@ -47,7 +50,7 @@
           <dl class="panel-body props" id="props-basic"></dl>
         </section>
         <section class="panel">
-          <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Bérlés és számlázás</h2></div>
+          <div class="panel-head"><h2 class="panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Bérlés és bizonylatok</h2></div>
           <dl class="panel-body props" id="props-billing"></dl>
         </section>
         <section class="panel">
@@ -81,18 +84,22 @@
       <section class="record-tabs">
         <div class="record-tabbar">
           <div class="record-tablist" role="tablist">
-            <button class="record-tab" type="button" role="tab" data-tab="invoices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Számlák <span class="panel-count" id="count-invoices"></span></button>
+            <button class="record-tab" type="button" role="tab" data-tab="invoices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Bizonylatok <span class="panel-count" id="count-invoices"></span></button>
             <button class="record-tab" type="button" role="tab" data-tab="utility"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#zap"/></svg>Rezsi <span class="panel-count" id="count-utility"></span></button>
             <button class="record-tab" type="button" role="tab" data-tab="tenants"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#users"/></svg>Bérlők <span class="panel-count" id="count-tenants"></span></button>
+          
+            <button class="record-tab" type="button" role="tab" data-tab="documents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#paperclip"/></svg>Dokumentumok <span class="panel-count" id="count-documents"></span></button>
           </div>
           <div class="record-tab-actions">
-            <button class="btn btn-secondary" type="button" id="add-utility" data-tab-action="utility" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#plus"/></svg>Rezsi a következő számlához</button>
+            <button class="btn btn-secondary" type="button" id="add-utility" data-tab-action="utility" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#plus"/></svg>Rezsi a következő bizonylathoz</button>
+            <button class="btn btn-secondary" type="button" id="upload-doc" data-tab-action="documents" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#upload"/></svg>Feltöltés</button>
           </div>
         </div>
         <div class="record-tab-body">
           <div class="record-tab-pane" data-pane="invoices" role="tabpanel" hidden><div class="panel-table" id="invoices-body"><div class="panel-empty">Betöltés…</div></div></div>
           <div class="record-tab-pane" data-pane="utility" role="tabpanel" hidden><div class="panel-table" id="utility-body"><div class="panel-empty">Betöltés…</div></div></div>
           <div class="record-tab-pane" data-pane="tenants" role="tabpanel" hidden><div class="panel-table" id="tenants-body"><div class="panel-empty">Betöltés…</div></div></div>
+          <div class="record-tab-pane" data-pane="documents" role="tabpanel" hidden><div id="documents-body"></div></div>
         </div>
       </section>
     </div>
@@ -103,8 +110,8 @@
 <div class="modal-overlay" id="owners-overlay">
   <div class="modal">
     <div class="modal-head">
-      <div><h2>Tulajdonosok</h2><p>A hányad tört alakban (pl. 1/2) — vagy mindenkinél add meg (összesen 1), vagy senkinél (egyenlő arány).</p></div>
-      <button class="modal-close" type="button" data-close-owners aria-label="Bezárás">✕</button>
+      <div><h2>Tulajdonosok</h2><p>A hányad tört alakban (pl. 1/2). Vagy mindenkinél add meg (összesen 1), vagy senkinél (egyenlő arány).</p></div>
+      <button class="modal-close" type="button" data-close-owners aria-label="Bezárás"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
     </div>
     <div class="modal-body">
       <div class="form-error" id="owners-error"></div>
@@ -118,6 +125,7 @@
   </div>
 </div>
 
+<script src="documents.js"></script>
 <script src="property-detail.js"></script>
 </body>
 </html>

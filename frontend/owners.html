@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Tulajdonosok</title>
+<title>Tulajdonosok | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -16,7 +16,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Partnerek</div>
         <h1>Tulajdonosok</h1>
         <div class="page-state" id="page-state"></div>
       </div>
@@ -25,7 +24,7 @@
 
     <div class="toolbar">
       <div class="search-box">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#search"/></svg>
         <input type="text" id="search-input" placeholder="Keresés név alapján...">
       </div>
     </div>
@@ -49,7 +48,7 @@
       <div>
         <h2 id="modal-title">Új tulajdonos</h2>
       </div>
-      <button class="modal-close" id="modal-close">✕</button>
+      <button aria-label="Bezárás" class="modal-close" id="modal-close"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
     </div>
     <div class="modal-body">
       <div class="form-error" id="modal-error"></div>
@@ -100,9 +99,9 @@ function renderOwners() {
   tbody.innerHTML = filtered.map((o) => `
     <tr class="clickable" title="Adatlap megnyitása" onclick="location.href='owner-detail.html?id=${encodeURIComponent(o.id)}'">
       <td class="cell-main"><a class="link" href="owner-detail.html?id=${encodeURIComponent(o.id)}" onclick="event.stopPropagation()">${escapeHtml(o.name)}</a></td>
-      <td>${escapeHtml(o.email || '—')}${o.phone ? `<div class="cell-sub">${escapeHtml(o.phone)}</div>` : ''}</td>
-      <td>${escapeHtml(o.taxId || '—')}</td>
-      <td>${o.propertyNames.length ? escapeHtml(o.propertyNames.join(', ')) : '—'}</td>
+      <td>${escapeHtml(o.email || '–')}${o.phone ? `<div class="cell-sub">${escapeHtml(o.phone)}</div>` : ''}</td>
+      <td>${escapeHtml(o.taxId || '–')}</td>
+      <td>${o.propertyNames.length ? escapeHtml(o.propertyNames.join(', ')) : '–'}</td>
       <td class="row-actions">
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); editOwner('${o.id}')">Szerkesztés</button>
         <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteOwner('${o.id}')">Törlés</button>
@@ -142,7 +141,7 @@ window.editOwner = (id) => {
 };
 
 window.deleteOwner = async (id) => {
-  if (!confirm('Biztosan törlöd ezt a tulajdonost?')) return;
+  if (!(await uiConfirm('Biztosan törlöd ezt a tulajdonost?', { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/owners/${id}`, { method: 'DELETE' });
   if (res.ok || res.status === 204) loadOwners();
 };

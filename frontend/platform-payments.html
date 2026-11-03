@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Platform admin — Fizetések</title>
+<title>Fizetések | Platform admin</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <style>
@@ -30,7 +30,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Platform admin</div>
         <h1>Fizetések</h1>
         <div class="page-state" id="page-state"></div>
       </div>
@@ -55,11 +54,11 @@
 requireAuth();
 const $ = (id) => document.getElementById(id);
 const huf = (n) => `${Math.round(n).toLocaleString('hu-HU')} Ft`;
-const day = (d) => (d ? new Date(d).toLocaleDateString('hu-HU') : '—');
+const day = (d) => (d ? new Date(d).toLocaleDateString('hu-HU') : '–');
 function show(id, text) { $(id).textContent = text; $(id).classList.toggle('show', !!text); }
 function secret(id, isSet) {
   $(id).value = '';
-  $(id).placeholder = isSet ? '•••••••• (beállítva — üresen hagyva nem változik)' : 'nincs beállítva';
+  $(id).placeholder = isSet ? '•••••••• (beállítva, üresen hagyva nem változik)' : 'nincs beállítva';
 }
 // A platform beállítás-sora egyben mentődik: betöltjük, a lap a saját mezőit átírja, és visszaküldjük
 // (a titkos kulcsok üresen maradva nem változnak).
@@ -100,7 +99,7 @@ const PST = { Pending: ['Folyamatban', 'warn'], Succeeded: ['Sikeres', 'ok'], Fa
     return `<tr>
       <td>${day(p.createdAt)}</td>
       <td class="cell-main">${escapeHtml(p.companyName)}</td>
-      <td>${p.kind === 'Renewal' ? 'Megújítás' : 'Indítás'} · ${p.interval === 'Yearly' ? 'éves' : 'havi'}</td>
+      <td>${p.kind === 'Renewal' ? 'Megújítás' : 'Indítás'}, ${p.interval === 'Yearly' ? 'éves' : 'havi'}</td>
       <td class="num">${p.propertyCount}</td>
       <td class="num">${huf(p.grossAmount)}</td>
       <td><span class="status-tag ${tone}" title="${escapeHtml(p.errorMessage || '')}">${escapeHtml(label)}</span></td>

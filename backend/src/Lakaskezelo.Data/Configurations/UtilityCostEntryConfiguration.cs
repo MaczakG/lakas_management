@@ -13,5 +13,6 @@ public class UtilityCostEntryConfiguration : IEntityTypeConfiguration<UtilityCos
         builder.Property(u => u.Amount).HasColumnType("numeric(12,2)");
         builder.HasOne(u => u.Property).WithMany(p => p.UtilityCostEntries).HasForeignKey(u => u.PropertyId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(u => new { u.PropertyId, u.Year, u.Month });
+        builder.HasOne(u => u.Invoice).WithMany().HasForeignKey(u => u.InvoiceId).OnDelete(DeleteBehavior.SetNull);
     }
 }

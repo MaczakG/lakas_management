@@ -21,7 +21,9 @@ public record PropertySheetDto(
     string? PropertyType, string? PostalCode, string? City, string? Street, string? FloorDoor, string? Hrsz,
     decimal? FloorArea, decimal? Rooms, int? BuildYear,
     string? ElectricityMeter, string? GasMeter, string? WaterMeter,
-    decimal? Deposit, string? Notes);
+    decimal? Deposit, string? Notes,
+    // Áfa a számlázóval kiállított számlán (cégnél); null: a cég alapértelmezése.
+    string? RentVat = null, string? UtilityVat = null);
 
 public record PropertyOwnerDto(Guid OwnerId, string OwnerName, string? Share);
 
@@ -33,5 +35,7 @@ public record UpsertPropertyRequest(
     List<PropertyOwnerInput> Owners,
     PropertySheetDto? Sheet = null); // null: az adatlap változatlan marad (pl. az "Új ingatlan" dialógus)
 
-public record UtilityCostEntryDto(Guid Id, int Year, int Month, string Label, decimal Amount, DateTime CreatedAt, bool IsLocked);
+public record UtilityCostEntryDto(Guid Id, int Year, int Month, string Label, decimal Amount, DateTime CreatedAt, bool IsLocked,
+    Guid? InvoiceId = null, string? InvoiceNumber = null);
 public record UpsertUtilityCostEntryRequest(int Year, int Month, string Label, decimal Amount);
+public record UpdateUtilityCostEntryRequest(string Label, decimal Amount);

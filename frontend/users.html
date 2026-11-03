@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Felhasználók</title>
+<title>Felhasználók | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -16,7 +16,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Fiók</div>
         <h1>Felhasználók</h1>
         <div class="page-state" id="page-state"></div>
       </div>
@@ -33,7 +32,7 @@
         </tbody>
       </table>
     </div>
-    <p class="hint" style="margin-top:14px;">Az <strong>adminisztrátor</strong> kezeli a felhasználókat és a Beállításokat; a <strong>munkatárs</strong> minden napi munkát végezhet (ingatlanok, bérlők, rezsi, számlák).</p>
+    <p class="hint" style="margin-top:14px;">Az <strong>adminisztrátor</strong> kezeli a felhasználókat és a Beállításokat; a <strong>munkatárs</strong> minden napi munkát végezhet (ingatlanok, bérlők, rezsi, bizonylatok).</p>
   </main>
 </div>
 
@@ -41,7 +40,7 @@
   <div class="modal">
     <div class="modal-head">
       <div><h2 id="modal-title">Felhasználó meghívása</h2></div>
-      <button class="modal-close" id="modal-close">✕</button>
+      <button aria-label="Bezárás" class="modal-close" id="modal-close"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
     </div>
     <div class="modal-body">
       <div class="form-error" id="modal-error"></div>
@@ -155,27 +154,27 @@ async function withBusy(btn, label, fn) {
 window.resendInvite = (id, btn) => withBusy(btn, 'Küldés...', async () => {
   const res = await apiFetch(`/api/users/${id}/resend-invite`, { method: 'POST' });
   const data = await readJson(res);
-  alert(errorMessage(res, data, res.ok ? 'Elküldve.' : 'Nem sikerült elküldeni.'));
+  await uiAlert(errorMessage(res, data, res.ok ? 'A meghívót újra elküldtük.' : 'Nem sikerült elküldeni.'), { title: 'Meghívó' });
 });
 
-window.sendPasswordReset = (id, btn) => {
+window.sendPasswordReset = async (id, btn) => {
   const u = users.find((x) => x.id === id);
-  if (!u || !confirm(`Elküldjük a jelszó-visszaállító e-mailt a(z) ${u.email} címre?`)) return;
+  if (!u || !(await uiConfirm(`Elküldjük a jelszó-visszaállító e-mailt a(z) ${u.email} címre?`, { title: 'Jelszó-visszaállítás', confirmText: 'Küldés' }))) return;
   return withBusy(btn, 'Küldés...', async () => {
     const res = await apiFetch('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: u.email }) });
     const data = await readJson(res);
-    alert(res.ok ? 'Elküldve.' : errorMessage(res, data, 'Nem sikerült elküldeni.'));
+    await uiAlert(res.ok ? 'A jelszó-visszaállító e-mailt elküldtük.' : errorMessage(res, data, 'Nem sikerült elküldeni.'), { title: 'Jelszó-visszaállítás' });
   });
 };
 
 window.deleteUser = async (id) => {
   const u = users.find((x) => x.id === id);
-  if (!u || !confirm(`Biztosan törlöd: ${u.fullName} (${u.email})?`)) return;
+  if (!u || !(await uiConfirm(`Biztosan törlöd: ${u.fullName} (${u.email})?`, { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/users/${id}`, { method: 'DELETE' });
   if (res.ok) {
     loadUsers();
   } else {
-    alert(errorMessage(res, await readJson(res), 'Nem sikerült törölni.'));
+    await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült törölni.'), { title: 'Törlés sikertelen' });
   }
 };
 
@@ -201,7 +200,7 @@ document.getElementById('user-form').addEventListener('submit', async (e) => {
       const message = errorMessage(res, await readJson(res), 'Hiba történt a mentés során.');
       // 502: a felhasználó létrejött, csak a meghívó e-mail nem ment ki — a listában újraküldhető.
       if (res.status === 502) {
-        alert(message);
+        await uiAlert(message, { title: 'Meghívó' });
       } else {
         errorEl.textContent = message;
         errorEl.classList.add('show');

@@ -14,7 +14,7 @@
   <aside class="sidebar">
     <a class="brand" href="dashboard.html">
       <span class="brand-mark">${icon('house')}</span>
-      <span class="brand-name">Lakáskezelő<small>Bérbeadás és számlázás</small></span>
+      <span class="brand-name">Lakáskezelő<small>Bérbeadás és bizonylatok</small></span>
     </a>
 
     <nav class="nav-scroll">
@@ -29,8 +29,7 @@
       ${item('tenants.html', 'users', 'Bérlők')}
 
       <div class="nav-label">Pénzügy</div>
-      ${item('billing.html', 'receipt', 'Számlázás')}
-      ${item('invoice-bundles.html', 'package', 'Számla csomagok')}
+      ${item('invoice-bundles.html', 'file-invoice', 'Bizonylatok')}
       ${item('exchange-rates.html', 'arrow-left-right', 'Árfolyamok')}
 
       <div class="nav-label">Fiók</div>
@@ -40,16 +39,21 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="avatar" id="avatar">··</div>
-      <div class="who"><span id="who-name">—</span><small id="who-company"></small></div>
+      <div class="avatar" id="avatar"></div>
+      <div class="who"><span id="who-name">–</span><small id="who-company"></small></div>
     </div>
     <button class="btn btn-secondary btn-sm logout-btn" type="button" id="logout-link">${icon('log-out')}Kilépés</button>
-    <span class="sidebar-version"><span id="version-tag"></span> · <a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelés</a></span>
+    <span class="sidebar-version"><span id="version-tag"></span><br><a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelés</a></span>
   </aside>`);
 
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.
   const page = location.pathname.split('/').pop() || 'dashboard.html';
-  const activePage = { 'property-detail.html': 'properties.html', 'tenant-detail.html': 'tenants.html', 'owner-detail.html': 'owners.html' }[page] || page;
+  // A dokumentum adatlapja ahhoz a menüponthoz tartozik, ahonnan megnyitották (?from=property:…).
+  // A bizonylat adatlapja is (?from=…; alapból a Bizonylatok menüpont).
+  const from = (new URLSearchParams(location.search).get('from') || '').split(':')[0];
+  const fromPage = { property: 'properties.html', tenant: 'tenants.html', owner: 'owners.html', bundles: 'invoice-bundles.html' }[from];
+  const activePage = { 'property-detail.html': 'properties.html', 'tenant-detail.html': 'tenants.html', 'owner-detail.html': 'owners.html',
+    'document-detail.html': fromPage || 'properties.html', 'invoice-detail.html': fromPage || 'invoice-bundles.html' }[page] || page;
   window.__currentPage = page;
   document.querySelectorAll('.sidebar .nav-item[href]').forEach((a) => {
     if (a.getAttribute('href') === activePage) a.classList.add('active');
@@ -107,10 +111,10 @@
     let text = null;
     if (st.locked) {
       tone = 'danger';
-      text = 'A fiók csak olvasható, mert nincs érvényes előfizetés. Az adataid megvannak — előfizetés után újra szerkesztheted őket.';
+      text = 'A fiók csak olvasható, mert nincs érvényes előfizetés. Az adataid megvannak, előfizetés után újra szerkesztheted őket.';
     } else if (st.status === 'PastDue') {
       tone = 'warn';
-      text = `Nem sikerült megújítani az előfizetést. ${st.graceEndsAt ? fmt(st.graceEndsAt) + '-ig' : 'Néhány napig'} még használható — fizess új kártyával.`;
+      text = `Nem sikerült megújítani az előfizetést. ${st.graceEndsAt ? fmt(st.graceEndsAt) + '-ig' : 'Néhány napig'} még használható. Fizess új kártyával.`;
     } else if (st.status === 'Trial') {
       const n = daysLeft(st.trialEndsAt);
       tone = n <= 3 ? 'warn' : 'info';
@@ -130,7 +134,7 @@
     if (isAdmin() && window.__currentPage !== 'subscription.html') {
       const link = document.createElement('a');
       link.href = 'subscription.html';
-      link.textContent = 'Előfizetés →';
+      link.innerHTML = 'Előfizetés<svg class="inline-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#arrow-right"/></svg>';
       banner.appendChild(link);
     }
     main.prepend(banner);

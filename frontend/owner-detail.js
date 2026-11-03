@@ -1,5 +1,5 @@
 // Tulajdonos adatlap (owner-detail.html?id=...) — az ingatlan-adatlap mintájára: helyben szerkeszthető adatok
-// panelekben, alatta a tulajdonos ingatlanai (hányaddal) és az ingatlanok számlái.
+// panelekben, alatta a tulajdonos ingatlanai (hányaddal) és az ingatlanok bizonylatai.
 requireAuth();
 
 const ownerId = new URLSearchParams(location.search).get('id');
@@ -48,14 +48,14 @@ function showError(message) { const el = document.getElementById('load-error'); 
 function hideError() { document.getElementById('load-error').classList.remove('show'); }
 
 function renderHeader() {
-  document.title = `Lakáskezelő — ${owner.name}`;
+  document.title = `${owner.name} | Lakáskezelő`;
   document.getElementById('p-name').textContent = owner.name;
   document.getElementById('crumb-name').textContent = owner.name;
   const active = ownedProperties.filter((p) => p.isActive).length;
   document.getElementById('p-status').innerHTML = ownedProperties.length
     ? `<span class="status-tag ok">${ownedProperties.length} ingatlan</span>` : '<span class="status-tag inactive">Nincs ingatlana</span>';
   document.getElementById('p-sub').textContent = [owner.email, owner.phone, active !== ownedProperties.length ? `${active} aktív ingatlan` : null]
-    .filter(Boolean).join(' · ') || 'Add meg az elérhetőségeket és a bankszámlaszámot.';
+    .filter(Boolean).join(', ') || 'Add meg az elérhetőségeket és a bankszámlaszámot.';
 }
 
 // A tulajdoni hányad "1/2" alakú tört; üresen egyenlő arány az ingatlan tulajdonosai között (itt nem számoljuk).
@@ -66,15 +66,15 @@ function shareValue(share) {
 
 function renderSummary() {
   const year = new Date().getFullYear();
-  const issued = invoices.filter((i) => i.status !== 'Failed');
+  const issued = invoices.filter((i) => i.status !== 'Failed' && (!i.cancelledAt && !i.cancelsInvoiceId));
   const thisYear = issued.filter((i) => i.periodYear === year).reduce((s, i) => s + Number(i.amountTotal), 0);
   const active = ownedProperties.filter((p) => p.isActive);
   const rented = active.filter((p) => p.tenantName).length;
   document.getElementById('summary').innerHTML = [
     detailRow('Ingatlanok', `${ownedProperties.length} db${active.length !== ownedProperties.length ? ` (${active.length} aktív)` : ''}`),
-    detailRow('Kiadva', active.length ? `${rented} / ${active.length}` : '<span class="dim">—</span>'),
-    detailRow(`Számlázva ${year}-ben`, `${formatCurrency(thisYear)} <span class="dim">(az ingatlanok teljes összege)</span>`),
-    detailRow('Számlák', `${issued.length} db`),
+    detailRow('Kiadva', active.length ? `${rented} / ${active.length}` : '<span class="dim">–</span>'),
+    detailRow(`Kiállítva ${year}-ben`, `${formatCurrency(thisYear)} <span class="dim">(az ingatlanok teljes összege)</span>`),
+    detailRow('Bizonylatok', `${issued.length} db`),
   ].join('');
 }
 
@@ -89,7 +89,7 @@ function renderProperties() {
   document.getElementById('count-properties').textContent = ownedProperties.length || '';
   const body = document.getElementById('properties-body');
   if (!ownedProperties.length) {
-    body.innerHTML = '<div class="panel-empty">Ehhez a tulajdonoshoz még nincs ingatlan rendelve — az ingatlan adatlapján, a Tulajdonosok panelen adhatod hozzá.</div>';
+    body.innerHTML = '<div class="panel-empty">Ehhez a tulajdonoshoz még nincs ingatlan rendelve. Az ingatlan adatlapján, a Tulajdonosok panelen adhatod hozzá.</div>';
     return;
   }
   body.innerHTML = `<table>
@@ -98,9 +98,9 @@ function renderProperties() {
       const share = shareValue(p.share);
       return `<tr class="clickable" onclick="location.href='property-detail.html?id=${encodeURIComponent(p.propertyId)}'">
         <td class="cell-main">${escapeHtml(p.name)}</td>
-        <td>${escapeHtml(p.city || '—')}</td>
+        <td>${escapeHtml(p.city || '–')}</td>
         <td>${p.share ? `${escapeHtml(p.share)}${share != null ? ` <span class="dim">(${Math.round(share * 100)}%)</span>` : ''}` : '<span class="dim">egyenlő arány</span>'}</td>
-        <td>${escapeHtml(p.tenantName || '—')}</td>
+        <td>${escapeHtml(p.tenantName || '–')}</td>
         <td class="num">${formatNumber(p.rentAmount, p.rentAmount % 1 ? 2 : 0)}</td>
         <td>${p.isActive ? '<span class="status-tag ok">Aktív</span>' : '<span class="status-tag inactive">Inaktív</span>'}</td>
       </tr>`;
@@ -109,11 +109,11 @@ function renderProperties() {
 
 function renderInvoices() {
   document.getElementById('count-invoices').textContent = invoices.length || '';
-  document.getElementById('invoices-body').innerHTML = renderInvoiceTable(invoices, 'A tulajdonos ingatlanaihoz még nincs számla.');
+  document.getElementById('invoices-body').innerHTML = renderInvoiceTable(invoices, 'A tulajdonos ingatlanaihoz még nincs bizonylat.', { from: `owner:${ownerId}` });
 }
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
-  if (!confirm(`Biztosan törlöd a tulajdonost: ${owner.name}?`)) return;
+  if (!(await uiConfirm(`Biztosan törlöd a tulajdonost: ${owner.name}?`, { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/owners/${ownerId}`, { method: 'DELETE' });
   if (res.ok) { location.href = 'owners.html'; return; }
   showError(errorMessage(res, await readJson(res), 'Nem sikerült törölni.'));
@@ -133,5 +133,25 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
   renderProperties();
   renderInvoices();
   setupTabs('ownerDetailTab', 'properties');
+  mountDocuments({
+    scope: { ownerId },
+    container: '#documents-body',
+    count: '#count-documents',
+    uploadButton: '#upload-doc',
+    links: async (doc) => {
+      const options = ownedProperties.map((p) => ({ value: p.propertyId, label: p.name }));
+      if (doc?.propertyId && !options.some((o) => o.value === doc.propertyId)) options.push({ value: doc.propertyId, label: doc.propertyName });
+      return [{ key: 'propertyId', label: 'Ingatlanhoz is tartozik', options, value: '', hint: 'Így az ingatlan adatlapján is megjelenik.' }];
+    },
+  });
   layoutMasonry();
 })();
+
+// Újrapróbálás / törlés után a bizonylatok és az összegzés frissül.
+document.addEventListener('invoices-changed', async () => {
+  const res = await apiFetch(`/api/owners/${ownerId}/invoices`);
+  if (!res.ok) return;
+  invoices = await readJson(res);
+  renderSummary();
+  renderInvoices();
+});

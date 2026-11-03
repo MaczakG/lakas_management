@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Bérlők</title>
+<title>Bérlők | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -16,7 +16,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Partnerek</div>
         <h1>Bérlők</h1>
         <div class="page-state" id="page-state"></div>
       </div>
@@ -25,7 +24,7 @@
 
     <div class="toolbar">
       <div class="search-box">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#search"/></svg>
         <input type="text" id="search-input" placeholder="Keresés név alapján...">
       </div>
     </div>
@@ -33,10 +32,10 @@
     <div class="card-table">
       <table>
         <thead>
-          <tr><th>Név</th><th>Elérhetőség</th><th>Ingatlan</th><th>Díj alapja</th><th>Beköltözés</th><th>Kiköltözés</th><th></th></tr>
+          <tr><th>Név</th><th>Elérhetőség</th><th>Ingatlan</th><th class="num">Egyenleg</th><th>Díj alapja</th><th>Beköltözés</th><th>Kiköltözés</th><th></th></tr>
         </thead>
         <tbody id="tenants-tbody">
-          <tr class="empty-row"><td colspan="7">Betöltés...</td></tr>
+          <tr class="empty-row"><td colspan="8">Betöltés...</td></tr>
         </tbody>
       </table>
     </div>
@@ -47,7 +46,7 @@
   <div class="modal">
     <div class="modal-head">
       <div><h2 id="modal-title">Új bérlő</h2></div>
-      <button class="modal-close" id="modal-close">✕</button>
+      <button aria-label="Bezárás" class="modal-close" id="modal-close"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
     </div>
     <div class="modal-body">
       <div class="form-error" id="modal-error"></div>
@@ -63,15 +62,15 @@
         </div>
         <div class="field-row">
           <div class="field"><label for="f-property">Ingatlan</label>
-            <select id="f-property"><option value="">— nincs hozzárendelve —</option></select>
+            <select id="f-property"><option value="">Nincs hozzárendelve</option></select>
           </div>
           <div class="field"><label for="f-currency">Bérleti díj alapja</label>
             <select id="f-currency">
               <option value="HUF">Forint (Ft)</option>
-              <option value="EUR">EUR — MNB árfolyamon átszámítva</option>
-              <option value="USD">USD — MNB árfolyamon átszámítva</option>
+              <option value="EUR">EUR (MNB-árfolyamon átszámítva)</option>
+              <option value="USD">USD (MNB-árfolyamon átszámítva)</option>
             </select>
-            <span class="hint">A számlán mindig HUF összeg jelenik meg; ez csak azt dönti el, milyen devizában van megadva az ingatlan bérleti díja.</span>
+            <span class="hint">A bizonylaton mindig HUF összeg jelenik meg; ez csak azt dönti el, milyen devizában van megadva az ingatlan bérleti díja.</span>
           </div>
         </div>
         <div class="field-row">
@@ -107,7 +106,7 @@ async function loadData() {
   ]);
 
   const select = document.getElementById('f-property');
-  select.innerHTML = '<option value="">— nincs hozzárendelve —</option>' +
+  select.innerHTML = '<option value="">Nincs hozzárendelve</option>' +
     properties.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
 
   renderTenants();
@@ -119,15 +118,16 @@ function renderTenants() {
   const tbody = document.getElementById('tenants-tbody');
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">Nincs találat.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">Nincs találat.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = filtered.map((t) => `
     <tr class="clickable" title="Adatlap megnyitása" onclick="location.href='tenant-detail.html?id=${encodeURIComponent(t.id)}'">
       <td class="cell-main"><a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}" onclick="event.stopPropagation()">${escapeHtml(t.name)}</a></td>
-      <td>${escapeHtml(t.email || '—')}${t.phone ? `<div class="cell-sub">${escapeHtml(t.phone)}</div>` : ''}</td>
-      <td>${escapeHtml(t.propertyName || '—')}</td>
+      <td>${escapeHtml(t.email || '–')}${t.phone ? `<div class="cell-sub">${escapeHtml(t.phone)}</div>` : ''}</td>
+      <td>${escapeHtml(t.propertyName || '–')}</td>
+      <td class="num">${Number(t.balance) > 0 ? `<span class="bal-due" title="Tartozás">${formatCurrency(t.balance)}</span>` : Number(t.balance) < 0 ? `<span class="bal-over" title="Túlfizetés">${formatCurrency(t.balance)}</span>` : '<span class="dim">–</span>'}</td>
       <td>${t.rentCurrency === 'HUF' ? 'Ft' : t.rentCurrency}</td>
       <td>${formatDate(t.moveInDate)}</td>
       <td>${formatDate(t.moveOutDate)}</td>
@@ -173,7 +173,7 @@ window.editTenant = (id) => {
 };
 
 window.deleteTenant = async (id) => {
-  if (!confirm('Biztosan törlöd ezt a bérlőt?')) return;
+  if (!(await uiConfirm('Biztosan törlöd ezt a bérlőt?', { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/tenants/${id}`, { method: 'DELETE' });
   if (res.ok || res.status === 204) loadData();
 };

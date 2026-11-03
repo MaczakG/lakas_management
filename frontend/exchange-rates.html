@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Árfolyamok</title>
+<title>Árfolyamok | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -16,9 +16,8 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Pénzügy</div>
         <h1>Árfolyamok</h1>
-        <p>Az MNB aktuális EUR/USD középárfolyama — óránként automatikusan frissül. Számlázáskor mindig az itt látható árfolyam kerül felhasználásra.</p>
+        <p>Az MNB aktuális EUR/USD középárfolyama, óránként automatikusan frissül. Bizonylat kiállításakor mindig az itt látható árfolyam kerül felhasználásra.</p>
       </div>
       <button class="btn btn-primary" id="refresh-btn">Frissítés most</button>
     </div>
@@ -48,7 +47,7 @@ async function loadRates() {
   const tbody = document.getElementById('rates-tbody');
 
   if (rates.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Még nincs lekért árfolyam — kattints a "Frissítés most" gombra.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Még nincs lekért árfolyam. Kattints a „Frissítés most” gombra.</td></tr>`;
     return;
   }
 

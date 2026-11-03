@@ -1,6 +1,6 @@
 // Közös építőkövek az adatlapokhoz (bérlő, tulajdonos) — az ingatlan-adatlap (property-detail.js) mintájára:
 // helyben szerkeszthető mezők (elhagyáskor / Enterre mentenek), panelek „masonry” elrendezése, fülek és a
-// számlák táblája.
+// bizonylatok táblája.
 const DETAIL_ICON = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#${id}"/></svg>`;
 const DETAIL_INVOICE_STATUS = { Sent: 'Kiküldve', Generated: 'Nem küldött', Failed: 'Sikertelen' };
 
@@ -28,13 +28,13 @@ function createInlineEditor({ getRecord, save }) {
     const id = idOf(field);
     let control;
     if (field.type === 'select') {
-      control = `<select class="iinput" id="${id}">${field.required ? '' : '<option value="">—</option>'}${field.options
+      control = `<select class="iinput" id="${id}">${field.required ? '' : '<option value="">Nincs megadva</option>'}${field.options
         .map((o) => `<option value="${escapeHtml(o.value)}"${String(o.value) === String(value ?? '') ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}</select>`;
     } else if (field.type === 'textarea') {
       control = `<textarea class="iinput" id="${id}" placeholder="${escapeHtml(field.placeholder || '')}">${escapeHtml(value ?? '')}</textarea>`;
     } else {
       const mode = field.type === 'email' ? ' inputmode="email"' : field.type === 'number' ? ' inputmode="decimal"' : field.type === 'date' ? ' inputmode="numeric"' : '';
-      control = `<input class="iinput" id="${id}" type="text"${mode} value="${escapeHtml(shown(field, value))}" placeholder="${escapeHtml(field.placeholder || (field.required ? '' : '—'))}" autocomplete="off">`;
+      control = `<input class="iinput" id="${id}" type="text"${mode} value="${escapeHtml(shown(field, value))}" placeholder="${escapeHtml(field.placeholder || (field.required ? '' : '–'))}" autocomplete="off">`;
     }
     return `<div class="prop${field.wide ? ' wide' : ''}">
       <dt><label for="${id}">${escapeHtml(field.label)}</label></dt>
@@ -131,30 +131,33 @@ function setupTabs(storageKey, fallback) {
   const activate = (name) => {
     document.querySelectorAll('.record-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.record-tab-pane').forEach((p) => { p.hidden = p.dataset.pane !== name; });
+    document.querySelectorAll('[data-tab-action]').forEach((b) => { b.hidden = b.dataset.tabAction !== name; });
     try { localStorage.setItem(storageKey, name); } catch { /* privát mód */ }
   };
   document.querySelectorAll('.record-tab').forEach((b) => b.addEventListener('click', () => activate(b.dataset.tab)));
   let saved = null;
   try { saved = localStorage.getItem(storageKey); } catch { /* privát mód */ }
+  // #fülnév a címben (pl. a dokumentum adatlapjáról visszalépve: …#documents) elsőbbséget kap.
+  const fromHash = location.hash.slice(1);
+  if (document.querySelector(`.record-tab[data-tab="${fromHash}"]`)) saved = fromHash;
   activate(document.querySelector(`.record-tab[data-tab="${saved}"]`) ? saved : fallback);
 }
 
-function renderInvoiceTable(invoices, emptyText, { showProperty = true, showTenant = true, showPeriod = true } = {}) {
+function renderInvoiceTable(invoices, emptyText, { showProperty = true, showTenant = true, showPeriod = true, from = '' } = {}) {
   if (!invoices.length) return `<div class="panel-empty">${escapeHtml(emptyText)}</div>`;
   return `<table>
     <thead><tr><th>Sorszám</th>${showPeriod ? '<th>Időszak</th>' : ''}${showProperty ? '<th>Ingatlan</th>' : ''}${showTenant ? '<th>Bérlő</th>' : ''}<th>Kiállítva</th><th class="num">Összeg</th><th>Állapot</th><th></th></tr></thead>
     <tbody>${invoices.map((i) => `
-      <tr>
-        <td><span class="mono">${escapeHtml(i.number)}</span></td>
+      <tr${(i.cancelledAt || i.cancelsInvoiceId) ? ' class="is-archived"' : ''}>
+        <td><a class="mono link" href="invoice-detail.html?id=${encodeURIComponent(i.id)}${from ? `&from=${encodeURIComponent(from)}` : ''}">${escapeHtml(i.number)}</a></td>
         ${showPeriod ? `<td>${i.periodYear}. ${MONTH_NAMES[i.periodMonth - 1].toLowerCase()}</td>` : ''}
         ${showProperty ? `<td><a class="link" href="property-detail.html?id=${encodeURIComponent(i.propertyId)}">${escapeHtml(i.propertyName)}</a></td>` : ''}
-        ${showTenant ? `<td>${escapeHtml(i.tenantName || '—')}</td>` : ''}
+        ${showTenant ? `<td>${escapeHtml(i.tenantName || '–')}</td>` : ''}
         <td>${formatDate(i.issuedAt)}</td>
         <td class="num">${formatCurrency(i.amountTotal)}</td>
-        <td><span class="status-tag ${escapeHtml(i.status)}">${DETAIL_INVOICE_STATUS[i.status] || escapeHtml(i.status)}</span></td>
-        <td class="num">${i.status !== 'Failed'
-          ? `<button class="icon-btn" type="button" title="PDF letöltése" aria-label="PDF letöltése" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">${DETAIL_ICON('download')}</button>`
-          : ''}</td>
+        <td>${window.invoiceStatusTag ? invoiceStatusTag(i, DETAIL_INVOICE_STATUS) : `<span class="status-tag ${escapeHtml(i.status)}">${DETAIL_INVOICE_STATUS[i.status] || escapeHtml(i.status)}</span>`}</td>
+        <td class="num">${window.invoiceActionButtons ? invoiceActionButtons(i)
+          : (i.status !== 'Failed' ? `<button class="icon-btn" type="button" title="PDF letöltése" aria-label="PDF letöltése" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">${DETAIL_ICON('download')}</button>` : '')}</td>
       </tr>`).join('')}</tbody></table>`;
 }
 

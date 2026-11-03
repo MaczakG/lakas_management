@@ -10,9 +10,14 @@
     #um-overlay .modal{max-width:640px;}
     .um-draft-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px;}
     .um-draft-row .field{margin-bottom:0;}
+    .um-draft-row button svg{width:16px;height:16px;display:block;margin:auto;}
     .um-draft-row button{width:42px;height:42px;border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;color:var(--coral);flex-shrink:0;}
     .um-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:4px 0 16px;}
     .um-existing-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:10px 0 20px;text-align:right;}
+    #um-existing-tbody input{height:36px;font-size:13.5px;}
+    #um-existing-tbody .row-actions{white-space:nowrap;}
+    .um-note{display:none;font-size:13px;line-height:1.5;color:var(--ink-soft);border-left:2px solid var(--line-strong);padding:2px 0 2px 12px;margin:0 0 18px;}
+    .um-note.show{display:block;}
     .um-section-title{font-family:var(--font-display);font-weight:700;font-size:14.5px;margin:0 0 10px;color:var(--ink);}
   `;
   document.head.appendChild(styleTag);
@@ -22,10 +27,11 @@
       <div class="modal">
         <div class="modal-head">
           <div><h2 id="um-title">Rezsi tételek</h2><p id="um-subtitle"></p></div>
-          <button class="modal-close" id="um-close" type="button">✕</button>
+          <button aria-label="Bezárás" class="modal-close" id="um-close" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
         </div>
         <div class="modal-body">
-          <div class="form-error" id="um-locked-note">Ez az időszak már számlázva lett, a rezsi tételek nem módosíthatók.</div>
+          <div class="um-note" id="um-late-note"></div>
+          <div class="form-error" id="um-locked-note"></div>
 
           <h3 class="um-section-title">Rögzített tételek</h3>
           <div class="card-table" style="margin-bottom:4px;">
@@ -51,6 +57,7 @@
     </div>
   `);
 
+  const LATE_UTILITY_MONTHS = 36;
   let state = { propertyId: null, year: null, month: null, onClose: null };
 
   function addDraftRow() {
@@ -59,7 +66,7 @@
     row.innerHTML = `
       <div class="field"><label>Megnevezés</label><input type="text" class="um-draft-label" placeholder="pl. Áram"></div>
       <div class="field"><label>Összeg (Ft)</label><input type="number" class="um-draft-amount" min="0"></div>
-      <button type="button" title="Sor eltávolítása">✕</button>
+      <button type="button" title="Sor eltávolítása" aria-label="Sor eltávolítása"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
     `;
     row.querySelector('button').addEventListener('click', () => { row.remove(); updateDraftTotal(); });
     row.querySelector('.um-draft-amount').addEventListener('input', updateDraftTotal);
@@ -74,7 +81,7 @@
 
   function resetDraftRows() {
     document.getElementById('um-draft-rows').innerHTML = '';
-    for (let i = 0; i < 3; i += 1) addDraftRow();
+    addDraftRow(); // alapból egy sor; többet a „+ Sor hozzáadása” gombbal
     updateDraftTotal();
   }
 
@@ -85,10 +92,15 @@
     ]);
     const allEntries = await entriesRes.json();
     const invoices = await invoicesRes.json();
-    const locked = invoices.some((i) => (i.status === 'Sent' || i.status === 'Generated')
+    // Tételenkénti zárolás: a bizonylatra került tétel sztornóig nem módosítható. A már bizonylatolt hónapra utólag
+    // felvett tétel nem zárolt, és a következő bizonylatra kerül, a hónapjával jelölve — legfeljebb 36 hónapra visszamenőleg.
+    const periodInvoice = invoices.find((i) => (!i.cancelledAt && !i.cancelsInvoiceId) && (i.status === 'Sent' || i.status === 'Generated')
       && i.periodYear === state.year && i.periodMonth === state.month);
+    const now = new Date();
+    const tooOld = (now.getFullYear() * 12 + now.getMonth()) - (state.year * 12 + state.month - 1) >= LATE_UTILITY_MONTHS;
 
     const entries = allEntries.filter((e) => e.year === state.year && e.month === state.month);
+    state.entries = entries;
     const tbody = document.getElementById('um-existing-tbody');
     tbody.innerHTML = entries.length === 0
       ? `<tr class="empty-row"><td colspan="3">Nincs még rögzített tétel.</td></tr>`
@@ -96,31 +108,66 @@
         <tr>
           <td>${escapeHtml(e.label)}</td>
           <td>${formatCurrency(e.amount)}</td>
-          <td class="row-actions">${locked
-            ? '<span class="status-tag ok">Lezárva</span>'
-            : `<button class="btn btn-danger btn-sm" onclick="window.__umDeleteEntry('${e.id}')">Törlés</button>`}</td>
+          <td class="row-actions">${e.isLocked
+            ? (e.invoiceId
+              ? `<a class="link mono" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}" title="Ezen a bizonylaton szerepel; sztornóig zárolt">${escapeHtml(e.invoiceNumber || 'Bizonylaton')}</a>`
+              : '<span class="status-tag inactive">Lezárva</span>')
+            : `<button class="btn btn-ghost btn-sm" type="button" onclick="window.__umEditEntry('${e.id}', this)">Szerkesztés</button>
+               <button class="btn btn-danger btn-sm" type="button" onclick="window.__umDeleteEntry('${e.id}')">Törlés</button>`}</td>
         </tr>
       `).join('');
 
     const sum = entries.reduce((acc, e) => acc + e.amount, 0);
     document.getElementById('um-existing-total').textContent = entries.length > 0 ? `Összesen: ${formatCurrency(sum)}` : '';
 
-    document.getElementById('um-locked-note').classList.toggle('show', locked);
-    document.getElementById('um-new-title').style.display = locked ? 'none' : '';
-    document.getElementById('um-draft-rows').style.display = locked ? 'none' : '';
-    document.getElementById('um-draft-total').style.display = locked ? 'none' : '';
-    document.getElementById('um-add-row-btn').style.display = locked ? 'none' : '';
-    document.getElementById('um-save-btn').style.display = locked ? 'none' : '';
+    const lateNote = document.getElementById('um-late-note');
+    lateNote.textContent = periodInvoice && !tooOld
+      ? `Erre a hónapra már kiállították a(z) ${periodInvoice.number} bizonylatot; a rajta szereplő tételek sztornóig zároltak. Az itt most felvett tételek a következő bizonylatra kerülnek, ezzel a hónappal jelölve.`
+      : '';
+    lateNote.classList.toggle('show', !!lateNote.textContent);
+    const lockedNote = document.getElementById('um-locked-note');
+    lockedNote.textContent = tooOld ? `Legfeljebb ${LATE_UTILITY_MONTHS} hónapra visszamenőleg lehet rezsitételt felvenni.` : '';
+    lockedNote.classList.toggle('show', tooOld);
+    for (const id of ['um-new-title', 'um-draft-rows', 'um-draft-total', 'um-add-row-btn', 'um-save-btn']) {
+      document.getElementById(id).style.display = tooOld ? 'none' : '';
+    }
 
     resetDraftRows();
   }
 
+  // Meglévő tétel helyben szerkesztése: a sor mezőkké alakul, Mentés / Mégse.
+  window.__umEditEntry = (entryId, btn) => {
+    const entry = state.entries.find((e) => e.id === entryId);
+    const row = btn.closest('tr');
+    if (!entry || !row) return;
+    row.innerHTML = `
+      <td><input type="text" class="um-edit-label" aria-label="Megnevezés"></td>
+      <td><input type="number" class="um-edit-amount" min="0" aria-label="Összeg (Ft)"></td>
+      <td class="row-actions"><button class="btn btn-primary btn-sm" type="button" data-save>Mentés</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-cancel>Mégse</button></td>`;
+    row.querySelector('.um-edit-label').value = entry.label;
+    row.querySelector('.um-edit-amount').value = entry.amount;
+    row.querySelector('.um-edit-label').focus();
+    row.querySelector('[data-cancel]').addEventListener('click', refresh);
+    row.querySelector('[data-save]').addEventListener('click', async () => {
+      const label = row.querySelector('.um-edit-label').value.trim();
+      const amount = Number(row.querySelector('.um-edit-amount').value);
+      const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/${entryId}`, { method: 'PUT', body: JSON.stringify({ label, amount }) });
+      if (!res.ok) {
+        await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült menteni a tételt.'), { title: 'Mentés sikertelen' });
+        return;
+      }
+      await refresh();
+      if (typeof state.onSaved === 'function') state.onSaved();
+    });
+  };
+
   window.__umDeleteEntry = async (entryId) => {
-    if (!confirm('Biztosan törlöd ezt a tételt?')) return;
+    if (!(await uiConfirm('Biztosan törlöd ezt a tételt?', { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
     const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/${entryId}`, { method: 'DELETE' });
     if (!res.ok && res.status !== 204) {
       const data = await res.json().catch(() => ({}));
-      alert(data.message || 'Nem sikerült törölni a tételt.');
+      await uiAlert(data.message || 'Nem sikerült törölni a tételt.', { title: 'Törlés sikertelen' });
       return;
     }
     await refresh();
@@ -178,7 +225,7 @@
   // hogy be kellene zárni a popupot).
   window.openUtilityModal = async function (propertyId, propertyName, year, month, opts = {}) {
     state = { propertyId, year, month, onClose: opts.onClose, onSaved: opts.onSaved };
-    document.getElementById('um-title').textContent = `Rezsi — ${propertyName}`;
+    document.getElementById('um-title').textContent = `Rezsi: ${propertyName}`;
     document.getElementById('um-subtitle').textContent = `${year}. ${MONTH_NAMES[month - 1]}`;
     document.getElementById('um-form-error').classList.remove('show');
     document.getElementById('um-form-success').classList.remove('show');

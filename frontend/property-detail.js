@@ -1,6 +1,6 @@
 // Ingatlan adatlap (property-detail.html?id=...). A panelek értékei helyben szerkeszthetők: egy mező
 // elhagyásakor (vagy Enterre) a teljes ingatlan PUT-tal mentődik — a szerver a frissített adatlapot adja
-// vissza, abból frissül a fejléc és a számolt értékek (pl. a munkanapra tolt következő számlázás).
+// vissza, abból frissül a fejléc és a számolt értékek (pl. a munkanapra tolt következő kiállítás).
 // A mezőket mentés után nem rajzoljuk újra, hogy a fókusz ne ugorjon el.
 requireAuth();
 
@@ -33,8 +33,8 @@ const FIELDS = {
   billing: [
     { path: 'rentAmount', label: 'Bérleti díj', type: 'number', group: true, required: true, suffix: () => rentCurrencyLabel() },
     { path: 'sheet.deposit', label: 'Kaució', type: 'number', group: true, suffix: () => 'Ft' },
-    { path: 'invoicePrefix', label: 'Számla előtag', placeholder: 'pl. A22', upper: true },
-    { path: 'billingDayOfMonth', label: 'Számlázási nap', type: 'number', integer: true, min: 1, max: 28, required: true, placeholder: '1–28' },
+    { path: 'invoicePrefix', label: 'Bizonylat előtag', placeholder: 'pl. A22', upper: true },
+    { path: 'billingDayOfMonth', label: 'Kiállítás napja', type: 'number', integer: true, min: 1, max: 28, required: true, placeholder: '1–28' },
     { path: 'billingTime', label: 'Kiküldés ideje', type: 'time', required: true, placeholder: 'óó:pp' },
   ],
   tech: [
@@ -74,8 +74,9 @@ function renderField(field) {
   const id = `f-${field.path.replace(/\./g, '-')}`;
   let control;
   if (field.type === 'select') {
-    control = `<select class="iinput" id="${id}"><option value="">—</option>${field.options
-      .map((o) => `<option value="${escapeHtml(o)}"${o === value ? ' selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select>`;
+    const opts = (typeof field.options === 'function' ? field.options() : field.options).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
+    control = `<select class="iinput" id="${id}"><option value="">${escapeHtml(field.emptyLabel ? field.emptyLabel() : 'Nincs megadva')}</option>${opts
+      .map((o) => `<option value="${escapeHtml(o.value)}"${o.value === value ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}</select>`;
   } else if (field.type === 'textarea') {
     control = `<textarea class="iinput" id="${id}" placeholder="${escapeHtml(field.placeholder || '')}">${escapeHtml(value ?? '')}</textarea>`;
   } else {
@@ -86,7 +87,7 @@ function renderField(field) {
       ? (field.group ? formatNumber(value, value % 1 ? 2 : 0) : String(value).replace('.', ','))
       : (value ?? '');
     const type = 'text';
-    control = `<input class="iinput" id="${id}" type="${type}"${mode} value="${escapeHtml(shown)}" placeholder="${escapeHtml(field.placeholder || (field.required ? '' : '—'))}" autocomplete="off">`;
+    control = `<input class="iinput" id="${id}" type="${type}"${mode} value="${escapeHtml(shown)}" placeholder="${escapeHtml(field.placeholder || (field.required ? '' : '–'))}" autocomplete="off">`;
   }
   const suffix = field.suffix ? `<span class="suffix" data-suffix="${field.path}">${escapeHtml(field.suffix())}</span>` : '';
   return `<div class="prop${field.wide ? ' wide' : ''}">
@@ -208,7 +209,7 @@ function addressLine() {
 }
 
 function renderHeader() {
-  document.title = `Lakáskezelő — ${property.name}`;
+  document.title = `${property.name} | Lakáskezelő`;
   document.getElementById('p-name').textContent = property.name;
   document.getElementById('crumb-name').textContent = property.name;
   document.getElementById('p-status').innerHTML = property.isActive
@@ -221,11 +222,11 @@ function renderHeader() {
     s.floorArea != null ? `${formatNumber(s.floorArea, s.floorArea % 1 ? 1 : 0)} m²` : null,
     s.rooms != null ? `${String(s.rooms).replace('.', ',')} szoba` : null,
   ].filter(Boolean);
-  document.getElementById('p-sub').textContent = facts.join(' · ') || 'Töltsd ki az adatlapot: cím, típus, alapterület…';
+  document.getElementById('p-sub').textContent = facts.join(', ') || 'Töltsd ki az adatlapot: cím, típus, alapterület…';
   document.getElementById('toggle-active-btn').textContent = property.isActive ? 'Inaktiválás' : 'Aktiválás';
 }
 
-// A nem szerkeszthető, számolt értékek: következő számlázás, deviza-utótag, összegzés.
+// A nem szerkeszthető, számolt értékek: következő kiállítás, deviza-utótag, összegzés.
 function renderComputed() {
   const next = String(property.nextBillingAt);
   const [date, time] = next.split('T');
@@ -235,7 +236,7 @@ function renderComputed() {
   if (nextEl) {
     nextEl.innerHTML = property.isActive
       ? `${y}.${m}.${d}. ${time.slice(0, 5)}${shifted ? ' <span class="dim">(munkanapra tolva)</span>' : ''}`
-      : '<span class="dim">— (inaktív, nem számláz)</span>';
+      : '<span class="dim">Inaktív, nem állít ki bizonylatot</span>';
   }
   document.querySelectorAll('[data-suffix]').forEach((el) => {
     const field = Object.values(FIELDS).flat().find((f) => f.path === el.dataset.suffix);
@@ -244,10 +245,21 @@ function renderComputed() {
   renderSummary();
 }
 
+// Cégnél, összekötött számlázóval az ingatlan áfája is beállítható (üresen a cég alapértelmezése).
+let company = null;
+const VAT_LABELS = { TAM: 'Tárgyi adómentes (TAM)', AAM: 'Alanyi adómentes (AAM)', 27: '27%', 18: '18%', 5: '5%', 0: '0%' };
+const VAT_OPTIONS = ['TAM', 'AAM', '27', '18', '5', '0'].map((c) => ({ value: c, label: VAT_LABELS[c] }));
+const VAT_FIELDS = [
+  { path: 'sheet.rentVat', label: 'Bérleti díj áfája', type: 'select', options: VAT_OPTIONS, emptyLabel: () => `Alapértelmezés: ${VAT_LABELS[company?.defaultRentVat] || 'TAM'}` },
+  { path: 'sheet.utilityVat', label: 'Rezsi áfája', type: 'select', options: VAT_OPTIONS, emptyLabel: () => `Alapértelmezés: ${VAT_LABELS[company?.defaultUtilityVat] || 'TAM'}` },
+];
+
 function renderPanels() {
+  FIELDS.billing = FIELDS.billing.filter((f) => !VAT_FIELDS.includes(f));
+  if (company?.invoiceProvider) FIELDS.billing.push(...VAT_FIELDS);
   document.getElementById('props-basic').innerHTML = FIELDS.basic.map(renderField).join('');
   document.getElementById('props-billing').innerHTML = FIELDS.billing.map(renderField).join('')
-    + '<div class="prop"><dt>Következő számlázás</dt><dd id="next-billing"></dd></div>';
+    + '<div class="prop"><dt>Következő kiállítás</dt><dd id="next-billing"></dd></div>';
   document.getElementById('props-tech').innerHTML = FIELDS.tech.map(renderField).join('');
   document.getElementById('props-notes').innerHTML = FIELDS.notes.map(renderField).join('');
   Object.values(FIELDS).forEach(bindFields);
@@ -265,7 +277,7 @@ function renderOwners() {
   }
   const equal = owners.every((o) => !o.share);
   body.innerHTML = owners.map((o) => `
-    <div class="owner-line"><b><a class="link" href="owner-detail.html?id=${encodeURIComponent(o.ownerId)}">${escapeHtml(o.ownerName)}</a></b><span class="share-chip">${escapeHtml(o.share || (equal ? `1/${owners.length}` : '—'))}</span></div>
+    <div class="owner-line"><b><a class="link" href="owner-detail.html?id=${encodeURIComponent(o.ownerId)}">${escapeHtml(o.ownerName)}</a></b><span class="share-chip">${escapeHtml(o.share || (equal ? `1/${owners.length}` : '–'))}</span></div>
   `).join('');
 }
 
@@ -279,29 +291,29 @@ function renderTenant() {
   const row = (label, value) => `<div class="prop"><dt>${label}</dt><dd>${value}</dd></div>`;
   body.innerHTML = [
     row('Név', `<a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}">${escapeHtml(t.name)}</a>`),
-    row('E-mail', t.email ? `<a class="link" href="mailto:${escapeHtml(t.email)}">${escapeHtml(t.email)}</a>` : '<span class="dim">—</span>'),
-    row('Telefon', t.phone ? escapeHtml(t.phone) : '<span class="dim">—</span>'),
-    row('Beköltözés', t.moveInDate ? formatDate(t.moveInDate) : '<span class="dim">—</span>'),
-    row('Díj devizája', t.rentCurrency === 'HUF' ? 'Forint' : `${escapeHtml(t.rentCurrency)} <span class="dim">(MNB-árfolyamon számlázva)</span>`),
+    row('E-mail', t.email ? `<a class="link" href="mailto:${escapeHtml(t.email)}">${escapeHtml(t.email)}</a>` : '<span class="dim">–</span>'),
+    row('Telefon', t.phone ? escapeHtml(t.phone) : '<span class="dim">–</span>'),
+    row('Beköltözés', t.moveInDate ? formatDate(t.moveInDate) : '<span class="dim">–</span>'),
+    row('Díj devizája', t.rentCurrency === 'HUF' ? 'Forint' : `${escapeHtml(t.rentCurrency)} <span class="dim">(MNB-árfolyamon átszámítva)</span>`),
   ].join('');
 }
 
 function renderSummary() {
   const year = new Date().getFullYear();
-  const issued = invoices.filter((i) => i.status !== 'Failed');
+  const issued = invoices.filter((i) => i.status !== 'Failed' && (!i.cancelledAt && !i.cancelsInvoiceId));
   const last = issued[0];
   const thisYear = issued.filter((i) => i.periodYear === year).reduce((sum, i) => sum + Number(i.amountTotal), 0);
-  const failed = invoices.filter((i) => i.status === 'Failed').length;
-  // A következő kiküldés időszakának rezsije kerül a számlára — ezt nézzük, nem az aktuális hónapot.
+  const failed = invoices.filter((i) => i.status === 'Failed' && (!i.cancelledAt && !i.cancelsInvoiceId)).length;
+  // A következő kiküldés időszakának rezsije kerül a bizonylatra — ezt nézzük, nem az aktuális hónapot.
   const utilityNext = utilityEntries.some((u) => u.year === property.nextPeriodYear && u.month === property.nextPeriodMonth);
-  const nextLabel = `${MONTH_NAMES[property.nextPeriodMonth - 1].toLowerCase()}i számlához`;
+  const nextLabel = `${MONTH_NAMES[property.nextPeriodMonth - 1].toLowerCase()}i bizonylathoz`;
   const row = (label, value) => `<div class="prop"><dt>${label}</dt><dd>${value}</dd></div>`;
   document.getElementById('summary').innerHTML = [
-    row('Utolsó számla', last ? `<span class="mono">${escapeHtml(last.number)}</span> <span class="dim">· ${formatDate(last.issuedAt)}</span>` : '<span class="dim">Még nincs</span>'),
-    row(`Számlázva ${year}-ben`, formatCurrency(thisYear)),
-    row('Kiállított számlák', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
+    row('Utolsó bizonylat', last ? `<span class="mono">${escapeHtml(last.number)}</span> <span class="dim">${formatDate(last.issuedAt)}</span>` : '<span class="dim">Még nincs</span>'),
+    row(`Kiállítva ${year}-ben`, formatCurrency(thisYear)),
+    row('Kiállított bizonylatok', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
     row(`Rezsi a ${nextLabel}`, utilityNext ? '<span class="status-tag ok">Rögzítve</span>' : '<span class="status-tag missing">Hiányzik</span>'),
-    row('Kaució', property.sheet.deposit != null ? formatCurrency(property.sheet.deposit) : '<span class="dim">—</span>'),
+    row('Kaució', property.sheet.deposit != null ? formatCurrency(property.sheet.deposit) : '<span class="dim">–</span>'),
   ].join('');
 }
 
@@ -309,22 +321,20 @@ function renderInvoices() {
   document.getElementById('count-invoices').textContent = invoices.length || '';
   const body = document.getElementById('invoices-body');
   if (!invoices.length) {
-    body.innerHTML = '<div class="panel-empty">Ehhez az ingatlanhoz még nincs számla.</div>';
+    body.innerHTML = '<div class="panel-empty">Ehhez az ingatlanhoz még nincs bizonylat.</div>';
     return;
   }
   body.innerHTML = `<table>
     <thead><tr><th>Sorszám</th><th>Időszak</th><th>Bérlő</th><th>Kiállítva</th><th class="num">Összeg</th><th>Állapot</th><th></th></tr></thead>
     <tbody>${invoices.map((i) => `
-      <tr>
-        <td><span class="mono">${escapeHtml(i.number)}</span></td>
+      <tr${(i.cancelledAt || i.cancelsInvoiceId) ? ' class="is-archived"' : ''}>
+        <td><a class="mono link" href="${invoiceDetailUrl(i, `property:${propertyId}`)}">${escapeHtml(i.number)}</a></td>
         <td>${i.periodYear}. ${MONTH_NAMES[i.periodMonth - 1].toLowerCase()}</td>
-        <td>${escapeHtml(i.tenantName || '—')}</td>
+        <td>${escapeHtml(i.tenantName || '–')}</td>
         <td>${formatDate(i.issuedAt)}</td>
         <td class="num">${formatCurrency(i.amountTotal)}</td>
-        <td><span class="status-tag ${escapeHtml(i.status)}">${INVOICE_STATUS[i.status] || escapeHtml(i.status)}</span></td>
-        <td class="num">${i.status !== 'Failed'
-          ? `<button class="icon-btn" type="button" title="PDF letöltése" aria-label="PDF letöltése" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">${ICON('download')}</button>`
-          : ''}</td>
+        <td>${invoiceStatusTag(i, INVOICE_STATUS)}</td>
+        <td class="num">${invoiceActionButtons(i)}</td>
       </tr>`).join('')}</tbody></table>`;
 }
 
@@ -332,10 +342,10 @@ function renderUtility() {
   const periods = new Map();
   utilityEntries.forEach((u) => {
     const key = `${u.year}-${String(u.month).padStart(2, '0')}`;
-    const p = periods.get(key) || { year: u.year, month: u.month, count: 0, total: 0, locked: false };
+    const p = periods.get(key) || { year: u.year, month: u.month, count: 0, total: 0, entries: [] };
     p.count += 1;
     p.total += Number(u.amount);
-    p.locked = p.locked || u.isLocked;
+    p.entries.push(u);
     periods.set(key, p);
   });
   const list = [...periods.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([, p]) => p);
@@ -352,7 +362,7 @@ function renderUtility() {
         <td class="cell-main">${p.year}. ${MONTH_NAMES[p.month - 1].toLowerCase()}</td>
         <td class="num">${p.count}</td>
         <td class="num">${formatCurrency(p.total)}</td>
-        <td>${p.locked ? '<span class="status-tag inactive">Lezárva</span>' : '<span class="status-tag ok">Rögzítve</span>'}</td>
+        <td>${utilityPeriodTag(p.entries)}</td>
       </tr>`).join('')}</tbody></table>`;
 }
 
@@ -370,8 +380,8 @@ function renderTenantsTab() {
     <tbody>${tenants.map((t) => `
       <tr>
         <td class="cell-main"><a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}">${escapeHtml(t.name)}</a></td>
-        <td>${escapeHtml(t.email || '—')}</td>
-        <td>${escapeHtml(t.phone || '—')}</td>
+        <td>${escapeHtml(t.email || '–')}</td>
+        <td>${escapeHtml(t.phone || '–')}</td>
         <td>${formatDate(t.moveInDate)}</td>
         <td>${formatDate(t.moveOutDate)}</td>
         <td>${t.rentCurrency === 'HUF' ? 'Ft' : escapeHtml(t.rentCurrency)}</td>
@@ -392,7 +402,7 @@ function activateTab(name) {
   try { localStorage.setItem('propertyDetailTab', name); } catch { /* privát mód: nem baj */ }
 }
 document.querySelectorAll('.record-tab').forEach((b) => b.addEventListener('click', () => activateTab(b.dataset.tab)));
-// Új rezsi alapból a következő kiküldés időszakára (annak a számlájára kerül).
+// Új rezsi alapból a következő kiküldés időszakára (annak a bizonylatára kerül).
 document.getElementById('add-utility').addEventListener('click', () => {
   window.openUtility(property.nextPeriodYear, property.nextPeriodMonth);
 });
@@ -422,27 +432,31 @@ window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer
 
 // ---------- fejléc-műveletek ----------
 
+document.getElementById('create-invoice-btn').addEventListener('click', () => openInvoiceCreateDialog({ propertyId }));
+// Bizonylat készítése / újrapróbálás / törlés után az adatlap (bizonylatok, összegzés, rezsi-zárolás) frissül.
+document.addEventListener('invoices-changed', () => load());
+
 document.getElementById('toggle-active-btn').addEventListener('click', async () => {
-  if (property.isActive && !confirm('Inaktív ingatlanra nem megy ki automatikus számla. Biztosan inaktiválod?')) return;
+  if (property.isActive && !(await uiConfirm('Inaktív ingatlanra nem megy ki automatikus bizonylat. Biztosan inaktiválod?', { title: 'Inaktiválás', confirmText: 'Inaktiválás' }))) return;
   const error = await save({ ...structuredClone(property), isActive: !property.isActive });
   if (error) showError(error);
 });
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
-  if (!confirm(`Biztosan törlöd ezt az ingatlant: „${property.name}”? Ez nem vonható vissza.`)) return;
+  if (!(await uiConfirm(`Biztosan törlöd ezt az ingatlant: „${property.name}”? Ez nem vonható vissza.`, { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/properties/${propertyId}`, { method: 'DELETE' });
   if (res.ok || res.status === 204) {
     location.href = 'properties.html';
     return;
   }
-  showError(errorMessage(res, await readJson(res), 'Nem sikerült törölni az ingatlant (lehet, hogy már van hozzá számla).'));
+  showError(errorMessage(res, await readJson(res), 'Nem sikerült törölni az ingatlant (lehet, hogy már van hozzá bizonylat).'));
 });
 
 // ---------- tulajdonosok szerkesztése ----------
 
 function ownerRowHtml(ownerId, share) {
   return `<div class="owner-row">
-    <select class="owner-select" aria-label="Tulajdonos"><option value="">— válassz —</option>${allOwners
+    <select class="owner-select" aria-label="Tulajdonos"><option value="">Válassz…</option>${allOwners
       .map((o) => `<option value="${o.id}"${o.id === ownerId ? ' selected' : ''}>${escapeHtml(o.name)}</option>`).join('')}</select>
     <input type="text" class="owner-share" placeholder="pl. 1/2" aria-label="Tulajdoni hányad" value="${escapeHtml(share || '')}">
     <button class="icon-btn danger" type="button" title="Eltávolítás" aria-label="Eltávolítás" onclick="this.parentElement.remove()">${ICON('trash')}</button>
@@ -480,6 +494,28 @@ document.getElementById('save-owners-btn').addEventListener('click', async () =>
   layoutMasonry();
 });
 
+// ---------- dokumentumok ----------
+
+// A fül egyszer épül fel (az első betöltéskor); a bérlő-választóban az ingatlan bérlői, a jelenlegi elöl.
+let documentsMounted = false;
+function mountPropertyDocuments() {
+  if (documentsMounted) return;
+  documentsMounted = true;
+  mountDocuments({
+    scope: { propertyId },
+    container: '#documents-body',
+    count: '#count-documents',
+    uploadButton: '#upload-doc',
+    links: async (doc) => {
+      const current = currentTenant();
+      const tenants = [...property.tenants].sort((a, b) => (a === current ? -1 : b === current ? 1 : (b.moveInDate || '').localeCompare(a.moveInDate || '')));
+      const options = tenants.map((t) => ({ value: t.id, label: t === current ? `${t.name} (jelenlegi)` : t.name }));
+      if (doc?.tenantId && !options.some((o) => o.value === doc.tenantId)) options.push({ value: doc.tenantId, label: doc.tenantName });
+      return [{ key: 'tenantId', label: 'Bérlőhöz is tartozik', options, value: '', hint: 'Pl. bérleti szerződésnél: így a bérlő adatlapján is megjelenik.' }];
+    },
+  });
+}
+
 // ---------- betöltés ----------
 
 async function loadUtility() {
@@ -490,14 +526,16 @@ async function loadUtility() {
 }
 
 async function load() {
-  const [pRes, iRes, uRes] = await Promise.all([
+  const [pRes, iRes, uRes, cRes] = await Promise.all([
     apiFetch(`/api/properties/${propertyId}`),
     apiFetch(`/api/properties/${propertyId}/invoices`),
     apiFetch(`/api/properties/${propertyId}/utility-costs`),
+    company ? null : apiFetch('/api/company'),
   ]);
+  if (cRes?.ok) company = await cRes.json();
   if (pRes.status === 404) {
     document.getElementById('p-name').textContent = 'Nincs ilyen ingatlan';
-    showError('Az ingatlan nem található — lehet, hogy törölték.');
+    showError('Az ingatlan nem található. Lehet, hogy törölték.');
     return;
   }
   property = await pRes.json();
@@ -514,7 +552,10 @@ async function load() {
 
   let tab = 'invoices';
   try { tab = localStorage.getItem('propertyDetailTab') || tab; } catch { /* nem baj */ }
-  activateTab(['invoices', 'utility', 'tenants'].includes(tab) ? tab : 'invoices');
+  // #fülnév a címben (pl. a dokumentum adatlapjáról visszalépve: …#documents) elsőbbséget kap.
+  if (['invoices', 'utility', 'tenants', 'documents'].includes(location.hash.slice(1))) tab = location.hash.slice(1);
+  activateTab(['invoices', 'utility', 'tenants', 'documents'].includes(tab) ? tab : 'invoices');
+  mountPropertyDocuments();
 }
 
 load();
