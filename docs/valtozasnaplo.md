@@ -4,6 +4,23 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.19** — Fizetés rögzítése a bizonylatra dátummal és összeggel, részletekben is.
+  - A „Fizetés rögzítése” ablak (pipa gomb a bizonylattáblákban, gomb az adatlapon) kéri:
+    - a dátumot (alapból ma);
+    - a befizetett összeget (alapból a hátralék);
+    - egy nem kötelező megjegyzést.
+
+    Az ablak mutatja a végösszeget, az eddig befizetett összeget és a hátralékot.
+  - Ha a bérlő fizeti az SZJA-t, a teljes összeg az SZJA-mentes végösszeg (a bizonylaton az „SZJA levonás (15%)” sor már
+    levonja). Az ablakban ilyenkor „Végösszeg (SZJA-mentes)” látszik.
+  - Állapot:
+    - „Részben fizetve”, amíg a befizetések nem érik el a végösszeget;
+    - utána „Fizetve” az utolsó részlet dátumával.
+
+    Az adatlap a befizetéseket egyenként is listázza.
+  - Minden befizetés a bérlő Egyenleg fülén is megjelenik, a bizonylatra hivatkozva. Ha ott törlöd, a bizonylat
+    fizetettsége újraszámolódik. „Befizetések visszavonása”: a bizonylat összes befizetését törli.
+  - Migráció: InvoicePartialPayments (befizetett összeg a bizonylaton, a meglévő befizetésekből kitöltve).
 - **2026.11.03.18** — A bizonylat fizetettre állítható, dátummal.
   - A bizonylattáblákban pipa gomb, a bizonylat adatlapján „Fizetettre állítás” gomb. A fizetés napja alapból a mai
     nap, átírható; jövőbeli dátum nem adható meg.

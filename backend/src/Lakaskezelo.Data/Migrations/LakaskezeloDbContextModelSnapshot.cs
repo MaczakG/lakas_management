@@ -464,6 +464,9 @@ namespace Lakaskezelo.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("numeric(12,2)");
+
                     b.Property<DateOnly?>("PaidAt")
                         .HasColumnType("date");
 

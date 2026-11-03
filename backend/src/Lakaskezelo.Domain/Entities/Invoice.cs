@@ -44,8 +44,10 @@ public class Invoice : ICompanyOwned
     public Guid? CancelsInvoiceId { get; set; }
     public Invoice? CancelsInvoice { get; set; }
 
-    // Fizetettre állítva: a befizetés napja. Ilyenkor egy hozzá kötött befizetés (TenantPayment.InvoiceId) is
-    // rögzül a bizonylat végösszegével, így a bérlő egyenlegében is megjelenik; visszavonáskor az is törlődik.
+    // Fizetés: a bizonylathoz kötött befizetések (TenantPayment.InvoiceId) összege — részletekben is jöhet. Ezek a bérlő
+    // egyenlegében is megjelennek. PaidAt: a teljes kifizetés napja (az utolsó, a végösszeget elérő befizetésé), addig null.
+    // A „teljes” összeg a végösszeg: ha a bérlő fizeti az SZJA-t, abban az „SZJA levonás” sor már benne van (SZJA-mentes).
+    public decimal PaidAmount { get; set; }
     public DateOnly? PaidAt { get; set; }
 
     // Sztornó bizonylat-e. (Aktív bizonylat: nem sztornó, és nem is sztornózták — ilyenből egy lehet időszakonként.)

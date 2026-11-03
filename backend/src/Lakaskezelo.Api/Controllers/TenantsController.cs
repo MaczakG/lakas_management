@@ -51,7 +51,7 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
             .Concat(payments.Select(p => new
             {
                 Sort = (Date: p.Date, At: p.CreatedAt),
-                Entry = new TenantLedgerEntryDto("payment", p.Id, p.Date, p.Invoice is null ? "Befizetés" : "Befizetés — bizonylat fizetve",
+                Entry = new TenantLedgerEntryDto("payment", p.Id, p.Date, p.Invoice is null ? "Befizetés" : "Befizetés a bizonylatra",
                     -p.Amount, 0, p.InvoiceId, p.Invoice?.Number, false, false, p.Note),
             }))
             .OrderBy(r => r.Sort.Date).ThenBy(r => r.Sort.At)
@@ -102,10 +102,14 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
     {
         var payment = await db.TenantPayments.Include(p => p.Invoice).FirstOrDefaultAsync(p => p.Id == paymentId && p.TenantId == id, ct);
         if (payment is null) return NotFound();
-        // Bizonylat fizetettre állításából jött befizetés törlésével a bizonylat fizetett jelölése is megszűnik.
-        if (payment.Invoice is { } paidInvoice) paidInvoice.PaidAt = null;
         db.TenantPayments.Remove(payment);
         await db.SaveChangesAsync(ct);
+        // Bizonylatra rögzített befizetés törlésével a bizonylat fizetettsége is újraszámolódik.
+        if (payment.Invoice is { } paidInvoice)
+        {
+            await Billing.InvoicePayments.RecalculateAsync(db, paidInvoice, ct);
+            await db.SaveChangesAsync(ct);
+        }
         return NoContent();
     }
 

@@ -300,40 +300,89 @@ window.invoiceCancel = async (id, number, sent) => {
   return true;
 };
 
-// Fizetettre állítható: kiállított, aktív, még nem fizetett bizonylat, amelynek van bérlője.
-window.invoiceCanBePaid = (i) => invoiceIsActive(i) && i.status !== 'Failed' && !i.paidAt && !!i.tenantName;
+// Fizetés rögzíthető: kiállított, aktív bizonylat bérlővel, amelyből még van hátralék.
+window.invoiceRemaining = (i) => Math.max(0, Math.round((Number(i.amountTotal) - Number(i.paidAmount || 0)) * 100) / 100);
+window.invoiceCanBePaid = (i) => invoiceIsActive(i) && i.status !== 'Failed' && !!i.tenantName && invoiceRemaining(i) > 0;
 
-// Fizetettre állítás dátummal (alapból ma). A bizonylat végösszege befizetésként a bérlő egyenlegébe is bekerül.
-window.invoiceMarkPaid = async (id, number, amount) => {
+// Fizetés rögzítése a bizonylatra: dátum (alapból ma), összeg (alapból a hátralék — SZJA-t fizető bérlőnél a végösszeg
+// már az SZJA-mentes összeg), megjegyzés. Részletekben is rögzíthető; a bérlő egyenlegébe is bekerül.
+window.invoiceMarkPaid = (invoice) => new Promise((resolve) => {
+  const i = invoice;
+  const remaining = invoiceRemaining(i);
+  const szja = (i.lines || []).some((l) => /^SZJA levonás/.test(l.label));
   const t = new Date();
   const today = `${t.getFullYear()}. ${String(t.getMonth() + 1).padStart(2, '0')}. ${String(t.getDate()).padStart(2, '0')}.`;
-  let value = today;
-  for (;;) {
-    const input = await uiPrompt(`A(z) ${number} bizonylat (${formatCurrency(amount)}) kifizetésének napja. Az összeg befizetésként a bérlő egyenlegébe is bekerül.`,
-      { title: 'Fizetettre állítás', confirmText: 'Fizetett', input: { label: 'Fizetés dátuma', value, placeholder: 'ÉÉÉÉ. HH. NN.' } });
-    if (input == null) return false;
-    value = input;
-    const m = /^(\d{4})[.\-/ ]\s*(\d{1,2})[.\-/ ]\s*(\d{1,2})\.?$/.exec(String(input).trim());
-    if (!m) { await uiAlert('A dátumot ÉÉÉÉ. HH. NN. alakban add meg.', { title: 'Érvénytelen dátum' }); continue; }
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay ui-dialog-overlay';
+  overlay.innerHTML = `
+    <form class="modal ui-dialog" role="dialog" aria-modal="true" aria-labelledby="ip-title" novalidate>
+      <div class="modal-head"><div><h2 id="ip-title">Fizetés rögzítése</h2><p class="ip-sub"></p></div></div>
+      <div class="modal-body">
+        <dl class="ip-sum"></dl>
+        <div class="field"><label for="ip-date">Fizetés dátuma</label><input id="ip-date" type="text" inputmode="numeric" placeholder="ÉÉÉÉ. HH. NN." autocomplete="off"></div>
+        <div class="field"><label for="ip-amount">Befizetett összeg (Ft)</label><input id="ip-amount" type="text" inputmode="decimal" autocomplete="off"></div>
+        <div class="field"><label for="ip-note">Megjegyzés</label><input id="ip-note" type="text" maxlength="500" placeholder="pl. átutalás, készpénz" autocomplete="off"></div>
+        <div class="form-error" id="ip-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-ip-cancel>Mégse</button>
+        <button class="btn btn-primary" type="submit" data-ip-ok>Rögzítés</button>
+      </div>
+    </form>`;
+  overlay.querySelector('.ip-sub').textContent = `${i.number} · a bérlő egyenlegébe is bekerül`;
+  const row = (k, v) => `<div><dt>${escapeHtml(k)}</dt><dd>${v}</dd></div>`;
+  overlay.querySelector('.ip-sum').innerHTML = [
+    row(szja ? 'Végösszeg (SZJA-mentes)' : 'Végösszeg', formatCurrency(i.amountTotal)),
+    Number(i.paidAmount) > 0 ? row('Eddig befizetve', formatCurrency(i.paidAmount)) : '',
+    row('Hátralék', `<b>${formatCurrency(remaining)}</b>`),
+  ].join('');
+  overlay.querySelector('#ip-date').value = today;
+  overlay.querySelector('#ip-amount').value = String(remaining).replace('.', ',');
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('open'));
+  overlay.querySelector('#ip-amount').focus();
+  overlay.querySelector('#ip-amount').select();
+  const close = (result) => { overlay.classList.remove('open'); setTimeout(() => overlay.remove(), 200); resolve(result); };
+  overlay.querySelector('[data-ip-cancel]').addEventListener('click', () => close(false));
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+  overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(false); });
+  overlay.querySelector('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = overlay.querySelector('#ip-error');
+    const fail = (msg) => { err.textContent = msg; err.classList.add('show'); };
+    const m = /^(\d{4})[.\-/ ]\s*(\d{1,2})[.\-/ ]\s*(\d{1,2})\.?$/.exec(overlay.querySelector('#ip-date').value.trim());
+    if (!m) { fail('A dátumot ÉÉÉÉ. HH. NN. alakban add meg.'); return; }
     const date = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
-    const res = await apiFetch(`/api/invoices/${id}/paid`, { method: 'POST', body: JSON.stringify({ date }) });
-    if (!res.ok) {
-      await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült fizetettre állítani.'), { title: 'Sikertelen' });
-      return false;
+    const amount = Number(overlay.querySelector('#ip-amount').value.replace(/[\s ]/g, '').replace(',', '.'));
+    if (!Number.isFinite(amount) || amount <= 0) { fail('Adj meg nullánál nagyobb összeget.'); return; }
+    const btn = overlay.querySelector('[data-ip-ok]');
+    btn.disabled = true;
+    try {
+      const res = await apiFetch(`/api/invoices/${i.id}/payments`, {
+        method: 'POST', body: JSON.stringify({ date, amount, note: overlay.querySelector('#ip-note').value.trim() || null }),
+      });
+      if (!res.ok) { fail(errorMessage(res, await readJson(res), 'Nem sikerült rögzíteni a fizetést.')); return; }
+      close(true);
+      document.dispatchEvent(new CustomEvent('invoices-changed'));
+    } finally {
+      btn.disabled = false;
     }
-    document.dispatchEvent(new CustomEvent('invoices-changed'));
-    return true;
-  }
-};
+  });
+});
 
+// A bizonylat összes befizetésének visszavonása.
 window.invoiceUnmarkPaid = async (id, number) => {
-  if (!(await uiConfirm(`Visszavonod a(z) ${number} bizonylat fizetett jelölését? A hozzá rögzített befizetés is törlődik a bérlő egyenlegéből.`,
-    { title: 'Fizetés visszavonása', confirmText: 'Visszavonás', danger: true }))) return false;
-  const res = await apiFetch(`/api/invoices/${id}/paid`, { method: 'DELETE' });
+  if (!(await uiConfirm(`Visszavonod a(z) ${number} bizonylatra rögzített összes befizetést? A bérlő egyenlegéből is törlődnek.`,
+    { title: 'Befizetések visszavonása', confirmText: 'Visszavonás', danger: true }))) return false;
+  const res = await apiFetch(`/api/invoices/${id}/payments`, { method: 'DELETE' });
   if (!res.ok) { await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült visszavonni.'), { title: 'Sikertelen' }); return false; }
   document.dispatchEvent(new CustomEvent('invoices-changed'));
   return true;
 };
+
+// A tábla-gombokból: a bizonylat adatait (sorokkal együtt) a gyorsítótárból vesszük.
+window.__invoiceCache = new Map();
+window.invoiceMarkPaidById = (id) => { const i = window.__invoiceCache.get(id); if (i) invoiceMarkPaid(i); };
 
 // A bizonylat adatlapjának címe; a from paraméterrel tér vissza oda, ahonnan megnyitották.
 window.invoiceDetailUrl = (i, from) => `invoice-detail.html?id=${encodeURIComponent(i.id)}${from ? `&from=${encodeURIComponent(from)}` : ''}`;
@@ -348,7 +397,8 @@ window.invoiceActionButtons = function (i) {
     buttons.push(`<button class="icon-btn" type="button" title="Újrapróbálás" aria-label="Újrapróbálás" onclick="invoiceRetry(${jsArg(i.propertyId)}, ${i.periodYear}, ${i.periodMonth}, ${jsArg(i.propertyName)})">${icon('rotate-ccw')}</button>`);
   }
   if (invoiceCanBePaid(i)) {
-    buttons.push(`<button class="icon-btn" type="button" title="Fizetettre állítás" aria-label="Fizetettre állítás" onclick="invoiceMarkPaid(${jsArg(i.id)}, ${jsArg(i.number)}, ${Number(i.amountTotal)})">${icon('check')}</button>`);
+    window.__invoiceCache.set(i.id, i);
+    buttons.push(`<button class="icon-btn" type="button" title="Fizetés rögzítése" aria-label="Fizetés rögzítése" onclick="invoiceMarkPaidById(${jsArg(i.id)})">${icon('check')}</button>`);
   }
   if (invoiceIsActive(i) && i.status !== 'Failed') {
     buttons.push(`<button class="icon-btn danger" type="button" title="Sztornózás" aria-label="Bizonylat sztornózása" onclick="invoiceCancel(${jsArg(i.id)}, ${jsArg(i.number)}, ${i.status === 'Sent'})">${icon('file-minus')}</button>`);
@@ -361,5 +411,6 @@ window.invoiceStatusTag = function (i, labels) {
   if (i.cancelsInvoiceId) return '<span class="status-tag storno">Sztornó</span>';
   if (i.cancelledAt) return '<span class="status-tag cancelled" title="Sztornózva: ' + escapeHtml(formatDate(i.cancelledAt)) + '">Sztornózott</span>';
   if (i.paidAt) return `<span class="status-tag paid" title="${escapeHtml(labels[i.status] || i.status)}">Fizetve ${escapeHtml(formatDate(i.paidAt))}</span>`;
+  if (Number(i.paidAmount) > 0) return `<span class="status-tag warn partial" title="Befizetve ${escapeHtml(formatCurrency(i.paidAmount))} / ${escapeHtml(formatCurrency(i.amountTotal))}">Részben fizetve</span>`;
   return `<span class="status-tag ${escapeHtml(i.status)}">${labels[i.status] || escapeHtml(i.status)}</span>`;
 };

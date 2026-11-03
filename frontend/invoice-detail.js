@@ -34,6 +34,16 @@ function crumbs() {
   return `<li><a href="invoice-bundles.html">Bizonylatok</a></li><li>${invoice.periodYear}. ${MONTH_NAMES[invoice.periodMonth - 1]}</li>`;
 }
 
+// Fizetettség: teljes (dátummal), részben (befizetve / hátralék) vagy nincs; alatta a befizetések.
+function paidHtml() {
+  if (invoice.cancelsInvoiceId) return '<span class="dim">–</span>';
+  const paid = Number(invoice.paidAmount) || 0;
+  const list = (detail.payments || []).map((p) => `<small class="prop-sub">${formatDate(p.date)}: ${formatCurrency(p.amount)}${p.note ? `, ${escapeHtml(p.note)}` : ''}</small>`).join('');
+  if (invoice.paidAt) return `<b>${formatDate(invoice.paidAt)}</b> <span class="dim">${formatCurrency(paid)}</span>${list}`;
+  if (paid > 0) return `<b>${formatCurrency(paid)}</b> <span class="dim">befizetve, hátralék ${formatCurrency(invoiceRemaining(invoice))}</span>${list}`;
+  return '<span class="dim">Nincs fizetve</span>';
+}
+
 function render() {
   document.title = `${invoice.number} | Lakáskezelő`;
   $('crumbs').innerHTML = crumbs();
@@ -50,7 +60,7 @@ function render() {
   $('retry-btn').hidden = !(active && invoice.status === 'Failed');
   $('cancel-btn').hidden = !(active && invoice.status !== 'Failed');
   $('paid-btn').hidden = !invoiceCanBePaid(invoice);
-  $('unpaid-btn').hidden = !invoice.paidAt;
+  $('unpaid-btn').hidden = !(Number(invoice.paidAmount) > 0);
 
   const original = detail.related.find((r) => r.id === invoice.cancelsInvoiceId);
   const storno = detail.related.find((r) => r.cancelsInvoiceId === invoice.id);
@@ -70,7 +80,7 @@ function render() {
     detailRow('Időszak', periodText(invoice)),
     detailRow('Kiállítva', formatDate(invoice.issuedAt)),
     detailRow('Fizetési határidő', formatDate(invoice.dueDate)),
-    detailRow('Fizetve', invoice.paidAt ? `<b>${formatDate(invoice.paidAt)}</b>` : (invoice.cancelsInvoiceId ? '<span class="dim">–</span>' : '<span class="dim">Nincs fizetve</span>')),
+    detailRow('Fizetve', paidHtml()),
     detailRow('Kiküldve', invoice.sentAt ? Docs.formatDateTime(invoice.sentAt) : '<span class="dim">–</span>'),
     detailRow('Összeg', `<b>${formatCurrency(invoice.amountTotal)}</b>`),
   ];
@@ -128,7 +138,7 @@ function showPdf() {
 
 $('download-btn').addEventListener('click', () => downloadFile(`/api/invoices/${invoiceId}/pdf`, `${invoice.number}.pdf`));
 $('retry-btn').addEventListener('click', () => invoiceRetry(invoice.propertyId, invoice.periodYear, invoice.periodMonth, invoice.propertyName));
-$('paid-btn').addEventListener('click', () => invoiceMarkPaid(invoice.id, invoice.number, invoice.amountTotal));
+$('paid-btn').addEventListener('click', () => invoiceMarkPaid(invoice));
 $('unpaid-btn').addEventListener('click', () => invoiceUnmarkPaid(invoice.id, invoice.number));
 $('cancel-btn').addEventListener('click', () => invoiceCancel(invoice.id, invoice.number, invoice.status === 'Sent'));
 document.addEventListener('invoices-changed', () => load());
