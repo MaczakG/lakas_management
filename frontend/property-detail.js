@@ -493,6 +493,7 @@ function mountPropertyDocuments() {
     scope: { propertyId },
     container: '#documents-body',
     count: '#count-documents',
+    uploadButton: '#upload-doc',
     links: async (doc) => {
       const current = currentTenant();
       const tenants = [...property.tenants].sort((a, b) => (a === current ? -1 : b === current ? 1 : (b.moveInDate || '').localeCompare(a.moveInDate || '')));
@@ -537,6 +538,8 @@ async function load() {
 
   let tab = 'invoices';
   try { tab = localStorage.getItem('propertyDetailTab') || tab; } catch { /* nem baj */ }
+  // #fülnév a címben (pl. a dokumentum adatlapjáról visszalépve: …#documents) elsőbbséget kap.
+  if (['invoices', 'utility', 'tenants', 'documents'].includes(location.hash.slice(1))) tab = location.hash.slice(1);
   activateTab(['invoices', 'utility', 'tenants', 'documents'].includes(tab) ? tab : 'invoices');
   mountPropertyDocuments();
 }

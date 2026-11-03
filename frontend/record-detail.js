@@ -131,11 +131,15 @@ function setupTabs(storageKey, fallback) {
   const activate = (name) => {
     document.querySelectorAll('.record-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.record-tab-pane').forEach((p) => { p.hidden = p.dataset.pane !== name; });
+    document.querySelectorAll('[data-tab-action]').forEach((b) => { b.hidden = b.dataset.tabAction !== name; });
     try { localStorage.setItem(storageKey, name); } catch { /* privát mód */ }
   };
   document.querySelectorAll('.record-tab').forEach((b) => b.addEventListener('click', () => activate(b.dataset.tab)));
   let saved = null;
   try { saved = localStorage.getItem(storageKey); } catch { /* privát mód */ }
+  // #fülnév a címben (pl. a dokumentum adatlapjáról visszalépve: …#documents) elsőbbséget kap.
+  const fromHash = location.hash.slice(1);
+  if (document.querySelector(`.record-tab[data-tab="${fromHash}"]`)) saved = fromHash;
   activate(document.querySelector(`.record-tab[data-tab="${saved}"]`) ? saved : fallback);
 }
 

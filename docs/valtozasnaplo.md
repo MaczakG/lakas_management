@@ -4,6 +4,16 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.12** — Saját adatlap minden dokumentumnak (a listában a névre kattintva). Bal oldalon:
+  - az adatok, helyben szerkeszthetően: név, típus, kapcsolódó ingatlan, bérlő és tulajdonos, megjegyzés; mellettük a fájl, a formátum, a méret, a verzió és a feltöltés adatai;
+  - a verziók listája;
+  - a napló: ki mikor töltötte fel, nézte meg, töltötte le vagy módosította.
+
+  Jobb oldalon az előnézet, alapból 60%-os nagyítással (100% = valódi méret), +/− gombokkal, oldalszámmal.
+  Fejléc-műveletek: Letöltés, Új verzió (a korábbi verziók megmaradnak, visszanézhetők és letölthetők), Törlés.
+  A dokumentumtípusok szerkeszthetők: új típus, átnevezés, sorrend, törlés („Típusok” gomb, vagy a típus-választó
+  „Típusok szerkesztése…” eleme). A Dokumentumok fül Feltöltés gombja a fülsáv jobb sarkába került (mint a Rezsi fülön).
+  Migráció: DocumentVersions, DocumentEvents, DocumentTypes (a meglévő dokumentumok 1. verzióként, típussal megmaradnak).
 - **2026.11.03.11** — Minden ikon a Flaticon ikonkészletéből (Uicons, regular rounded): menü, gombok, fülek,
   táblák, a Dokumentumok fájltípus-jelei (PDF, Word, Excel, kép, CSV), a keresőmezők, a bezáró és eltávolító gombok
   (✕ helyett), a vissza/tovább nyilak és a legördülő listák nyila, pipája. Az ikonok saját szerverről jönnek; a
