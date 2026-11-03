@@ -342,10 +342,10 @@ function renderUtility() {
   const periods = new Map();
   utilityEntries.forEach((u) => {
     const key = `${u.year}-${String(u.month).padStart(2, '0')}`;
-    const p = periods.get(key) || { year: u.year, month: u.month, count: 0, total: 0, locked: false };
+    const p = periods.get(key) || { year: u.year, month: u.month, count: 0, total: 0, entries: [] };
     p.count += 1;
     p.total += Number(u.amount);
-    p.locked = p.locked || u.isLocked;
+    p.entries.push(u);
     periods.set(key, p);
   });
   const list = [...periods.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([, p]) => p);
@@ -362,7 +362,7 @@ function renderUtility() {
         <td class="cell-main">${p.year}. ${MONTH_NAMES[p.month - 1].toLowerCase()}</td>
         <td class="num">${p.count}</td>
         <td class="num">${formatCurrency(p.total)}</td>
-        <td>${p.locked ? '<span class="status-tag inactive">Lezárva</span>' : '<span class="status-tag ok">Rögzítve</span>'}</td>
+        <td>${utilityPeriodTag(p.entries)}</td>
       </tr>`).join('')}</tbody></table>`;
 }
 

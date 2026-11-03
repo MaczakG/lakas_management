@@ -420,3 +420,15 @@ const uiPrompt = (message, opts) => uiDialog('prompt', message, opts);
     }
   });
 })();
+
+// Egy rezsi-hónap állapota a tételei alapján (tételenkénti zárolás): mind bizonylaton → „Bizonylaton”; van bizonylaton
+// lévő és még nyitott is (utólag felvett) → „Utólagos tétel” (a következő bizonylatra kerül); egyik sem → „Rögzítve”.
+function utilityPeriodTag(entries) {
+  const locked = entries.filter((e) => e.isLocked).length;
+  if (!entries.length) return '<span class="status-tag missing">Nincs adat</span>';
+  if (locked === entries.length) {
+    return entries.some((e) => e.invoiceId) ? '<span class="status-tag inactive">Bizonylaton</span>' : '<span class="status-tag inactive">Lezárva</span>';
+  }
+  if (locked > 0) return '<span class="status-tag warn" title="Az utólag felvett tételek a következő bizonylatra kerülnek">Utólagos tétel</span>';
+  return '<span class="status-tag ok">Rögzítve</span>';
+}

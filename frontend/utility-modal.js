@@ -16,6 +16,8 @@
     .um-existing-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:10px 0 20px;text-align:right;}
     #um-existing-tbody input{height:36px;font-size:13.5px;}
     #um-existing-tbody .row-actions{white-space:nowrap;}
+    .um-note{display:none;font-size:13px;line-height:1.5;color:var(--ink-soft);border-left:2px solid var(--line-strong);padding:2px 0 2px 12px;margin:0 0 18px;}
+    .um-note.show{display:block;}
     .um-section-title{font-family:var(--font-display);font-weight:700;font-size:14.5px;margin:0 0 10px;color:var(--ink);}
   `;
   document.head.appendChild(styleTag);
@@ -28,7 +30,8 @@
           <button aria-label="Bezárás" class="modal-close" id="um-close" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
         </div>
         <div class="modal-body">
-          <div class="form-error" id="um-locked-note">Erre az időszakra már van bizonylat, ezért a tételek nem módosíthatók. Ha javítani kell, sztornózd a bizonylatot (a bizonylat sorában a Sztornózás gombbal), utána a tételek szerkeszthetők.</div>
+          <div class="um-note" id="um-late-note"></div>
+          <div class="form-error" id="um-locked-note"></div>
 
           <h3 class="um-section-title">Rögzített tételek</h3>
           <div class="card-table" style="margin-bottom:4px;">
@@ -54,6 +57,7 @@
     </div>
   `);
 
+  const LATE_UTILITY_MONTHS = 36;
   let state = { propertyId: null, year: null, month: null, onClose: null };
 
   function addDraftRow() {
@@ -88,8 +92,12 @@
     ]);
     const allEntries = await entriesRes.json();
     const invoices = await invoicesRes.json();
-    const locked = invoices.some((i) => (!i.cancelledAt && !i.cancelsInvoiceId) && (i.status === 'Sent' || i.status === 'Generated')
+    // Tételenkénti zárolás: a bizonylatra került tétel sztornóig nem módosítható. A már bizonylatolt hónapra utólag
+    // felvett tétel nem zárolt, és a következő bizonylatra kerül, a hónapjával jelölve — legfeljebb 36 hónapra visszamenőleg.
+    const periodInvoice = invoices.find((i) => (!i.cancelledAt && !i.cancelsInvoiceId) && (i.status === 'Sent' || i.status === 'Generated')
       && i.periodYear === state.year && i.periodMonth === state.month);
+    const now = new Date();
+    const tooOld = (now.getFullYear() * 12 + now.getMonth()) - (state.year * 12 + state.month - 1) >= LATE_UTILITY_MONTHS;
 
     const entries = allEntries.filter((e) => e.year === state.year && e.month === state.month);
     state.entries = entries;
@@ -100,8 +108,10 @@
         <tr>
           <td>${escapeHtml(e.label)}</td>
           <td>${formatCurrency(e.amount)}</td>
-          <td class="row-actions">${locked
-            ? '<span class="status-tag ok">Lezárva</span>'
+          <td class="row-actions">${e.isLocked
+            ? (e.invoiceId
+              ? `<a class="link mono" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}" title="Ezen a bizonylaton szerepel; sztornóig zárolt">${escapeHtml(e.invoiceNumber || 'Bizonylaton')}</a>`
+              : '<span class="status-tag inactive">Lezárva</span>')
             : `<button class="btn btn-ghost btn-sm" type="button" onclick="window.__umEditEntry('${e.id}', this)">Szerkesztés</button>
                <button class="btn btn-danger btn-sm" type="button" onclick="window.__umDeleteEntry('${e.id}')">Törlés</button>`}</td>
         </tr>
@@ -110,12 +120,17 @@
     const sum = entries.reduce((acc, e) => acc + e.amount, 0);
     document.getElementById('um-existing-total').textContent = entries.length > 0 ? `Összesen: ${formatCurrency(sum)}` : '';
 
-    document.getElementById('um-locked-note').classList.toggle('show', locked);
-    document.getElementById('um-new-title').style.display = locked ? 'none' : '';
-    document.getElementById('um-draft-rows').style.display = locked ? 'none' : '';
-    document.getElementById('um-draft-total').style.display = locked ? 'none' : '';
-    document.getElementById('um-add-row-btn').style.display = locked ? 'none' : '';
-    document.getElementById('um-save-btn').style.display = locked ? 'none' : '';
+    const lateNote = document.getElementById('um-late-note');
+    lateNote.textContent = periodInvoice && !tooOld
+      ? `Erre a hónapra már kiállították a(z) ${periodInvoice.number} bizonylatot; a rajta szereplő tételek sztornóig zároltak. Az itt most felvett tételek a következő bizonylatra kerülnek, ezzel a hónappal jelölve.`
+      : '';
+    lateNote.classList.toggle('show', !!lateNote.textContent);
+    const lockedNote = document.getElementById('um-locked-note');
+    lockedNote.textContent = tooOld ? `Legfeljebb ${LATE_UTILITY_MONTHS} hónapra visszamenőleg lehet rezsitételt felvenni.` : '';
+    lockedNote.classList.toggle('show', tooOld);
+    for (const id of ['um-new-title', 'um-draft-rows', 'um-draft-total', 'um-add-row-btn', 'um-save-btn']) {
+      document.getElementById(id).style.display = tooOld ? 'none' : '';
+    }
 
     resetDraftRows();
   }

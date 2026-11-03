@@ -108,19 +108,24 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
     public async Task<ActionResult<List<UtilityCostEntryDto>>> ListUtilityCosts(Guid id, CancellationToken ct)
     {
         var entries = await db.UtilityCostEntries.Where(u => u.PropertyId == id)
+            .Include(u => u.Invoice)
             .OrderByDescending(u => u.Year).ThenByDescending(u => u.Month).ThenBy(u => u.Label)
             .ToListAsync(ct);
-        var lockedPeriods = await LockedPeriodsAsync(id, ct);
-        return Ok(entries.Select(e => ToDto(e, lockedPeriods.Contains((e.Year, e.Month)))));
+        return Ok(entries.Select(ToDto));
     }
 
     [HttpPost("{id:guid}/utility-costs")]
     public async Task<ActionResult<UtilityCostEntryDto>> AddUtilityCost(Guid id, UpsertUtilityCostEntryRequest request, CancellationToken ct)
     {
         if (!await db.Properties.AnyAsync(p => p.Id == id, ct)) return NotFound();
-        if (await IsPeriodLockedAsync(id, request.Year, request.Month, ct))
+        if (request.Month is < 1 or > 12) return BadRequest(new { message = "Érvénytelen hónap." });
+        // Utólag legfeljebb 36 hónapra visszamenőleg lehet tételt felvenni (az aktuális hónappal együtt): a már
+        // bizonylatolt hónapra felvett tétel nem zárolt, és a következő bizonylatra kerül, a hónapjával jelölve.
+        var now = Billing.BudapestClock.Now;
+        var (fromYear, fromMonth) = Billing.InvoiceGenerationService.BillingWindowStart(now.Year, now.Month);
+        if (request.Year * 12 + request.Month < fromYear * 12 + fromMonth)
         {
-            return Conflict(new { message = LockedMessage });
+            return BadRequest(new { message = $"Legfeljebb {Billing.InvoiceGenerationService.LateUtilityMonths} hónapra visszamenőleg lehet rezsitételt felvenni ({fromYear}. {fromMonth:D2}. hónaptól)." });
         }
 
         var entry = new UtilityCostEntry
@@ -136,55 +141,44 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         };
         db.UtilityCostEntries.Add(entry);
         await db.SaveChangesAsync(ct);
-        return Ok(ToDto(entry, isLocked: false));
+        return Ok(ToDto(entry));
     }
 
-    private const string LockedMessage = "Erre az időszakra már van bizonylat, ezért a rezsi tételek nem módosíthatók. Ha javítani kell, sztornózd a bizonylatot, utána a tételek szerkeszthetők.";
+    private static string LockedMessage(UtilityCostEntry entry) => entry.Invoice is { } invoice
+        ? $"Ez a tétel már a(z) {invoice.Number} bizonylaton szerepel, ezért nem módosítható. Ha javítani kell, sztornózd a bizonylatot, utána a tétel szerkeszthető."
+        : "Ez a tétel egy korábban lezárt időszakhoz tartozik, ezért nem módosítható.";
 
-    // Meglévő tétel javítása (megnevezés, összeg) — csak ha az időszakra nincs aktív (nem archivált) számla.
+    // Meglévő tétel javítása (megnevezés, összeg) — csak ha még nincs aktív bizonylaton.
     [HttpPut("{id:guid}/utility-costs/{entryId:guid}")]
     public async Task<ActionResult<UtilityCostEntryDto>> UpdateUtilityCost(Guid id, Guid entryId, UpdateUtilityCostEntryRequest request, CancellationToken ct)
     {
-        var entry = await db.UtilityCostEntries.FirstOrDefaultAsync(u => u.Id == entryId && u.PropertyId == id, ct);
+        var entry = await db.UtilityCostEntries.Include(u => u.Invoice).FirstOrDefaultAsync(u => u.Id == entryId && u.PropertyId == id, ct);
         if (entry is null) return NotFound();
-        if (await IsPeriodLockedAsync(id, entry.Year, entry.Month, ct)) return Conflict(new { message = LockedMessage });
+        if (IsLocked(entry)) return Conflict(new { message = LockedMessage(entry) });
         var label = (request.Label ?? "").Trim();
         if (label.Length is 0 or > 200) return BadRequest(new { message = "Add meg a tétel megnevezését." });
         if (request.Amount < 0) return BadRequest(new { message = "Az összeg nem lehet negatív." });
         entry.Label = label;
         entry.Amount = request.Amount;
         await db.SaveChangesAsync(ct);
-        return Ok(ToDto(entry, isLocked: false));
+        return Ok(ToDto(entry));
     }
 
     [HttpDelete("{id:guid}/utility-costs/{entryId:guid}")]
     public async Task<IActionResult> DeleteUtilityCost(Guid id, Guid entryId, CancellationToken ct)
     {
-        var entry = await db.UtilityCostEntries.FirstOrDefaultAsync(u => u.Id == entryId && u.PropertyId == id, ct);
+        var entry = await db.UtilityCostEntries.Include(u => u.Invoice).FirstOrDefaultAsync(u => u.Id == entryId && u.PropertyId == id, ct);
         if (entry is null) return NotFound();
-        if (await IsPeriodLockedAsync(id, entry.Year, entry.Month, ct))
-        {
-            return Conflict(new { message = LockedMessage });
-        }
+        if (IsLocked(entry)) return Conflict(new { message = LockedMessage(entry) });
 
         db.UtilityCostEntries.Remove(entry);
         await db.SaveChangesAsync(ct);
         return NoContent();
     }
 
-    // Egy (év, hónap) rezsi-időszak akkor számít lezártnak, ha ahhoz az ingatlanhoz már van
-    // sikeresen legenerált vagy kiküldött számla — a Failed státuszú próbálkozás szándékosan nem
-    // zár le semmit, hogy a hiányzó/hibás adat javítható és a generálás újrapróbálható legyen.
-    private async Task<bool> IsPeriodLockedAsync(Guid propertyId, int year, int month, CancellationToken ct) =>
-        await db.Invoices.AnyAsync(i => i.PropertyId == propertyId && i.PeriodYear == year && i.PeriodMonth == month && i.CancelledAt == null && i.CancelsInvoiceId == null
-            && (i.Status == Domain.Enums.InvoiceStatus.Sent || i.Status == Domain.Enums.InvoiceStatus.Generated), ct);
-
-    private async Task<HashSet<(int Year, int Month)>> LockedPeriodsAsync(Guid propertyId, CancellationToken ct) =>
-        (await db.Invoices.Where(i => i.PropertyId == propertyId && i.CancelledAt == null && i.CancelsInvoiceId == null
-                && (i.Status == Domain.Enums.InvoiceStatus.Sent || i.Status == Domain.Enums.InvoiceStatus.Generated))
-            .Select(i => new { i.PeriodYear, i.PeriodMonth })
-            .ToListAsync(ct))
-        .Select(p => (p.PeriodYear, p.PeriodMonth)).ToHashSet();
+    // Egy rezsitétel akkor zárolt, ha egy aktív (nem sztornózott) bizonylaton szerepel — sztornózáskor a kapcsolat
+    // megszűnik. A bevezetés előtti, bizonylat nélkül lezárt korábbi időszakok tételei (ExcludedFromBilling) is zároltak.
+    private static bool IsLocked(UtilityCostEntry entry) => entry.InvoiceId is not null || entry.ExcludedFromBilling;
 
     // ---------- Számlák ----------
 
@@ -320,12 +314,13 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         property.Id, property.Name, property.RentAmount, property.InvoicePrefix,
         property.BillingDayOfMonth, property.BillingHour, property.BillingMinute, property.IsActive,
         [.. property.PropertyOwners.Select(po => new PropertyOwnerDto(po.OwnerId, po.Owner!.Name, po.Share))],
-        [.. property.Tenants.Select(t => new TenantDto(t.Id, t.Name, t.Email, t.Phone, t.Address, t.TaxId, t.PropertyId, property.Name, t.MoveInDate, t.MoveOutDate, t.Notes, t.RentCurrency))],
+        [.. property.Tenants.Select(t => new TenantDto(t.Id, t.Name, t.Email, t.Phone, t.Address, t.TaxId, t.PropertyId, property.Name, t.MoveInDate, t.MoveOutDate, t.Notes, t.RentCurrency, t.RentPaymentTiming, t.TenantPaysSzja, 0))],
         new PropertySheetDto(property.PropertyType, property.PostalCode, property.City, property.Street, property.FloorDoor, property.Hrsz,
             property.FloorArea, property.Rooms, property.BuildYear, property.ElectricityMeter, property.GasMeter, property.WaterMeter,
             property.Deposit, property.Notes, property.RentVat, property.UtilityVat),
         next.At, next.Period.Year, next.Period.Month);
     }
 
-    private static UtilityCostEntryDto ToDto(UtilityCostEntry entry, bool isLocked) => new(entry.Id, entry.Year, entry.Month, entry.Label, entry.Amount, entry.CreatedAt, isLocked);
+    private static UtilityCostEntryDto ToDto(UtilityCostEntry entry) => new(entry.Id, entry.Year, entry.Month, entry.Label, entry.Amount, entry.CreatedAt,
+        IsLocked(entry), entry.InvoiceId, entry.Invoice?.Number);
 }

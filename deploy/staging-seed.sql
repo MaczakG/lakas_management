@@ -70,6 +70,12 @@ SELECT gen_random_uuid(), i."Id", l.label, l.amount + CASE WHEN l.pos = 0 THEN 0
 FROM "Invoices" i
 CROSS JOIN (VALUES ('Bérleti díj', 185000, 0), ('Közös költség', 18500, 1), ('Víz', 4000, 2)) l(label, amount, pos);
 
+-- A kiállított bizonylatokon szereplő rezsitételek a bizonylathoz kötődnek (zároltak, sztornóig).
+UPDATE "UtilityCostEntries" u SET "InvoiceId" = i."Id"
+FROM "Invoices" i
+WHERE i."PropertyId" = u."PropertyId" AND i."PeriodYear" = u."Year" AND i."PeriodMonth" = u."Month"
+  AND i."CancelledAt" IS NULL AND i."CancelsInvoiceId" IS NULL AND i."Status" IN (0, 1);
+
 ALTER TABLE "Owners" ALTER COLUMN "CompanyId" DROP DEFAULT;
 ALTER TABLE "Properties" ALTER COLUMN "CompanyId" DROP DEFAULT;
 ALTER TABLE "PropertyOwners" ALTER COLUMN "CompanyId" DROP DEFAULT;

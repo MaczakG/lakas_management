@@ -409,3 +409,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E") center/contain no-repeat;}
 .ui-option.disabled{color:var(--muted);cursor:default;}
 @media (prefers-reduced-motion: reduce){ .ui-menu{animation:none;} }
+
+/* Bérlő egyenlege */
+.bal-due{color:var(--coral);}
+.bal-over{color:var(--green);}
+.ledger-totals{display:flex;gap:32px;flex-wrap:wrap;padding:14px 16px 12px;border-bottom:1px solid var(--line);}
+.ledger-totals div{display:flex;flex-direction:column;gap:2px;}
+.ledger-totals span{font-size:12px;color:var(--muted);}
+.ledger-totals b{font-size:15px;font-weight:600;}
+.ledger-totals b b{font-size:inherit;}

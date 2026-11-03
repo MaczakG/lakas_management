@@ -24,6 +24,7 @@ public class LakaskezeloDbContext(DbContextOptions<LakaskezeloDbContext> options
     public DbSet<UtilityReminderLog> UtilityReminderLogs => Set<UtilityReminderLog>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
+    public DbSet<TenantPayment> TenantPayments => Set<TenantPayment>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentContent> DocumentContents => Set<DocumentContent>();
     public DbSet<DocumentVersion> DocumentVersions => Set<DocumentVersion>();

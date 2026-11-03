@@ -61,10 +61,33 @@ public class InvoiceGenerationService(
             throw new InvalidOperationException(
                 $"Erre az időszakra már ki van állítva: {existing.Number}. Javításhoz sztornózd, és utána készíts újat.");
         }
-        var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.PropertyId == property.Id, ct);
+        // A bizonylat az időszakban ott lakó bérlőé (a kiköltözött korábbi bérlő nem kaphatja, és az egyenlegébe sem
+        // kerülhet); több jelölt közül a legutóbb beköltözött.
+        var periodStart = new DateOnly(year, month, 1);
+        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+        var tenant = await db.Tenants
+            .Where(t => t.PropertyId == property.Id
+                && (t.MoveOutDate == null || t.MoveOutDate >= periodStart)
+                && (t.MoveInDate == null || t.MoveInDate <= periodEnd))
+            .OrderByDescending(t => t.MoveOutDate == null).ThenByDescending(t => t.MoveInDate)
+            .FirstOrDefaultAsync(ct);
+        // Ha a beköltözés dátuma pontatlan (az időszak utánra esik), a jelenlegi bérlő kapja.
+        tenant ??= await db.Tenants.Where(t => t.PropertyId == property.Id && t.MoveOutDate == null)
+            .OrderByDescending(t => t.MoveInDate).FirstOrDefaultAsync(ct);
+        // A bizonylatra az ingatlan minden még nem zárolt (bizonylathoz nem kötött) rezsitétele kerül, amely az időszakra
+        // vagy legfeljebb 35 hónappal korábbra (összesen 36 hónap) szól: a később felvett tételek így a következő
+        // bizonylaton számlázódnak. Az újragenerált bizonylat saját korábbi tételei is ide tartoznak. A bevezetés előtti,
+        // kizárt (ExcludedFromBilling) tétel csak a saját hónapja bizonylatára kerülhet.
+        var (fromYear, fromMonth) = BillingWindowStart(year, month);
+        var fromKey = fromYear * 12 + fromMonth;
+        var toKey = year * 12 + month;
+        var existingId = existing?.Id;
         var utilityLines = await db.UtilityCostEntries
-            .Where(u => u.PropertyId == property.Id && u.Year == year && u.Month == month)
+            .Where(u => u.PropertyId == property.Id && (!u.ExcludedFromBilling || (u.Year == year && u.Month == month))
+                && (u.InvoiceId == null || u.InvoiceId == existingId)
+                && u.Year * 12 + u.Month >= fromKey && u.Year * 12 + u.Month <= toKey)
             .ToListAsync(ct);
+        foreach (var u in utilityLines) u.InvoiceId = null;
 
         // A bizonylat "Bérleti díj jogosultjai" táblázatához kell a tulajdonos-lista Owner-navigációval.
         await db.Entry(property).Collection(p => p.PropertyOwners).Query().Include(po => po.Owner).LoadAsync(ct);
@@ -121,15 +144,31 @@ public class InvoiceGenerationService(
             var oldLines = existing?.Lines.ToList() ?? [];
             if (oldLines.Count > 0) db.InvoiceLines.RemoveRange(oldLines);
 
+            // A lakbér sora a bérlőnél beállított fizetési mód szerinti hónapot viseli: előre fizetésnél a bizonylat
+            // időszakát, utólagosnál az azt megelőző hónapot.
+            var (rentYear, rentMonth) = RentPeriod(tenant, year, month);
             var newLines = new List<InvoiceLine>
             {
-                new() { Id = Guid.NewGuid(), InvoiceId = invoice.Id, Label = InvoiceLine.RentLabel, Amount = rentAmountHuf, Position = 0 },
+                new() { Id = Guid.NewGuid(), InvoiceId = invoice.Id, Label = $"{InvoiceLine.RentLabel} ({rentYear}. {MonthName(rentMonth)})", Amount = rentAmountHuf, Position = 0 },
             };
+            // Ha a bérlő fizeti a bérbeadó helyett az SZJA-t (magánszemély bérbeadónál), a lakbérből levonódik.
+            var szja = SzjaDeduction(company, provider is not null, tenant, rentAmountHuf);
+            if (szja != 0)
+            {
+                newLines.Add(new InvoiceLine { Id = Guid.NewGuid(), InvoiceId = invoice.Id, Label = SzjaLabel, Amount = szja, Position = newLines.Count });
+            }
             // A rezsi tételesen kerül a számlára: a Rezsi felvételben rögzített minden tétel külön sor, a felvett
-            // megnevezéssel (pl. Áram, Gáz, Közös költség), a rögzítés sorrendjében.
-            foreach (var u in utilityLines.Where(u => u.Amount != 0).OrderBy(u => u.CreatedAt).ThenBy(u => u.Label))
+            // megnevezéssel (pl. Áram, Gáz, Közös költség); előbb az időszak tételei a rögzítés sorrendjében, utána a
+            // korábbi hónapokra utólag felvettek, a hónapjukkal jelölve.
+            var billed = utilityLines.Where(u => u.Amount != 0)
+                .OrderBy(u => u.Year == year && u.Month == month ? 0 : 1)
+                .ThenBy(u => u.Year).ThenBy(u => u.Month)
+                .ThenBy(u => u.CreatedAt).ThenBy(u => u.Label)
+                .ToList();
+            foreach (var u in billed)
             {
                 var label = string.IsNullOrWhiteSpace(u.Label) ? "Rezsi" : u.Label.Trim();
+                if (u.Year != year || u.Month != month) label = $"{label} ({u.Year}. {MonthName(u.Month)})";
                 newLines.Add(new InvoiceLine { Id = Guid.NewGuid(), InvoiceId = invoice.Id, Label = label, Amount = u.Amount, Position = newLines.Count });
             }
             db.InvoiceLines.AddRange(newLines);
@@ -153,7 +192,7 @@ public class InvoiceGenerationService(
                 var request = new Invoicing.ProviderInvoiceRequest(
                     Invoicing.InvoicingProviders.BuyerFor(tenant, property),
                     [.. newLines.Select(l => new Invoicing.ProviderLine(
-                        l.Position == 0 ? $"{l.Label} ({year}. {MonthName(month)})" : l.Label, l.Amount, l.Position == 0 ? rentVat : utilityVat))],
+                        l.Label, l.Amount, l.Position == 0 ? rentVat : utilityVat))],
                     today, invoice.DueDate, invoice.DueDate, comment);
                 var issued = await provider.IssueAsync(settings, request, ct);
                 issuedAtProvider = true;
@@ -218,12 +257,15 @@ public class InvoiceGenerationService(
 
             invoice.Status = emailed ? InvoiceStatus.Sent : InvoiceStatus.Generated;
             invoice.SentAt = emailed ? DateTime.UtcNow : null;
+            // A bizonylatra került rezsitételek innentől zárolva vannak, amíg a bizonylatot nem sztornózzák.
+            foreach (var u in utilityLines) { u.InvoiceId = invoice.Id; u.ExcludedFromBilling = false; }
             invoice.ErrorMessage = pdfBytes is null ? "A számla elkészült, de a PDF-je még nem tölthető le a számlázóból, ezért e-mailben nem ment ki." : null;
         }
         catch (Exception ex) when (issuedAtProvider)
         {
             logger.LogWarning(ex, "Post-issue step failed for provider invoice {Number}", invoice.Number);
             invoice.Status = InvoiceStatus.Generated;
+            foreach (var u in utilityLines) { u.InvoiceId = invoice.Id; u.ExcludedFromBilling = false; }
             invoice.ErrorMessage = $"A számla elkészült, de utána hiba történt: {ex.Message}";
         }
         catch (Exception ex)
@@ -355,11 +397,35 @@ public class InvoiceGenerationService(
 
         original.CancelledAt = now;
         original.CancelledByUserId = userId;
+        // A sztornózott bizonylat rezsitételei feloldódnak: szerkeszthetők, és a következő bizonylatra kerülnek.
+        await db.UtilityCostEntries.Where(u => u.InvoiceId == original.Id).ForEachAsync(u => u.InvoiceId = null, ct);
         db.Invoices.Add(storno);
         db.InvoiceLines.AddRange(lines);
         await db.SaveChangesAsync(ct);
         return storno;
     }
+
+    public const string SzjaLabel = "SZJA levonás (15%)";
+    public const decimal SzjaRate = 0.15m;
+    // Ennyi hónapra visszamenőleg lehet rezsitételt utólag felvenni (az időszak hónapjával együtt).
+    public const int LateUtilityMonths = 36;
+
+    public static (int Year, int Month) BillingWindowStart(int year, int month)
+    {
+        var key = year * 12 + (month - 1) - (LateUtilityMonths - 1);
+        return (key / 12, key % 12 + 1);
+    }
+
+    public static (int Year, int Month) RentPeriod(Tenant? tenant, int year, int month) =>
+        tenant?.RentPaymentTiming == RentPaymentTiming.Arrears
+            ? (month == 1 ? (year - 1, 12) : (year, month - 1))
+            : (year, month);
+
+    // Csak magánszemély bérbeadónál (saját bizonylat): cégnél a társasági adózás miatt nincs ilyen levonás.
+    public static decimal SzjaDeduction(Company company, bool viaProvider, Tenant? tenant, decimal rentHuf) =>
+        tenant is { TenantPaysSzja: true } && !company.IsBusiness && !viaProvider && rentHuf > 0
+            ? -Math.Round(rentHuf * SzjaRate, 0, MidpointRounding.AwayFromZero)
+            : 0;
 
     private static string MonthName(int month) =>
         new[] { "január", "február", "március", "április", "május", "június", "július", "augusztus", "szeptember", "október", "november", "december" }[month - 1];

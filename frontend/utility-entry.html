@@ -84,16 +84,8 @@ async function loadMonths() {
   if (!propertyId) return;
   const year = Number(yearInput.value);
 
-  const [entriesRes, invoicesRes] = await Promise.all([
-    apiFetch(`/api/properties/${propertyId}/utility-costs`),
-    apiFetch(`/api/properties/${propertyId}/invoices`),
-  ]);
-  const entries = await entriesRes.json();
-  const invoices = await invoicesRes.json();
+  const entries = await (await apiFetch(`/api/properties/${propertyId}/utility-costs`)).json();
 
-  const lockedMonths = new Set(
-    invoices.filter((i) => (!i.cancelledAt && !i.cancelsInvoiceId) && (i.status === 'Sent' || i.status === 'Generated') && i.periodYear === year).map((i) => i.periodMonth)
-  );
 
   // A következő kiküldés időszaka (annak a rezsije kerül a bizonylatra) — a táblázatban jelöljük.
   const property = properties.find((p) => p.id === propertyId);
@@ -104,10 +96,7 @@ async function loadMonths() {
     const month = idx + 1;
     const monthEntries = entries.filter((e) => e.year === year && e.month === month);
     const sum = monthEntries.reduce((acc, e) => acc + e.amount, 0);
-    const locked = lockedMonths.has(month);
-    const statusTag = locked
-      ? '<span class="status-tag ok">Lezárva</span>'
-      : (monthEntries.length > 0 ? '<span class="status-tag ok">Rögzítve</span>' : '<span class="status-tag missing">Nincs adat</span>');
+    const statusTag = utilityPeriodTag(monthEntries);
 
     return `
       <tr class="clickable" onclick="openMonth(${month})">
