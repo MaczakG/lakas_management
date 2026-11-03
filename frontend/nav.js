@@ -43,7 +43,7 @@
       <div class="who"><span id="who-name">–</span><small id="who-company"></small></div>
     </div>
     <button class="btn btn-secondary btn-sm logout-btn" type="button" id="logout-link">${icon('log-out')}Kilépés</button>
-    <span class="sidebar-version"><span id="version-tag"></span><br><a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelés</a><br><span class="credit">Uicons by <a href="https://www.flaticon.com/uicons" target="_blank" rel="noopener">Flaticon</a></span></span>
+    <span class="sidebar-version"><span id="version-tag"></span><br><a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelés</a></span>
   </aside>`);
 
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.

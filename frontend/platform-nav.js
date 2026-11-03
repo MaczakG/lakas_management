@@ -30,7 +30,7 @@
       <div class="who"><span id="who-name">–</span><small>Platform üzemeltető</small></div>
     </div>
     <button class="btn btn-secondary btn-sm logout-btn" type="button" id="logout-link">${icon('log-out')}Kilépés</button>
-    <span class="sidebar-version"><span id="version-tag"></span><br><span class="credit">Uicons by <a href="https://www.flaticon.com/uicons" target="_blank" rel="noopener">Flaticon</a></span></span>
+    <span class="sidebar-version" id="version-tag"></span>
   </aside>`);
 
   const page = location.pathname.split('/').pop() || 'platform.html';

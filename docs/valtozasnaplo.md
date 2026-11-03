@@ -4,6 +4,12 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.14** — Az ikonok a Phosphor Icons készletből jönnek (MIT licenc: ingyenes, a felületen semmit nem kell
+  feltüntetni). A Flaticon ikonok és a „Uicons by Flaticon” forrásmegjelölés mindenhonnan kikerültek (menü lábléce,
+  platform menü). A legördülő nyíl, a kiválasztott elem pipája és az állapotcímkék ikonjai is lecserélődtek.
+  A rezsi emlékeztető e-mail is a következő számla időszakát nézi (nem az aktuális hónapot): ingatlanonként a
+  számlázás előtti utolsó határnapon (Beállítások → Rezsi emlékeztető, pl. 25 → dec. 1-i számlázásnál nov. 25.)
+  szól, ha arra az időszakra még nincs rezsi; a levélben ingatlanonként az időszak és a számlázás ideje is szerepel.
 - **2026.11.03.13** — Archiválás helyett sztornózás: a kiállított számla nem törölhető és nem archiválható, csak
   külön sztornó bizonylat készíthető hozzá (a számla sorában vagy adatlapján a Sztornózás gombbal). A sztornó
   bizonylat az eredeti sorait negatív összeggel tartalmazza, saját sorszámmal (pl. FUT-2026-011-S), az eredetire
@@ -32,8 +38,8 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
   Migráció: DocumentVersions, DocumentEvents, DocumentTypes (a meglévő dokumentumok 1. verzióként, típussal megmaradnak).
 - **2026.11.03.11** — Minden ikon a Flaticon ikonkészletéből (Uicons, regular rounded): menü, gombok, fülek,
   táblák, a Dokumentumok fájltípus-jelei (PDF, Word, Excel, kép, CSV), a keresőmezők, a bezáró és eltávolító gombok
-  (✕ helyett), a vissza/tovább nyilak és a legördülő listák nyila, pipája. Az ikonok saját szerverről jönnek; a
-  Flaticon License szerinti forrásmegjelölés („Uicons by Flaticon”) a menü láblécében és az ÁSZF-ben szerepel.
+  (✕ helyett), a vissza/tovább nyilak és a legördülő listák nyila, pipája. Az ikonok saját szerverről jönnek
+  (a 2026.11.03.14-től Phosphor Icons).
 - **2026.11.03.10** — Dokumentumok az ingatlan, bérlő és tulajdonos adatlapján (új „Dokumentumok” fül): szerződés,
   szkennelt rezsi számla, jegyzőkönyv, fotó vagy bármilyen PDF, kép, Word, Excel, szöveg (fájlonként legfeljebb 15 MB).
   Feltöltés gombbal vagy behúzással, egyszerre több fájl, folyamatjelzővel; a kategóriát a fájlnévből javasolja.
