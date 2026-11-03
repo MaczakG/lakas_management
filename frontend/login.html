@@ -102,7 +102,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     // kikapcsolták a szerveren (ld. AuthController.TwoFactorEnabled).
     if (data.accessToken) {
       storeAuth(data);
-      location.href = 'properties.html';
+      location.href = 'dashboard.html';
       return;
     }
     challengeId = data.challengeId;
@@ -142,7 +142,7 @@ document.getElementById('code-step').addEventListener('submit', async (e) => {
       return;
     }
     storeAuth(data);
-    location.href = 'properties.html';
+    location.href = 'dashboard.html';
   } catch (err) {
     errorEl.textContent = 'Nem sikerült elérni a szervert.';
     errorEl.classList.add('show');

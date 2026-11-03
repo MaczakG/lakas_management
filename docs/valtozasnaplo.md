@@ -4,7 +4,8 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
-(nincs)
+- **2026.11.03.1** — A Vezérlőpult a kezdőoldal: belépés után, a főoldalról és az oldalsáv logójáról is ide jut
+  a felhasználó.
 
 ## Élesben
 
