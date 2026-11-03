@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakáskezelő — Vezérlőpult</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+<div class="app">
+  <script src="app.js"></script>
+  <script src="nav.js"></script>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Áttekintés</div>
+        <h1 id="greeting">Vezérlőpult</h1>
+        <p>Számlák, rezsi és ingatlanok egy helyen.</p>
+      </div>
+      <div class="dash-filter">
+        <label for="year-select">Év</label>
+        <select id="year-select" aria-label="Év"></select>
+      </div>
+    </div>
+
+    <div class="form-error" id="page-error"></div>
+
+    <div id="dash" class="dash">
+      <!-- Mutatók -->
+      <div class="kpi-row">
+        <div class="viz-card kpi kpi-hero">
+          <div class="kpi-label" id="kpi-invoiced-label">Kiszámlázva</div>
+          <div class="kpi-hero-value" id="kpi-invoiced">—</div>
+          <div class="kpi-sub" id="kpi-invoiced-sub"></div>
+          <div class="kpi-delta" id="kpi-delta"></div>
+        </div>
+        <div class="viz-card kpi">
+          <div class="kpi-label" id="kpi-utility-label">Rezsi</div>
+          <div class="kpi-value" id="kpi-utility">—</div>
+          <div class="kpi-sub">felvett rezsi tételek összesen</div>
+        </div>
+        <div class="viz-card kpi">
+          <div class="kpi-label">Kiadott ingatlanok</div>
+          <div class="kpi-value" id="kpi-occupancy">—</div>
+          <div class="meter" id="occupancy-meter" role="meter" aria-label="Kiadott ingatlanok aránya" aria-valuemin="0" aria-valuemax="100"><span></span></div>
+          <div class="kpi-sub" id="kpi-occupancy-sub"></div>
+        </div>
+      </div>
+
+      <div class="viz-grid">
+        <section class="viz-card span-2">
+          <div class="viz-head">
+            <div>
+              <h2 class="viz-title" id="monthly-title">Kiszámlázott összeg havonta</h2>
+              <p class="viz-sub">A sikertelen számlák nélkül, a számlázott időszak hónapja szerint.</p>
+            </div>
+            <div class="viz-legend" id="monthly-legend"></div>
+          </div>
+          <div class="viz-plot" id="monthly-chart"></div>
+          <details class="viz-table"><summary>Táblázat</summary><div id="monthly-table"></div></details>
+        </section>
+
+        <section class="viz-card">
+          <div class="viz-head">
+            <div>
+              <h2 class="viz-title">Számlák állapota</h2>
+              <p class="viz-sub" id="status-sub"></p>
+            </div>
+          </div>
+          <div id="status-chart"></div>
+        </section>
+
+        <section class="viz-card span-2">
+          <div class="viz-head">
+            <div>
+              <h2 class="viz-title">Ingatlanonként</h2>
+              <p class="viz-sub">Kiszámlázott összeg az évben, a legnagyobbtól.</p>
+            </div>
+          </div>
+          <div id="property-chart"></div>
+        </section>
+
+        <section class="viz-card">
+          <div class="viz-head">
+            <div>
+              <h2 class="viz-title">Közelgő események</h2>
+              <p class="viz-sub">A következő 30 napban — az évválasztótól függetlenül.</p>
+            </div>
+          </div>
+          <div id="upcoming"></div>
+        </section>
+
+        <section class="viz-card span-3">
+          <div class="viz-head">
+            <div>
+              <h2 class="viz-title">Rezsi havonta</h2>
+              <p class="viz-sub">A Rezsi felvétel tételei kategóriánként.</p>
+            </div>
+            <div class="viz-legend" id="utility-legend"></div>
+          </div>
+          <div class="viz-plot" id="utility-chart"></div>
+          <details class="viz-table"><summary>Táblázat</summary><div id="utility-table"></div></details>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="dashboard.js"></script>
+</body>
+</html>
