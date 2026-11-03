@@ -4,13 +4,17 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+(nincs)
+
+## Élesben
+
+### v2026.11.03 — 2026. 11. 03.
+
 - **2026.11.03** — Új „Vezérlőpult” menüpont diagramokkal, évválasztóval: kiszámlázott összeg (az előző év azonos
   időszakához mérve), rezsi összesen, kiadott ingatlanok aránya; havi kiszámlázott összeg az előző évvel
   összevetve; számlák állapota (kiküldve / nem küldött / sikertelen); ingatlanonkénti összegek; rezsi havonta
   kategóriánként; közelgő események a következő 30 napban (számla-kiküldések, be- és kiköltözések). Minden
   diagram mellett táblázatos nézet is van.
-
-## Élesben
 
 ### v2026.11.02.9 — 2026. 11. 02.
 
