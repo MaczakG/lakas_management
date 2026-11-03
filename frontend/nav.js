@@ -18,6 +18,8 @@
     </a>
 
     <nav class="nav-scroll">
+      ${item('dashboard.html', 'layout-dashboard', 'Vezérlőpult')}
+
       <div class="nav-label">Ingatlanok</div>
       ${item('properties.html', 'house', 'Ingatlanok')}
       ${item('utility-entry.html', 'zap', 'Rezsi felvétel')}
