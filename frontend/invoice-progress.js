@@ -7,6 +7,7 @@
   const STEP_LABELS = {
     data: 'Adatok összegyűjtése (bérleti díj, rezsi tételek)',
     pdf: 'Bizonylat (PDF) elkészítése',
+    provider: 'Számla kiállítása a számlázóban',
     upload: 'Mentés a tárhelyre',
     email: 'E-mail küldése a bérlőnek',
     save: 'Rögzítés',

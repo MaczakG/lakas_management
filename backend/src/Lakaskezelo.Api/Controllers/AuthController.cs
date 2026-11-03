@@ -319,6 +319,7 @@ public class AuthController(
         {
             Id = Guid.NewGuid(), Name = companyName, CreatedAt = DateTime.UtcNow,
             TermsVersion = terms.TermsVersion, TermsAcceptedAt = DateTime.UtcNow,
+            IsBusiness = request.IsBusiness,
         };
         db.Companies.Add(company);
         companyContext.Set(company.Id);

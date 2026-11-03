@@ -65,8 +65,10 @@ SELECT gen_random_uuid(),'b0000000-0000-4000-8000-000000000001','c0000000-0000-4
        CASE WHEN d = date_trunc('month', now()) - interval '4 months' THEN 'SMTP hiba (mintaadat)' ELSE NULL END
 FROM generate_series(date_trunc('month', now()) - interval '4 months', date_trunc('month', now()) - interval '1 month', interval '1 month') d;
 
-INSERT INTO "InvoiceLines" ("Id","InvoiceId","Label","Amount")
-SELECT gen_random_uuid(), i."Id", 'Bérleti díj', 185000 FROM "Invoices" i;
+INSERT INTO "InvoiceLines" ("Id","InvoiceId","Label","Amount","Position")
+SELECT gen_random_uuid(), i."Id", l.label, l.amount + CASE WHEN l.pos = 0 THEN 0 ELSE i."PeriodMonth" * 120 END, l.pos
+FROM "Invoices" i
+CROSS JOIN (VALUES ('Bérleti díj', 185000, 0), ('Közös költség', 18500, 1), ('Víz', 4000, 2)) l(label, amount, pos);
 
 ALTER TABLE "Owners" ALTER COLUMN "CompanyId" DROP DEFAULT;
 ALTER TABLE "Properties" ALTER COLUMN "CompanyId" DROP DEFAULT;

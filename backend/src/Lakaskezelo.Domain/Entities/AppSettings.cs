@@ -56,4 +56,17 @@ public class AppSettings : ICompanyOwned
     public string? InvoiceEmailBody { get; set; }
 
     public DateTime UpdatedAt { get; set; }
+
+    // ---------- Számlázó összekötése (csak cégnek, ld. Company.IsBusiness) ----------
+    // „Billingo” vagy „Szamlazzhu”; null: nincs összekötve, a rendszer bizonylatot állít ki.
+    public string? InvoiceProvider { get; set; }
+    // Titkos kulcsok: a felület csak beküldi, visszaolvasni nem lehet (ld. CompanySettingsDto).
+    public string? BillingoApiKey { get; set; }
+    public int? BillingoBlockId { get; set; }
+    public string? SzamlazzAgentKey { get; set; }
+    // Számlázz.hu számlaszám-előtag (a fiókban beállított számlatömb előtagja); üresen a fiók alapértelmezése.
+    public string? SzamlazzInvoicePrefix { get; set; }
+    // Alapértelmezett áfa a bérleti díjra és a továbbszámlázott rezsire (ld. VatCodes); ingatlanonként felülírható.
+    public string DefaultRentVat { get; set; } = "TAM";
+    public string DefaultUtilityVat { get; set; } = "TAM";
 }

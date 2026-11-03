@@ -30,6 +30,10 @@ public class Invoice : ICompanyOwned
     public string? PdfStorageKey { get; set; }
     public DateTime? SentAt { get; set; }
     public string? ErrorMessage { get; set; }
+    // Ha a cég számlázójában készült (valódi számla): „Billingo” / „Szamlazzhu”, és ott a dokumentum azonosítója
+    // (Billingo: dokumentum-id; Számlázz.hu: a számlaszám). null: a rendszer saját bizonylata.
+    public string? Provider { get; set; }
+    public string? ProviderDocumentId { get; set; }
 
     // Sztornózás: kiállított bizonylat nem törölhető és nem archiválható; helyette sztornó bizonylat készül
     // (negatív összegekkel, az eredetire hivatkozva), és mindkettő megmarad.

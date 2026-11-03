@@ -4,6 +4,21 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.16** — Cégeknek: Számlázz.hu vagy Billingo összekötés.
+  - Regisztrációkor választható: magánszemélyként vagy cégként / egyéni vállalkozóként adsz bérbe. A Beállításokban később is átállítható.
+  - Cégnél a Beállítások → „Bérbeadó és számlázó” részben köthető össze a számlázó:
+    - Billingo: API-kulcs és számlatömb;
+    - Számlázz.hu: Számla Agent kulcs, nem kötelező előtag;
+    - kapcsolatpróba;
+    - alapértelmezett áfa a bérleti díjra és a rezsire (TAM, AAM, 27%, 18%, 5%, 0%), ingatlanonként az adatlapon felülírható.
+  - Összekötés után a havi díjról valódi számla készül a számlázóban (saját sorszám, NAV-bejelentés):
+    - a PDF-et onnan vesszük át;
+    - a levelet a Lakáskezelő küldi;
+    - a sztornó is a számlázóban készül.
+  - Kiállított számla nem készíthető újra, javításhoz sztornózni kell.
+  - A kulcsok a felületről nem olvashatók vissza.
+  - Javítás: a sztornó mindig pontosan az eredeti végösszegét nullázza. Ha az eredeti tételei nem adják ki, egy kiegyenlítő sor kerül rá. A tesztkörnyezet mintabizonylatainál a rezsi sorok hiányoztak, ezt a mintaadatokban is javítottam.
+  - Migráció: InvoicingProviders. Csak új oszlopok kerülnek be; meglévő adatot nem módosít.
 - **2026.11.03.15** — „Számla” helyett mindenhol „bizonylat”, mert magánszemély bérbeadó nem állít ki számlát, csak
   bizonylatot:
   - menü, oldalcímek, gombok, fülek, táblák, ablakok és üzenetek: például „Bizonylatok” menüpont, „Bizonylat készítése”, „Sztornó bizonylat”;

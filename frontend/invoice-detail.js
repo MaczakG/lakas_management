@@ -55,7 +55,13 @@ function render() {
   const link = (r) => `<a class="link mono" href="${invoiceDetailUrl(r, fromParam)}">${escapeHtml(r.number)}</a>`;
   const rows = [
     detailRow('Sorszám', `<span class="mono">${escapeHtml(invoice.number)}</span>`),
-    detailRow('Bizonylat', invoice.cancelsInvoiceId ? `Sztornó bizonylat${original ? `<small class="prop-sub">a(z) ${link(original)} sztornója</small>` : ''}` : 'Számviteli bizonylat'),
+    detailRow('Bizonylat', (() => {
+      const provider = { Billingo: 'Billingo', Szamlazzhu: 'Számlázz.hu' }[invoice.provider];
+      const kind = provider ? `számla (${provider})` : 'bizonylat';
+      return invoice.cancelsInvoiceId
+        ? `Sztornó ${kind}${original ? `<small class="prop-sub">a(z) ${link(original)} sztornója</small>` : ''}`
+        : (provider ? `Számla, kiállítva: ${provider}` : 'Számviteli bizonylat');
+    })()),
     detailRow('Állapot', invoiceStatusTag(invoice, STATUS_LABELS)),
     detailRow('Ingatlan', `<a class="link" href="property-detail.html?id=${encodeURIComponent(invoice.propertyId)}">${escapeHtml(invoice.propertyName)}</a>`),
     detailRow('Bérlő', escapeHtml(invoice.tenantName || '–')),

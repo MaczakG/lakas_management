@@ -17,6 +17,8 @@ public class Tenant : ICompanyOwned
     public DateOnly? MoveInDate { get; set; }
     public DateOnly? MoveOutDate { get; set; }
     public string? Notes { get; set; }
+    // A bérlő partner-azonosítója a cég Billingo-fiókjában (az első kiállított számlakor jön létre).
+    public int? BillingoPartnerId { get; set; }
     public DateTime CreatedAt { get; set; }
 
     // Milyen devizanemben van megadva az ingatlan bérleti díja ennél a bérlőnél — a számlán

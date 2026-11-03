@@ -72,18 +72,24 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
             var summary = new StringBuilder("Bizonylatszám;Ingatlan;Bérlő;Időszak;Kiállítva;Fizetési határidő;Összeg (Ft);Állapot\r\n");
             foreach (var invoice in invoices)
             {
-                var pdf = await pdfStore.GetOrCreateAsync(invoice, ct);
-                var entry = zip.CreateEntry(InvoicePdfStore.FileName(invoice), CompressionLevel.Optimal);
-                await using (var entryStream = entry.Open())
+                string? pdfError = null;
+                try
                 {
+                    var pdf = await pdfStore.GetOrCreateAsync(invoice, ct);
+                    var entry = zip.CreateEntry(InvoicePdfStore.FileName(invoice), CompressionLevel.Optimal);
+                    await using var entryStream = entry.Open();
                     await entryStream.WriteAsync(pdf, ct);
+                }
+                catch (Invoicing.ProviderException ex)
+                {
+                    pdfError = $"PDF nem érhető el: {ex.Message}";
                 }
 
                 summary.Append(string.Join(';',
                     Csv(invoice.Number), Csv(invoice.Property?.Name), Csv(invoice.Tenant?.Name),
                     $"{invoice.PeriodYear}.{invoice.PeriodMonth:D2}", invoice.IssuedAt.ToString("yyyy.MM.dd", Hu),
                     invoice.DueDate.ToString("yyyy.MM.dd", Hu), invoice.AmountTotal.ToString("0", Hu),
-                    Csv(StatusText(invoice, invoices)))).Append("\r\n");
+                    Csv(StatusText(invoice, invoices) + (pdfError is null ? "" : $" ({pdfError})")))).Append("\r\n");
             }
 
             // UTF-8 BOM + pontosvessző, hogy a magyar Excel ékezethelyesen, oszlopokra bontva nyissa meg.
