@@ -13,6 +13,8 @@
     .um-draft-row button{width:42px;height:42px;border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;color:var(--coral);flex-shrink:0;}
     .um-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:4px 0 16px;}
     .um-existing-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:10px 0 20px;text-align:right;}
+    #um-existing-tbody input{height:36px;font-size:13.5px;}
+    #um-existing-tbody .row-actions{white-space:nowrap;}
     .um-section-title{font-family:var(--font-display);font-weight:700;font-size:14.5px;margin:0 0 10px;color:var(--ink);}
   `;
   document.head.appendChild(styleTag);
@@ -25,7 +27,7 @@
           <button class="modal-close" id="um-close" type="button">✕</button>
         </div>
         <div class="modal-body">
-          <div class="form-error" id="um-locked-note">Ez az időszak már számlázva lett, a rezsi tételek nem módosíthatók.</div>
+          <div class="form-error" id="um-locked-note">Erre az időszakra már van számla, ezért a tételek nem módosíthatók. Ha javítani kell, archiváld a számlát (a számla sorában az Archiválás gombbal), utána a tételek szerkeszthetők.</div>
 
           <h3 class="um-section-title">Rögzített tételek</h3>
           <div class="card-table" style="margin-bottom:4px;">
@@ -74,7 +76,7 @@
 
   function resetDraftRows() {
     document.getElementById('um-draft-rows').innerHTML = '';
-    for (let i = 0; i < 3; i += 1) addDraftRow();
+    addDraftRow(); // alapból egy sor; többet a „+ Sor hozzáadása” gombbal
     updateDraftTotal();
   }
 
@@ -85,10 +87,11 @@
     ]);
     const allEntries = await entriesRes.json();
     const invoices = await invoicesRes.json();
-    const locked = invoices.some((i) => (i.status === 'Sent' || i.status === 'Generated')
+    const locked = invoices.some((i) => !i.archivedAt && (i.status === 'Sent' || i.status === 'Generated')
       && i.periodYear === state.year && i.periodMonth === state.month);
 
     const entries = allEntries.filter((e) => e.year === state.year && e.month === state.month);
+    state.entries = entries;
     const tbody = document.getElementById('um-existing-tbody');
     tbody.innerHTML = entries.length === 0
       ? `<tr class="empty-row"><td colspan="3">Nincs még rögzített tétel.</td></tr>`
@@ -98,7 +101,8 @@
           <td>${formatCurrency(e.amount)}</td>
           <td class="row-actions">${locked
             ? '<span class="status-tag ok">Lezárva</span>'
-            : `<button class="btn btn-danger btn-sm" onclick="window.__umDeleteEntry('${e.id}')">Törlés</button>`}</td>
+            : `<button class="btn btn-ghost btn-sm" type="button" onclick="window.__umEditEntry('${e.id}', this)">Szerkesztés</button>
+               <button class="btn btn-danger btn-sm" type="button" onclick="window.__umDeleteEntry('${e.id}')">Törlés</button>`}</td>
         </tr>
       `).join('');
 
@@ -114,6 +118,33 @@
 
     resetDraftRows();
   }
+
+  // Meglévő tétel helyben szerkesztése: a sor mezőkké alakul, Mentés / Mégse.
+  window.__umEditEntry = (entryId, btn) => {
+    const entry = state.entries.find((e) => e.id === entryId);
+    const row = btn.closest('tr');
+    if (!entry || !row) return;
+    row.innerHTML = `
+      <td><input type="text" class="um-edit-label" aria-label="Megnevezés"></td>
+      <td><input type="number" class="um-edit-amount" min="0" aria-label="Összeg (Ft)"></td>
+      <td class="row-actions"><button class="btn btn-primary btn-sm" type="button" data-save>Mentés</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-cancel>Mégse</button></td>`;
+    row.querySelector('.um-edit-label').value = entry.label;
+    row.querySelector('.um-edit-amount').value = entry.amount;
+    row.querySelector('.um-edit-label').focus();
+    row.querySelector('[data-cancel]').addEventListener('click', refresh);
+    row.querySelector('[data-save]').addEventListener('click', async () => {
+      const label = row.querySelector('.um-edit-label').value.trim();
+      const amount = Number(row.querySelector('.um-edit-amount').value);
+      const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/${entryId}`, { method: 'PUT', body: JSON.stringify({ label, amount }) });
+      if (!res.ok) {
+        await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült menteni a tételt.'), { title: 'Mentés sikertelen' });
+        return;
+      }
+      await refresh();
+      if (typeof state.onSaved === 'function') state.onSaved();
+    });
+  };
 
   window.__umDeleteEntry = async (entryId) => {
     if (!(await uiConfirm('Biztosan törlöd ezt a tételt?', { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;

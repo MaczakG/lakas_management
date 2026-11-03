@@ -4,6 +4,12 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.9** — A kiállított számlák nem törölhetők, csak archiválhatók (a bizonylat és a PDF megmarad, de nem
+  számít bele az összesítőkbe, a havi csomagba és a Vezérlőpultba; a táblákban „Archivált” címkével, halványan
+  látszik). Archiválás után az időszak rezsi tételei újra szerkeszthetők, és új számla készíthető rá „/2”, „/3”
+  végződésű sorszámmal (migráció: Invoices.ArchivedAt, ArchivedByUserId; az egyediség csak a nem archivált
+  számlákra vonatkozik). A rezsi ablak alapból egy üres sorral nyílik, a meglévő tételek soron belül
+  szerkeszthetők. A Számla csomagok év szűrője egyszerű legördülő lista, csak azokkal az évekkel, amelyekre van számla.
 - **2026.11.03.8** — Arculat: mély erdőzöld (#1E5B47) fő szín, grafitszürke szöveg, meleg-szürke felületek. Emberibb,
   kevésbé „gépi” felület: nincsenek nagybetűs címkék a címek fölött, a táblafejlécek, menücsoportok és státuszcímkék
   mondatkezdők, a díszítő pöttyök eltűntek (a számlálók egy mondatban: „4 aktív, 3 hiányzó rezsi…”), a felületek

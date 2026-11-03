@@ -36,9 +36,13 @@ public class InvoiceGenerationService(
             catch (Exception ex) { logger.LogDebug(ex, "Invoice progress callback failed"); }
         }
 
+        // Csak az aktív (nem archivált) számlát frissítjük; archivált mellé új számla készül.
         var existing = await db.Invoices
             .Include(i => i.Lines)
-            .FirstOrDefaultAsync(i => i.PropertyId == property.Id && i.PeriodYear == year && i.PeriodMonth == month, ct);
+            .FirstOrDefaultAsync(i => i.PropertyId == property.Id && i.PeriodYear == year && i.PeriodMonth == month && i.ArchivedAt == null, ct);
+        var archivedCount = existing is null
+            ? await db.Invoices.CountAsync(i => i.PropertyId == property.Id && i.PeriodYear == year && i.PeriodMonth == month && i.ArchivedAt != null, ct)
+            : 0;
 
         var settings = await settingsService.GetAsync(ct);
         var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.PropertyId == property.Id, ct);
@@ -62,7 +66,9 @@ public class InvoiceGenerationService(
         invoice.TenantId = tenant?.Id;
         invoice.IssuedAt = DateTime.UtcNow;
         invoice.DueDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(8);
-        invoice.Number = existing?.Number ?? BuildInvoiceNumber(property, year, month);
+        // Ha az időszakra már van archivált számla, az új a „/2”, „/3”… utótagot kapja, hogy a sorszám egyedi maradjon.
+        invoice.Number = existing?.Number
+            ?? BuildInvoiceNumber(property, year, month) + (archivedCount > 0 ? $"/{archivedCount + 1}" : "");
 
         try
         {

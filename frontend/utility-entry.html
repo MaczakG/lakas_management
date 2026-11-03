@@ -92,7 +92,7 @@ async function loadMonths() {
   const invoices = await invoicesRes.json();
 
   const lockedMonths = new Set(
-    invoices.filter((i) => (i.status === 'Sent' || i.status === 'Generated') && i.periodYear === year).map((i) => i.periodMonth)
+    invoices.filter((i) => !i.archivedAt && (i.status === 'Sent' || i.status === 'Generated') && i.periodYear === year).map((i) => i.periodMonth)
   );
 
   // A következő kiküldés időszaka (annak a rezsije kerül a számlára) — a táblázatban jelöljük.

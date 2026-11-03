@@ -91,7 +91,7 @@ function renderProperty() {
 
 function renderSummary() {
   const year = new Date().getFullYear();
-  const issued = invoices.filter((i) => i.status !== 'Failed');
+  const issued = invoices.filter((i) => i.status !== 'Failed' && !i.archivedAt);
   const total = issued.reduce((s, i) => s + Number(i.amountTotal), 0);
   const thisYear = issued.filter((i) => i.periodYear === year).reduce((s, i) => s + Number(i.amountTotal), 0);
   const last = issued[0];

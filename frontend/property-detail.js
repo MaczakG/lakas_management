@@ -288,10 +288,10 @@ function renderTenant() {
 
 function renderSummary() {
   const year = new Date().getFullYear();
-  const issued = invoices.filter((i) => i.status !== 'Failed');
+  const issued = invoices.filter((i) => i.status !== 'Failed' && !i.archivedAt);
   const last = issued[0];
   const thisYear = issued.filter((i) => i.periodYear === year).reduce((sum, i) => sum + Number(i.amountTotal), 0);
-  const failed = invoices.filter((i) => i.status === 'Failed').length;
+  const failed = invoices.filter((i) => i.status === 'Failed' && !i.archivedAt).length;
   // A következő kiküldés időszakának rezsije kerül a számlára — ezt nézzük, nem az aktuális hónapot.
   const utilityNext = utilityEntries.some((u) => u.year === property.nextPeriodYear && u.month === property.nextPeriodMonth);
   const nextLabel = `${MONTH_NAMES[property.nextPeriodMonth - 1].toLowerCase()}i számlához`;
@@ -315,13 +315,13 @@ function renderInvoices() {
   body.innerHTML = `<table>
     <thead><tr><th>Sorszám</th><th>Időszak</th><th>Bérlő</th><th>Kiállítva</th><th class="num">Összeg</th><th>Állapot</th><th></th></tr></thead>
     <tbody>${invoices.map((i) => `
-      <tr>
+      <tr${i.archivedAt ? ' class="is-archived"' : ''}>
         <td><span class="mono">${escapeHtml(i.number)}</span></td>
         <td>${i.periodYear}. ${MONTH_NAMES[i.periodMonth - 1].toLowerCase()}</td>
         <td>${escapeHtml(i.tenantName || '–')}</td>
         <td>${formatDate(i.issuedAt)}</td>
         <td class="num">${formatCurrency(i.amountTotal)}</td>
-        <td><span class="status-tag ${escapeHtml(i.status)}">${INVOICE_STATUS[i.status] || escapeHtml(i.status)}</span></td>
+        <td>${invoiceStatusTag(i, INVOICE_STATUS)}</td>
         <td class="num">${invoiceActionButtons(i)}</td>
       </tr>`).join('')}</tbody></table>`;
 }

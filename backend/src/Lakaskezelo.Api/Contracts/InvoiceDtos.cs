@@ -8,8 +8,8 @@ public record InvoiceDto(
     Guid Id, Guid PropertyId, string PropertyName, string? TenantName,
     int PeriodYear, int PeriodMonth, string Number, DateTime IssuedAt, DateOnly DueDate,
     decimal AmountTotal, InvoiceStatus Status, DateTime? SentAt, string? ErrorMessage,
-    List<InvoiceLineDto> Lines);
+    List<InvoiceLineDto> Lines, DateTime? ArchivedAt = null);
 
 public record GenerateInvoiceRequest(Guid PropertyId, int Year, int Month);
 
-public record InvoiceBundleMonthDto(int Year, int Month, int InvoiceCount, int FailedCount, decimal TotalAmount);
+public record InvoiceBundleMonthDto(int Year, int Month, int InvoiceCount, int FailedCount, decimal TotalAmount, int ArchivedCount = 0);

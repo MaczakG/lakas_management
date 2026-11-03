@@ -1,3 +1,4 @@
+using Lakaskezelo.Api.Auth;
 using Lakaskezelo.Api.Billing;
 using Lakaskezelo.Api.Contracts;
 using Lakaskezelo.Data;
@@ -105,29 +106,27 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         }
     }
 
-    // Csak a még ki nem küldött (Generated/Failed) számlák törölhetők — pl. téves/teszt generálás
-    // után, hogy az adott időszak rezsi tételei újra szerkeszthetők legyenek (ld.
-    // PropertiesController.IsPeriodLockedAsync). Egy ténylegesen kiküldött (Sent) számlát a
-    // rendszer alapból nem enged törölni, az már valós, bérlőnek elküldött bizonylat — a
-    // force=true csak szándékos admin felülbírálásra való (pl. téves teszt-küldés törlése).
-    [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, [FromQuery] bool force, CancellationToken ct)
+    // A kiállított bizonylat nem törölhető (nincs DELETE végpont), csak archiválható. Az archivált számla
+    // megmarad és letölthető, de nem zárja az időszak rezsijét (PropertiesController.IsPeriodLockedAsync), nem
+    // számít bele az összesítőkbe és a csomagba, és új számla készíthető ugyanarra az időszakra.
+    [HttpPost("{id:guid}/archive")]
+    public async Task<ActionResult<InvoiceDto>> Archive(Guid id, CancellationToken ct)
     {
-        var invoice = await db.Invoices.FirstOrDefaultAsync(i => i.Id == id, ct);
+        var invoice = await db.Invoices.Include(i => i.Lines).Include(i => i.Property).Include(i => i.Tenant)
+            .FirstOrDefaultAsync(i => i.Id == id, ct);
         if (invoice is null) return NotFound();
-        if (invoice.Status == Domain.Enums.InvoiceStatus.Sent && !force)
+        if (invoice.ArchivedAt is null)
         {
-            return Conflict(new { message = "Egy már kiküldött számla nem törölhető." });
+            invoice.ArchivedAt = DateTime.UtcNow;
+            invoice.ArchivedByUserId = User.GetUserId();
+            await db.SaveChangesAsync(ct);
         }
-
-        db.Invoices.Remove(invoice);
-        await db.SaveChangesAsync(ct);
-        return NoContent();
+        return Ok(ToDto(invoice));
     }
 
     public static InvoiceDto ToDto(Invoice invoice) => new(
         invoice.Id, invoice.PropertyId, invoice.Property?.Name ?? "", invoice.Tenant?.Name,
         invoice.PeriodYear, invoice.PeriodMonth, invoice.Number, invoice.IssuedAt, invoice.DueDate,
         invoice.AmountTotal, invoice.Status, invoice.SentAt, invoice.ErrorMessage,
-        [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))]);
+        [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))], invoice.ArchivedAt);
 }

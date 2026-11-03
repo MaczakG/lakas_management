@@ -27,7 +27,8 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
         var today = DateOnly.FromDateTime(now);
         var y = year is >= 2000 and <= 2100 ? year.Value : now.Year;
 
-        var invoices = await db.Invoices.Where(i => i.PeriodYear == y || i.PeriodYear == y - 1)
+        // Az archivált számlák nem számítanak bele az összesítőkbe.
+        var invoices = await db.Invoices.Where(i => (i.PeriodYear == y || i.PeriodYear == y - 1) && i.ArchivedAt == null)
             .Select(i => new { i.PeriodYear, i.PeriodMonth, i.Status, i.AmountTotal, i.PropertyId, PropertyName = i.Property!.Name })
             .ToListAsync(ct);
         var current = invoices.Where(i => i.PeriodYear == y).ToList();
@@ -107,7 +108,7 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
                 upcoming.Add(new UpcomingEvent(outDate, "moveOut", t.PropertyId!.Value, t.PropertyName, t.Id, t.Name));
         }
 
-        var years = await db.Invoices.Select(i => i.PeriodYear).Distinct().ToListAsync(ct);
+        var years = await db.Invoices.Where(i => i.ArchivedAt == null).Select(i => i.PeriodYear).Distinct().ToListAsync(ct);
         years.Add(now.Year);
         years.Add(y);
 

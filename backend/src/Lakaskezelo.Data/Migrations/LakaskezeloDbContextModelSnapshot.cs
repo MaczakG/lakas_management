@@ -193,6 +193,12 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<decimal>("AmountTotal")
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ArchivedByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -241,7 +247,8 @@ namespace Lakaskezelo.Data.Migrations
                     b.HasIndex("TenantId");
 
                     b.HasIndex("PropertyId", "PeriodYear", "PeriodMonth")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"ArchivedAt\" IS NULL");
 
                     b.ToTable("Invoices");
                 });

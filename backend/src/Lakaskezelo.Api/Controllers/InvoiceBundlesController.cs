@@ -21,24 +21,31 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
 {
     private static readonly CultureInfo Hu = CultureInfo.GetCultureInfo("hu-HU");
 
+    // Az évszűrőhöz: azok az évek, amelyekhez van legalább egy számla (a legújabb elöl).
+    [HttpGet("years")]
+    public async Task<ActionResult<List<int>>> Years(CancellationToken ct) =>
+        Ok(await db.Invoices.Select(i => i.PeriodYear).Distinct().OrderByDescending(y => y).ToListAsync(ct));
+
     [HttpGet]
     public async Task<ActionResult<List<InvoiceBundleMonthDto>>> List([FromQuery] int year, CancellationToken ct)
     {
         var invoices = await db.Invoices.Where(i => i.PeriodYear == year)
-            .Select(i => new { i.PeriodMonth, i.Status, i.AmountTotal })
+            .Select(i => new { i.PeriodMonth, i.Status, i.AmountTotal, Archived = i.ArchivedAt != null })
             .ToListAsync(ct);
+        // Az archiváltak nem kerülnek a csomagba és az összegbe, csak a számuk látszik.
         return Ok(invoices
             .GroupBy(i => i.PeriodMonth)
             .OrderByDescending(g => g.Key)
             .Select(g => new InvoiceBundleMonthDto(
                 year, g.Key,
-                g.Count(i => i.Status != InvoiceStatus.Failed),
-                g.Count(i => i.Status == InvoiceStatus.Failed),
-                g.Where(i => i.Status != InvoiceStatus.Failed).Sum(i => i.AmountTotal))));
+                g.Count(i => !i.Archived && i.Status != InvoiceStatus.Failed),
+                g.Count(i => !i.Archived && i.Status == InvoiceStatus.Failed),
+                g.Where(i => !i.Archived && i.Status != InvoiceStatus.Failed).Sum(i => i.AmountTotal),
+                g.Count(i => i.Archived))));
     }
 
     // Egy hónap számlái (a lista lenyíló soraihoz): elöl a csomagba (ZIP-be) kerülők, a végén a sikertelenek —
-    // azok nem kerülnek a csomagba, de innen újrapróbálhatók vagy törölhetők.
+    // és az archiváltak. Ezek nem kerülnek a csomagba, de innen újrapróbálhatók, illetve megtekinthetők.
     [HttpGet("{year:int}/{month:int}")]
     public async Task<ActionResult<List<InvoiceDto>>> Invoices(int year, int month, CancellationToken ct)
     {
@@ -46,7 +53,8 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
             .Where(i => i.PeriodYear == year && i.PeriodMonth == month)
             .ToListAsync(ct);
         return Ok(invoices
-            .OrderBy(i => i.Status == InvoiceStatus.Failed)
+            .OrderBy(i => i.ArchivedAt != null)
+            .ThenBy(i => i.Status == InvoiceStatus.Failed)
             .ThenBy(i => i.Number)
             .Select(InvoicesController.ToDto));
     }
@@ -55,7 +63,7 @@ public class InvoiceBundlesController(LakaskezeloDbContext db, InvoicePdfStore p
     public async Task<IActionResult> DownloadZip(int year, int month, CancellationToken ct)
     {
         var invoices = await InvoicesController.WithPdfData(db.Invoices)
-            .Where(i => i.PeriodYear == year && i.PeriodMonth == month && i.Status != InvoiceStatus.Failed)
+            .Where(i => i.PeriodYear == year && i.PeriodMonth == month && i.Status != InvoiceStatus.Failed && i.ArchivedAt == null)
             .OrderBy(i => i.Number)
             .ToListAsync(ct);
         if (invoices.Count == 0) return NotFound(new { message = "Ebben a hónapban nincs kiküldött vagy legenerált számla." });

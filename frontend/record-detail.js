@@ -144,14 +144,14 @@ function renderInvoiceTable(invoices, emptyText, { showProperty = true, showTena
   return `<table>
     <thead><tr><th>Sorszám</th>${showPeriod ? '<th>Időszak</th>' : ''}${showProperty ? '<th>Ingatlan</th>' : ''}${showTenant ? '<th>Bérlő</th>' : ''}<th>Kiállítva</th><th class="num">Összeg</th><th>Állapot</th><th></th></tr></thead>
     <tbody>${invoices.map((i) => `
-      <tr>
+      <tr${i.archivedAt ? ' class="is-archived"' : ''}>
         <td><span class="mono">${escapeHtml(i.number)}</span></td>
         ${showPeriod ? `<td>${i.periodYear}. ${MONTH_NAMES[i.periodMonth - 1].toLowerCase()}</td>` : ''}
         ${showProperty ? `<td><a class="link" href="property-detail.html?id=${encodeURIComponent(i.propertyId)}">${escapeHtml(i.propertyName)}</a></td>` : ''}
         ${showTenant ? `<td>${escapeHtml(i.tenantName || '–')}</td>` : ''}
         <td>${formatDate(i.issuedAt)}</td>
         <td class="num">${formatCurrency(i.amountTotal)}</td>
-        <td><span class="status-tag ${escapeHtml(i.status)}">${DETAIL_INVOICE_STATUS[i.status] || escapeHtml(i.status)}</span></td>
+        <td>${window.invoiceStatusTag ? invoiceStatusTag(i, DETAIL_INVOICE_STATUS) : `<span class="status-tag ${escapeHtml(i.status)}">${DETAIL_INVOICE_STATUS[i.status] || escapeHtml(i.status)}</span>`}</td>
         <td class="num">${window.invoiceActionButtons ? invoiceActionButtons(i)
           : (i.status !== 'Failed' ? `<button class="icon-btn" type="button" title="PDF letöltése" aria-label="PDF letöltése" onclick="downloadFile('/api/invoices/${i.id}/pdf', ${jsArg(i.number + '.pdf')})">${DETAIL_ICON('download')}</button>` : '')}</td>
       </tr>`).join('')}</tbody></table>`;
