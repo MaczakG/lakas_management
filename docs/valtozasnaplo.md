@@ -4,6 +4,12 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+Jelenleg nincs ilyen változás.
+
+## Élesben
+
+### v2026.11.03.21 — 2026. 11. 03.
+
 - **2026.11.03.21** — A felvett, de még bizonylatra nem került rezsitétel is tartozásként jelenik meg a bérlő
   egyenlegében.
   - **Kinél:** az ingatlan jelenlegi bérlőjénél, mert ő kapja meg a következő bizonylaton.
@@ -17,8 +23,6 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
     terhelés. Sztornó után a tétel újra itt jelenik meg.
   - **Kivételek:** a régi, kizárt tételek és a 36 hónapnál régebbiek nem számítanak bele.
   - **Lejárt hátralék:** a bizonylatra váró rezsi nem lehet lejárt, ezért nem számít bele.
-
-## Élesben
 
 ### v2026.11.03.20 — 2026. 11. 03.
 
