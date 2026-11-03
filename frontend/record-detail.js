@@ -28,13 +28,13 @@ function createInlineEditor({ getRecord, save }) {
     const id = idOf(field);
     let control;
     if (field.type === 'select') {
-      control = `<select class="iinput" id="${id}">${field.required ? '' : '<option value="">—</option>'}${field.options
+      control = `<select class="iinput" id="${id}">${field.required ? '' : '<option value="">Nincs megadva</option>'}${field.options
         .map((o) => `<option value="${escapeHtml(o.value)}"${String(o.value) === String(value ?? '') ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}</select>`;
     } else if (field.type === 'textarea') {
       control = `<textarea class="iinput" id="${id}" placeholder="${escapeHtml(field.placeholder || '')}">${escapeHtml(value ?? '')}</textarea>`;
     } else {
       const mode = field.type === 'email' ? ' inputmode="email"' : field.type === 'number' ? ' inputmode="decimal"' : field.type === 'date' ? ' inputmode="numeric"' : '';
-      control = `<input class="iinput" id="${id}" type="text"${mode} value="${escapeHtml(shown(field, value))}" placeholder="${escapeHtml(field.placeholder || (field.required ? '' : '—'))}" autocomplete="off">`;
+      control = `<input class="iinput" id="${id}" type="text"${mode} value="${escapeHtml(shown(field, value))}" placeholder="${escapeHtml(field.placeholder || (field.required ? '' : '–'))}" autocomplete="off">`;
     }
     return `<div class="prop${field.wide ? ' wide' : ''}">
       <dt><label for="${id}">${escapeHtml(field.label)}</label></dt>
@@ -148,7 +148,7 @@ function renderInvoiceTable(invoices, emptyText, { showProperty = true, showTena
         <td><span class="mono">${escapeHtml(i.number)}</span></td>
         ${showPeriod ? `<td>${i.periodYear}. ${MONTH_NAMES[i.periodMonth - 1].toLowerCase()}</td>` : ''}
         ${showProperty ? `<td><a class="link" href="property-detail.html?id=${encodeURIComponent(i.propertyId)}">${escapeHtml(i.propertyName)}</a></td>` : ''}
-        ${showTenant ? `<td>${escapeHtml(i.tenantName || '—')}</td>` : ''}
+        ${showTenant ? `<td>${escapeHtml(i.tenantName || '–')}</td>` : ''}
         <td>${formatDate(i.issuedAt)}</td>
         <td class="num">${formatCurrency(i.amountTotal)}</td>
         <td><span class="status-tag ${escapeHtml(i.status)}">${DETAIL_INVOICE_STATUS[i.status] || escapeHtml(i.status)}</span></td>

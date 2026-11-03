@@ -67,7 +67,7 @@
 .event:first-child{border-top:none;padding-top:2px;}
 .event .date{text-align:center;border:1px solid var(--line);border-radius:8px;padding:4px 0;line-height:1.1;}
 .event .date b{display:block;font-size:16px;font-weight:700;color:var(--ink);}
-.event .date small{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.event .date small{font-size:11px;font-weight:500;color:var(--muted);}
 .event .what{min-width:0;}
 .event .what .k{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);}
 .event .what .k svg{width:13px;height:13px;}

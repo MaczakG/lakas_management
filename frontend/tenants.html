@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Bérlők</title>
+<title>Bérlők | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -16,7 +16,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Partnerek</div>
         <h1>Bérlők</h1>
         <div class="page-state" id="page-state"></div>
       </div>
@@ -63,13 +62,13 @@
         </div>
         <div class="field-row">
           <div class="field"><label for="f-property">Ingatlan</label>
-            <select id="f-property"><option value="">— nincs hozzárendelve —</option></select>
+            <select id="f-property"><option value="">Nincs hozzárendelve</option></select>
           </div>
           <div class="field"><label for="f-currency">Bérleti díj alapja</label>
             <select id="f-currency">
               <option value="HUF">Forint (Ft)</option>
-              <option value="EUR">EUR — MNB árfolyamon átszámítva</option>
-              <option value="USD">USD — MNB árfolyamon átszámítva</option>
+              <option value="EUR">EUR (MNB-árfolyamon átszámítva)</option>
+              <option value="USD">USD (MNB-árfolyamon átszámítva)</option>
             </select>
             <span class="hint">A számlán mindig HUF összeg jelenik meg; ez csak azt dönti el, milyen devizában van megadva az ingatlan bérleti díja.</span>
           </div>
@@ -107,7 +106,7 @@ async function loadData() {
   ]);
 
   const select = document.getElementById('f-property');
-  select.innerHTML = '<option value="">— nincs hozzárendelve —</option>' +
+  select.innerHTML = '<option value="">Nincs hozzárendelve</option>' +
     properties.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
 
   renderTenants();
@@ -126,8 +125,8 @@ function renderTenants() {
   tbody.innerHTML = filtered.map((t) => `
     <tr class="clickable" title="Adatlap megnyitása" onclick="location.href='tenant-detail.html?id=${encodeURIComponent(t.id)}'">
       <td class="cell-main"><a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}" onclick="event.stopPropagation()">${escapeHtml(t.name)}</a></td>
-      <td>${escapeHtml(t.email || '—')}${t.phone ? `<div class="cell-sub">${escapeHtml(t.phone)}</div>` : ''}</td>
-      <td>${escapeHtml(t.propertyName || '—')}</td>
+      <td>${escapeHtml(t.email || '–')}${t.phone ? `<div class="cell-sub">${escapeHtml(t.phone)}</div>` : ''}</td>
+      <td>${escapeHtml(t.propertyName || '–')}</td>
       <td>${t.rentCurrency === 'HUF' ? 'Ft' : t.rentCurrency}</td>
       <td>${formatDate(t.moveInDate)}</td>
       <td>${formatDate(t.moveOutDate)}</td>

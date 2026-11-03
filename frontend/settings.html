@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakáskezelő — Beállítások</title>
+<title>Beállítások | Lakáskezelő</title>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 <style>
@@ -34,7 +34,6 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <div class="page-eyebrow">Fiók</div>
         <h1>Beállítások</h1>
         <p>Előfizetés, rezsi-emlékeztető, a számlák kibocsátója és a bérlőknek küldött számla-levél szövege.</p>
       </div>
@@ -93,7 +92,7 @@
         </div>
         <div class="field">
           <label for="invoice-email-subject">Tárgy</label>
-          <input type="text" id="invoice-email-subject" placeholder="Számla — {ingatlan}">
+          <input type="text" id="invoice-email-subject" placeholder="Számla: {ingatlan}">
         </div>
         <div class="field">
           <label for="invoice-email-body">Szöveg</label>
@@ -118,7 +117,7 @@ const $ = (id) => document.getElementById(id);
 async function loadSettings() {
   const res = await apiFetch('/api/settings');
   if (res.status === 403) {
-    document.querySelector('.main').innerHTML = '<div class="page-header"><div><div class="page-eyebrow">Fiók</div><h1>Beállítások</h1></div></div><p>A Beállításokat csak a cég adminisztrátora módosíthatja.</p>';
+    document.querySelector('.main').innerHTML = '<div class="page-header"><div><h1>Beállítások</h1></div></div><p>A Beállításokat csak a cég adminisztrátora módosíthatja.</p>';
     return;
   }
   const s = await res.json();
@@ -168,7 +167,7 @@ async function loadSubscription() {
   if (!res.ok) { body.innerHTML = `<p class="hint">${escapeHtml(errorMessage(res, d, 'Nem sikerült betölteni az előfizetést.'))}</p>`; return; }
   const st = d.state;
   // „2026. 11. 17-ig” (a rag előtt nem marad pont)
-  const day = (v) => (v ? new Date(v).toLocaleDateString('hu-HU').replace(/\.$/, '') : '—');
+  const day = (v) => (v ? new Date(v).toLocaleDateString('hu-HU').replace(/\.$/, '') : '–');
   const unit = `${formatCurrency(d.monthlyPricePerProperty)} / aktív ingatlan / hó${d.pricesIncludeVat ? ' (bruttó)' : ' + ÁFA'}`;
   const row = (label, value) => `<dt>${label}</dt><dd>${value}</dd>`;
   const props = `${d.activeProperties} db`;
@@ -185,28 +184,28 @@ async function loadSubscription() {
       ${row('Állapot', '<span class="status-tag ok">Díjmentes</span>')}
       ${row('Aktív ingatlanok', props)}
       ${row('Díj (bekapcsolás után)', unit)}
-      ${row('Ennyi lenne most', `${formatCurrency(d.monthlyQuote.grossAmount)} / hó <span class="dim">· éves fizetéssel ${formatCurrency(d.yearlyQuote.grossAmount)} / év (−${d.yearlyDiscountPercent}%)</span>`)}
-    </dl><p class="sub-note">A díjszedés még nincs bekapcsolva — a rendszert jelenleg díjmentesen használod.</p>`;
+      ${row('Ennyi lenne most', `${formatCurrency(d.monthlyQuote.grossAmount)} / hó<br><span class="dim">Éves fizetéssel ${formatCurrency(d.yearlyQuote.grossAmount)} / év (−${d.yearlyDiscountPercent}%)</span>`)}
+    </dl><p class="sub-note">A díjszedés még nincs bekapcsolva, a rendszert jelenleg díjmentesen használod.</p>`;
     return;
   }
 
   const [label, tone] = SUB_STATUS[st.locked ? 'Locked' : st.status] || [st.status, ''];
   const until = st.status === 'Trial'
     ? `Próbaidő ${day(st.trialEndsAt)}-ig`
-    : st.paidUntil ? `Kifizetve ${day(st.paidUntil)}-ig` : '—';
+    : st.paidUntil ? `Kifizetve ${day(st.paidUntil)}-ig` : '–';
   const yearly = d.interval === 'Yearly';
   const fee = yearly
     ? `${formatCurrency(d.yearlyQuote.grossAmount)} / év <span class="dim">(−${d.yearlyDiscountPercent}%)</span>`
     : `${formatCurrency(d.monthlyQuote.grossAmount)} / hó`;
   const card = d.cardRegistered
-    ? (st.cancelAtPeriodEnd ? 'Lemondva — a kifizetett időszak végén lejár' : `Bankkártya mentve — automatikus megújítás (${yearly ? 'éves' : 'havi'})`)
+    ? (st.cancelAtPeriodEnd ? 'Lemondva, a kifizetett időszak végén lejár' : `Bankkártya mentve, automatikus megújítás (${yearly ? 'éves' : 'havi'})`)
     : '<span class="dim">Nincs mentett kártya</span>';
   body.innerHTML = `<dl class="sub-grid">
     ${row('Állapot', `<span class="status-tag ${tone}">${label}</span>`)}
     ${row('Érvényes', until)}
     ${st.status === 'PastDue' && st.graceEndsAt ? row('Türelmi idő', `${day(st.graceEndsAt)}-ig`) : ''}
     ${row('Aktív ingatlanok', props)}
-    ${row('Díj', `${fee} <span class="dim">· ${unit}</span>`)}
+    ${row('Díj', `${fee}<br><span class="dim">${unit}</span>`)}
     ${row('Fizetés', card)}
   </dl>
   ${st.locked ? '<p class="sub-note">Az előfizetés lejárt, ezért a rendszer csak olvasható. Fizetés után azonnal újra szerkeszthető.</p>' : ''}

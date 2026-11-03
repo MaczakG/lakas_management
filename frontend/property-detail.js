@@ -74,7 +74,7 @@ function renderField(field) {
   const id = `f-${field.path.replace(/\./g, '-')}`;
   let control;
   if (field.type === 'select') {
-    control = `<select class="iinput" id="${id}"><option value="">—</option>${field.options
+    control = `<select class="iinput" id="${id}"><option value="">Nincs megadva</option>${field.options
       .map((o) => `<option value="${escapeHtml(o)}"${o === value ? ' selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select>`;
   } else if (field.type === 'textarea') {
     control = `<textarea class="iinput" id="${id}" placeholder="${escapeHtml(field.placeholder || '')}">${escapeHtml(value ?? '')}</textarea>`;
@@ -86,7 +86,7 @@ function renderField(field) {
       ? (field.group ? formatNumber(value, value % 1 ? 2 : 0) : String(value).replace('.', ','))
       : (value ?? '');
     const type = 'text';
-    control = `<input class="iinput" id="${id}" type="${type}"${mode} value="${escapeHtml(shown)}" placeholder="${escapeHtml(field.placeholder || (field.required ? '' : '—'))}" autocomplete="off">`;
+    control = `<input class="iinput" id="${id}" type="${type}"${mode} value="${escapeHtml(shown)}" placeholder="${escapeHtml(field.placeholder || (field.required ? '' : '–'))}" autocomplete="off">`;
   }
   const suffix = field.suffix ? `<span class="suffix" data-suffix="${field.path}">${escapeHtml(field.suffix())}</span>` : '';
   return `<div class="prop${field.wide ? ' wide' : ''}">
@@ -208,7 +208,7 @@ function addressLine() {
 }
 
 function renderHeader() {
-  document.title = `Lakáskezelő — ${property.name}`;
+  document.title = `${property.name} | Lakáskezelő`;
   document.getElementById('p-name').textContent = property.name;
   document.getElementById('crumb-name').textContent = property.name;
   document.getElementById('p-status').innerHTML = property.isActive
@@ -221,7 +221,7 @@ function renderHeader() {
     s.floorArea != null ? `${formatNumber(s.floorArea, s.floorArea % 1 ? 1 : 0)} m²` : null,
     s.rooms != null ? `${String(s.rooms).replace('.', ',')} szoba` : null,
   ].filter(Boolean);
-  document.getElementById('p-sub').textContent = facts.join(' · ') || 'Töltsd ki az adatlapot: cím, típus, alapterület…';
+  document.getElementById('p-sub').textContent = facts.join(', ') || 'Töltsd ki az adatlapot: cím, típus, alapterület…';
   document.getElementById('toggle-active-btn').textContent = property.isActive ? 'Inaktiválás' : 'Aktiválás';
 }
 
@@ -235,7 +235,7 @@ function renderComputed() {
   if (nextEl) {
     nextEl.innerHTML = property.isActive
       ? `${y}.${m}.${d}. ${time.slice(0, 5)}${shifted ? ' <span class="dim">(munkanapra tolva)</span>' : ''}`
-      : '<span class="dim">— (inaktív, nem számláz)</span>';
+      : '<span class="dim">Inaktív, nem számláz</span>';
   }
   document.querySelectorAll('[data-suffix]').forEach((el) => {
     const field = Object.values(FIELDS).flat().find((f) => f.path === el.dataset.suffix);
@@ -265,7 +265,7 @@ function renderOwners() {
   }
   const equal = owners.every((o) => !o.share);
   body.innerHTML = owners.map((o) => `
-    <div class="owner-line"><b><a class="link" href="owner-detail.html?id=${encodeURIComponent(o.ownerId)}">${escapeHtml(o.ownerName)}</a></b><span class="share-chip">${escapeHtml(o.share || (equal ? `1/${owners.length}` : '—'))}</span></div>
+    <div class="owner-line"><b><a class="link" href="owner-detail.html?id=${encodeURIComponent(o.ownerId)}">${escapeHtml(o.ownerName)}</a></b><span class="share-chip">${escapeHtml(o.share || (equal ? `1/${owners.length}` : '–'))}</span></div>
   `).join('');
 }
 
@@ -279,9 +279,9 @@ function renderTenant() {
   const row = (label, value) => `<div class="prop"><dt>${label}</dt><dd>${value}</dd></div>`;
   body.innerHTML = [
     row('Név', `<a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}">${escapeHtml(t.name)}</a>`),
-    row('E-mail', t.email ? `<a class="link" href="mailto:${escapeHtml(t.email)}">${escapeHtml(t.email)}</a>` : '<span class="dim">—</span>'),
-    row('Telefon', t.phone ? escapeHtml(t.phone) : '<span class="dim">—</span>'),
-    row('Beköltözés', t.moveInDate ? formatDate(t.moveInDate) : '<span class="dim">—</span>'),
+    row('E-mail', t.email ? `<a class="link" href="mailto:${escapeHtml(t.email)}">${escapeHtml(t.email)}</a>` : '<span class="dim">–</span>'),
+    row('Telefon', t.phone ? escapeHtml(t.phone) : '<span class="dim">–</span>'),
+    row('Beköltözés', t.moveInDate ? formatDate(t.moveInDate) : '<span class="dim">–</span>'),
     row('Díj devizája', t.rentCurrency === 'HUF' ? 'Forint' : `${escapeHtml(t.rentCurrency)} <span class="dim">(MNB-árfolyamon számlázva)</span>`),
   ].join('');
 }
@@ -297,11 +297,11 @@ function renderSummary() {
   const nextLabel = `${MONTH_NAMES[property.nextPeriodMonth - 1].toLowerCase()}i számlához`;
   const row = (label, value) => `<div class="prop"><dt>${label}</dt><dd>${value}</dd></div>`;
   document.getElementById('summary').innerHTML = [
-    row('Utolsó számla', last ? `<span class="mono">${escapeHtml(last.number)}</span> <span class="dim">· ${formatDate(last.issuedAt)}</span>` : '<span class="dim">Még nincs</span>'),
+    row('Utolsó számla', last ? `<span class="mono">${escapeHtml(last.number)}</span> <span class="dim">${formatDate(last.issuedAt)}</span>` : '<span class="dim">Még nincs</span>'),
     row(`Számlázva ${year}-ben`, formatCurrency(thisYear)),
     row('Kiállított számlák', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
     row(`Rezsi a ${nextLabel}`, utilityNext ? '<span class="status-tag ok">Rögzítve</span>' : '<span class="status-tag missing">Hiányzik</span>'),
-    row('Kaució', property.sheet.deposit != null ? formatCurrency(property.sheet.deposit) : '<span class="dim">—</span>'),
+    row('Kaució', property.sheet.deposit != null ? formatCurrency(property.sheet.deposit) : '<span class="dim">–</span>'),
   ].join('');
 }
 
@@ -318,7 +318,7 @@ function renderInvoices() {
       <tr>
         <td><span class="mono">${escapeHtml(i.number)}</span></td>
         <td>${i.periodYear}. ${MONTH_NAMES[i.periodMonth - 1].toLowerCase()}</td>
-        <td>${escapeHtml(i.tenantName || '—')}</td>
+        <td>${escapeHtml(i.tenantName || '–')}</td>
         <td>${formatDate(i.issuedAt)}</td>
         <td class="num">${formatCurrency(i.amountTotal)}</td>
         <td><span class="status-tag ${escapeHtml(i.status)}">${INVOICE_STATUS[i.status] || escapeHtml(i.status)}</span></td>
@@ -368,8 +368,8 @@ function renderTenantsTab() {
     <tbody>${tenants.map((t) => `
       <tr>
         <td class="cell-main"><a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}">${escapeHtml(t.name)}</a></td>
-        <td>${escapeHtml(t.email || '—')}</td>
-        <td>${escapeHtml(t.phone || '—')}</td>
+        <td>${escapeHtml(t.email || '–')}</td>
+        <td>${escapeHtml(t.phone || '–')}</td>
         <td>${formatDate(t.moveInDate)}</td>
         <td>${formatDate(t.moveOutDate)}</td>
         <td>${t.rentCurrency === 'HUF' ? 'Ft' : escapeHtml(t.rentCurrency)}</td>
@@ -444,7 +444,7 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
 
 function ownerRowHtml(ownerId, share) {
   return `<div class="owner-row">
-    <select class="owner-select" aria-label="Tulajdonos"><option value="">— válassz —</option>${allOwners
+    <select class="owner-select" aria-label="Tulajdonos"><option value="">Válassz…</option>${allOwners
       .map((o) => `<option value="${o.id}"${o.id === ownerId ? ' selected' : ''}>${escapeHtml(o.name)}</option>`).join('')}</select>
     <input type="text" class="owner-share" placeholder="pl. 1/2" aria-label="Tulajdoni hányad" value="${escapeHtml(share || '')}">
     <button class="icon-btn danger" type="button" title="Eltávolítás" aria-label="Eltávolítás" onclick="this.parentElement.remove()">${ICON('trash')}</button>
@@ -499,7 +499,7 @@ async function load() {
   ]);
   if (pRes.status === 404) {
     document.getElementById('p-name').textContent = 'Nincs ilyen ingatlan';
-    showError('Az ingatlan nem található — lehet, hogy törölték.');
+    showError('Az ingatlan nem található. Lehet, hogy törölték.');
     return;
   }
   property = await pRes.json();

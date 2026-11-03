@@ -4,7 +4,6 @@ requireAuth();
 (function () {
   const $ = (id) => document.getElementById(id);
   const ICON = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#${id}"/></svg>`;
-  const WEEKDAY = ['V', 'H', 'K', 'Sze', 'Cs', 'P', 'Szo'];
   const css = (name) => getComputedStyle($('dash')).getPropertyValue(name).trim();
 
   let data = null;
@@ -14,9 +13,9 @@ requireAuth();
   // ---------- szakaszok ----------
   function renderKpis() {
     const d = data;
-    $('kpi-invoiced-label').textContent = `Kiszámlázva — ${d.year}`;
+    $('kpi-invoiced-label').textContent = `Kiszámlázva ${inYear(d.year)}`;
     $('kpi-invoiced').textContent = huf(d.invoicedTotal);
-    $('kpi-invoiced-sub').textContent = `${d.invoiceCount} db számla${d.failed.count ? ` · ${d.failed.count} sikertelen nélkül` : ''}`;
+    $('kpi-invoiced-sub').textContent = `${d.invoiceCount} db számla${d.failed.count ? `, ${d.failed.count} sikertelen nélkül` : ''}`;
     const range = d.compareUntilMonth === 12 ? 'teljes év' : `jan–${MONTH_SHORT[d.compareUntilMonth - 1]}`;
     if (d.previousYearToDate > 0) {
       const pct = ((d.invoicedTotal - d.previousYearToDate) / d.previousYearToDate) * 100;
@@ -28,7 +27,7 @@ requireAuth();
     } else {
       $('kpi-delta').innerHTML = `<span class="vs">${inYear(d.year - 1)} ugyanebben az időszakban nem volt számla.</span>`;
     }
-    $('kpi-utility-label').textContent = `Rezsi — ${d.year}`;
+    $('kpi-utility-label').textContent = `Rezsi ${inYear(d.year)}`;
     $('kpi-utility').textContent = huf(d.utilityTotal);
     $('kpi-occupancy').textContent = `${d.rentedProperties} / ${d.activeProperties}`;
     const pct = d.activeProperties ? Math.round((d.rentedProperties / d.activeProperties) * 100) : 0;
@@ -36,7 +35,7 @@ requireAuth();
     $('occupancy-meter').setAttribute('aria-valuenow', pct);
     const vacant = d.activeProperties - d.rentedProperties;
     $('kpi-occupancy-sub').textContent = d.activeProperties
-      ? `${pct}% kiadva · ${vacant ? `${vacant} üres` : 'nincs üres'}`
+      ? `${pct}% kiadva, ${vacant ? `${vacant} üres` : 'nincs üres'}`
       : 'Még nincs aktív ingatlan.';
   }
 
@@ -44,7 +43,7 @@ requireAuth();
     const d = data;
     const cur = { name: String(d.year), color: css('--viz-accent'), values: d.monthly.map((m) => m.amount) };
     const prev = { name: String(d.year - 1), color: css('--viz-context'), values: d.monthly.map((m) => m.previousAmount) };
-    $('monthly-title').textContent = `Kiszámlázott összeg havonta — ${d.year}`;
+    $('monthly-title').textContent = `Kiszámlázott összeg havonta (${d.year})`;
     legend($('monthly-legend'), [cur, prev]);
     renderColumns($('monthly-chart'), {
       series: [prev, cur],
@@ -75,7 +74,7 @@ requireAuth();
       { key: 'failed', name: 'Sikertelen', tone: 'critical', color: css('--status-critical'), icon: 'triangle-alert', ...d.failed },
     ];
     const total = parts.reduce((s, p) => s + p.count, 0);
-    $('status-sub').textContent = total ? `${total} számla ${inYear(d.year)}, darabszám szerint.` : `${inYear(d.year)} még nincs számla.`;
+    $('status-sub').textContent = total ? `${total} számla` : `${inYear(d.year)} még nincs számla.`;
     const bar = total
       ? `<div class="segbar" role="img" aria-label="${escapeHtml(parts.map((p) => `${p.name}: ${p.count} db (${Math.round((p.count / total) * 100)}%)`).join(', '))}">
           ${parts.filter((p) => p.count > 0).map((p) => {
@@ -136,10 +135,10 @@ requireAuth();
       const k = KIND[e.kind] || KIND.billing;
       const prop = `<a href="property-detail.html?id=${encodeURIComponent(e.propertyId)}">${escapeHtml(e.propertyName)}</a>`;
       const what = e.tenantName
-        ? `<a href="tenant-detail.html?id=${encodeURIComponent(e.tenantId)}">${escapeHtml(e.tenantName)}</a> · ${prop}`
+        ? `<a href="tenant-detail.html?id=${encodeURIComponent(e.tenantId)}">${escapeHtml(e.tenantName)}</a>, ${prop}`
         : prop;
       return `<div class="event">
-        <div class="date"><b>${date.getDate()}</b><small>${MONTH_SHORT[date.getMonth()]} · ${WEEKDAY[date.getDay()]}</small></div>
+        <div class="date"><b>${date.getDate()}</b><small>${MONTH_SHORT[date.getMonth()]}.</small></div>
         <div class="what"><div class="k">${ICON(k.icon)}${k.label}</div><div class="d">${what}</div></div>
       </div>`;
     }).join('')}</div>

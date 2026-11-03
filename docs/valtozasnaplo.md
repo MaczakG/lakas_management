@@ -4,6 +4,12 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.03.8** — Arculat: mély erdőzöld (#1E5B47) fő szín, grafitszürke szöveg, meleg-szürke felületek. Emberibb,
+  kevésbé „gépi” felület: nincsenek nagybetűs címkék a címek fölött, a táblafejlécek, menücsoportok és státuszcímkék
+  mondatkezdők, a díszítő pöttyök eltűntek (a számlálók egy mondatban: „4 aktív, 3 hiányzó rezsi…”), a felületek
+  laposak, árnyék nélkül. A szövegekből kikerült a hosszú gondolatjel és a „·” elválasztó (természetes írásjelek
+  helyette; a jogi szövegekben a magyar „–” gondolatjel), az oldalcímek „Oldal | Lakáskezelő” alakúak, a Vezérlőpult
+  kevesebb magyarázó alcímet kapott.
 - **2026.11.03.7** — Arculat-finomítás: fekete és narancs helyett zafírkék (#2257E6) fő szín (gombok, linkek, aktív
   elemek, márkajel, diagramok), sötét tengerészkék (#13233F) szöveg, hideg kékesszürke felületek és világos
   oldalsáv. A diagramok kategóriaszínei narancs és citromsárga nélkül (színtévesztésre ellenőrizve).

@@ -39,11 +39,11 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="avatar" id="avatar">··</div>
-      <div class="who"><span id="who-name">—</span><small id="who-company"></small></div>
+      <div class="avatar" id="avatar"></div>
+      <div class="who"><span id="who-name">–</span><small id="who-company"></small></div>
     </div>
     <button class="btn btn-secondary btn-sm logout-btn" type="button" id="logout-link">${icon('log-out')}Kilépés</button>
-    <span class="sidebar-version"><span id="version-tag"></span> · <a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelés</a></span>
+    <span class="sidebar-version"><span id="version-tag"></span><br><a href="aszf.html" target="_blank">ÁSZF</a> · <a href="adatkezeles.html" target="_blank">Adatkezelés</a></span>
   </aside>`);
 
   // Az adatlap (property-detail.html) az Ingatlanok menüpont alá tartozik.
@@ -106,10 +106,10 @@
     let text = null;
     if (st.locked) {
       tone = 'danger';
-      text = 'A fiók csak olvasható, mert nincs érvényes előfizetés. Az adataid megvannak — előfizetés után újra szerkesztheted őket.';
+      text = 'A fiók csak olvasható, mert nincs érvényes előfizetés. Az adataid megvannak, előfizetés után újra szerkesztheted őket.';
     } else if (st.status === 'PastDue') {
       tone = 'warn';
-      text = `Nem sikerült megújítani az előfizetést. ${st.graceEndsAt ? fmt(st.graceEndsAt) + '-ig' : 'Néhány napig'} még használható — fizess új kártyával.`;
+      text = `Nem sikerült megújítani az előfizetést. ${st.graceEndsAt ? fmt(st.graceEndsAt) + '-ig' : 'Néhány napig'} még használható. Fizess új kártyával.`;
     } else if (st.status === 'Trial') {
       const n = daysLeft(st.trialEndsAt);
       tone = n <= 3 ? 'warn' : 'info';

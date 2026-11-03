@@ -128,7 +128,7 @@ APP_INFO.then((v) => {
     const ribbon = document.createElement('div');
     ribbon.id = 'env-ribbon';
     ribbon.className = 'env-ribbon';
-    ribbon.textContent = `TESZT KÖRNYEZET · v${v.version} · kitalált adatok, e-mail csak a felhasználóknak megy`;
+    ribbon.textContent = `Tesztkörnyezet (v${v.version}): kitalált adatok, e-mail csak a felhasználóknak megy`;
     document.body.prepend(ribbon);
     document.documentElement.classList.add('has-env-ribbon');
     if (!document.title.startsWith('[TESZT]')) document.title = `[TESZT] ${document.title}`;
@@ -182,7 +182,7 @@ function formatMoney(amount, currency) {
 }
 
 function formatDate(value) {
-  if (!value) return '—';
+  if (!value) return '–';
   const d = new Date(value);
   return d.toLocaleDateString('hu-HU');
 }

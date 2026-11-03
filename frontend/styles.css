@@ -1,44 +1,40 @@
 /* ============================================================
    Lakáskezelő — közös dizájnrendszer
-   Paletta: zafírkék (#2257E6) a fő szín — bizalmat és minőséget sugall, élénk, de nem kiabál —, mélyebb
-   árnyalata (#174BC2) a ráhúzáshoz; a szöveg sötét tengerészkék (#13233F), nem fekete; a felületek hideg,
-   kékes szürkék. Betű: Geist + Geist Mono. Eszköz, nem marketingoldal: a gombokon nincs dekoratív
-   színátmenet, a számok egymás alá igazodnak (tabular-nums), és az elválasztást hajszálvonalak végzik.
+   Paletta: mély erdőzöld (#1E5B47) a fő szín, grafitszürke (#24302C) szöveg, meleg-szürke felületek.
+   Betű: Geist + Geist Mono. Eszköz, nem marketingoldal: lapos felületek hajszálvonallal (árnyék csak a
+   lebegő elemeken: ablak, lenyíló lista), szerény lekerekítés, mondatkezdő (nem csupa nagybetűs)
+   feliratok, díszítő pöttyök és színátmenetek nélkül. A számok egymás alá igazodnak (tabular-nums).
 
-   Kontraszt (WCAG AA): a #2257E6 fehéren 5,9:1, a halványkék kitöltésen 5,2:1 — így ugyanaz a kék
-   jó gombkitöltésnek (fehér felirattal) és szövegnek (link, aktív menüpont) is.
+   Kontraszt (WCAG AA): a zöld fehéren 7,9:1, a halványzöld kitöltésen 6,8:1 — gombnak (fehér felirattal)
+   és szövegnek is jó; a halvány szövegszín (#626D69) fehéren 5,4:1, a háttéren 4,95:1.
 
    Minden oldal ezt tölti be; az oldalak saját <style> blokkja csak elrendezést ad hozzá, és ezeket a
    tokeneket/osztályokat használja. Az adatlapok (property-detail.html) komponensei a detail.css-ben.
    ============================================================ */
 
 :root{
-  /* ---------- a paletta ---------- */
-  --brand-blue:#2257E6;
-  --brand-navy:#13233F;
-
-  /* ---------- felületek (hideg, kékes szürkék) ---------- */
-  --bg:#F4F7FB;            /* az app háttere — erről emelkednek ki a fehér kártyák */
+  /* ---------- felületek (meleg-szürke) ---------- */
+  --bg:#F5F6F4;            /* az app háttere — erről emelkednek ki a fehér felületek */
   --surface:#FFFFFF;
-  --surface-2:#F4F7FB;     /* táblázatfej, besüllyesztett mezők */
-  --surface-sunken:#F4F7FB;
-  --line:#E2E8F2;          /* hajszálvonal a dolgok között */
-  --line-strong:#8592A8;   /* vezérlő (mező, másodlagos gomb) széle — 3:1 fehéren (WCAG 1.4.11) */
+  --surface-2:#F5F6F4;     /* táblázatfej, besüllyesztett mezők */
+  --surface-sunken:#F5F6F4;
+  --line:#E4E7E3;          /* hajszálvonal a dolgok között */
+  --line-strong:#8C9692;   /* vezérlő (mező, másodlagos gomb) széle — 3:1 fehéren (WCAG 1.4.11) */
 
   /* ---------- szöveg ---------- */
-  --ink:#13233F;           /* sötét tengerészkék — fekete helyett */
-  --ink-soft:#3D4B63;
-  --muted:#5B6880;         /* AA fehéren (5,6:1) és --surface-2-n is (5,2:1) */
+  --ink:#24302C;           /* grafitszürke, zöldes beütéssel — nem fekete */
+  --ink-soft:#4A5652;
+  --muted:#626D69;
   --on-accent:#FFFFFF;
 
-  /* ---------- fő szín (zafírkék) ---------- */
-  --accent:#2257E6;        /* gomb, link, aktív állapot — fehéren 5,9:1 */
-  --accent-deep:#174BC2;   /* ráhúzás, szöveg a halványkék kitöltésen */
-  --accent-bright:#2257E6;
-  --accent-bg:#EAF1FE;
-  --accent-border:#BCD0FA;
-  --accent-ring:rgba(34,87,230,0.22);
-  --grad-brand:var(--accent); /* a márkajel tömör kék — színátmenet nélkül */
+  /* ---------- fő szín (erdőzöld) ---------- */
+  --accent:#1E5B47;
+  --accent-deep:#164536;   /* ráhúzás, szöveg a halványzöld kitöltésen */
+  --accent-bright:#2F7A5F; /* diagram-sáv, kitöltés */
+  --accent-bg:#E7F0EC;
+  --accent-border:#BFD5CB;
+  --accent-ring:rgba(30,91,71,0.22);
+  --grad-brand:var(--accent); /* a márkajel tömör zöld — színátmenet nélkül */
 
   /* ---------- szemantikus (állapotok) ---------- */
   --green:#067647;
@@ -57,15 +53,15 @@
   /* ---------- lekerekítés ----------
      A vezérlők (gomb, mező, fül, menüpont) szögletesebbek, a címkék (státusz, számláló) kapszulák:
      ránézésre látszik, mire lehet kattintani és mi csak tényt közöl. */
-  --radius-sm:8px;
-  --radius-md:10px;
-  --radius-lg:12px;
+  --radius-sm:6px;
+  --radius-md:8px;
+  --radius-lg:8px;
   --radius-pill:999px;
 
-  --shadow-xs:0 1px 2px rgba(19,35,63,0.05);
-  --shadow-sm:0 1px 2px rgba(19,35,63,0.06),0 1px 1px rgba(19,35,63,0.04);
-  --shadow-md:0 8px 20px -8px rgba(19,35,63,0.14),0 2px 5px -2px rgba(19,35,63,0.07);
-  --shadow-lg:0 24px 48px -16px rgba(19,35,63,0.24),0 6px 14px -6px rgba(19,35,63,0.12);
+  --shadow-xs:none;
+  --shadow-sm:none;
+  --shadow-md:0 8px 20px -8px rgba(36,48,44,0.14),0 2px 5px -2px rgba(36,48,44,0.07);
+  --shadow-lg:0 24px 48px -16px rgba(36,48,44,0.24),0 6px 14px -6px rgba(36,48,44,0.12);
 
   --font-display:'Geist','Segoe UI',system-ui,sans-serif;
   --font-body:'Geist','Segoe UI',system-ui,sans-serif;
@@ -136,9 +132,8 @@ table,.mono,.stat-value,input,select,textarea{font-variant-numeric:tabular-nums;
 /* ============================================================
    Státusz-címkék — egy egységes címkerendszer (kapszula).
    ============================================================ */
-.status-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--radius-pill);
-  text-transform:uppercase;letter-spacing:0.03em;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line);white-space:nowrap;}
-.status-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
+.status-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px;
+  background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line);white-space:nowrap;line-height:1.5;}
 .status-tag.ok,.status-tag.Sent{background:var(--green-bg);color:var(--green);border-color:var(--green-border);}
 .status-tag.warn,.status-tag.Generated{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border);}
 .status-tag.missing,.status-tag.Failed{background:var(--coral-bg);color:var(--coral);border-color:var(--coral-border);}
@@ -161,8 +156,8 @@ table,.mono,.stat-value,input,select,textarea{font-variant-numeric:tabular-nums;
    Táblázatok — sűrű, pontos, admin-jellegű.
    ============================================================ */
 table{width:100%;border-collapse:collapse;font-size:13.5px;}
-thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);
-  font-weight:700;padding:11px 14px;border-bottom:1px solid var(--line-strong);background:var(--surface-2);vertical-align:bottom;}
+thead th{text-align:left;font-size:12.5px;color:var(--muted);
+  font-weight:600;padding:11px 14px;border-bottom:1px solid var(--line-strong);background:var(--surface-2);vertical-align:bottom;}
 tbody td{padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink);}
 thead th:first-child,tbody td:first-child{padding-left:20px;}
 thead th:last-child,tbody td:last-child{padding-right:20px;}
@@ -236,7 +231,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 /* ============================================================
    Dialógus — minden hozzáadás/szerkesztés. A .modal-lg a nagyobb, füles dialógusokhoz.
    ============================================================ */
-.modal-overlay{position:fixed;inset:0;background:rgba(19,35,63,0.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;
+.modal-overlay{position:fixed;inset:0;background:rgba(36,48,44,0.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;
   padding:24px;z-index:250;opacity:0;pointer-events:none;transition:opacity .18s ease;}
 .modal-overlay.open{opacity:1;pointer-events:auto;}
 .modal{background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
@@ -270,7 +265,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .brand-name small{display:block;font-size:11px;font-weight:600;letter-spacing:0;color:var(--muted);margin-top:2px;}
 /* Csak a menüpontok görögnek — a márkajel és a lábléc a helyén marad. */
 .nav-scroll{flex:1;min-height:0;overflow-y:auto;margin:0 -16px;padding:0 16px;}
-.nav-label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);padding:0 12px;margin:16px 0 6px;font-weight:700;}
+.nav-label{font-size:12px;color:var(--muted);padding:0 12px;margin:16px 0 6px;font-weight:700;}
 .nav-label:first-child{margin-top:0;}
 .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:500;
   color:var(--ink-soft);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--font-body);margin-bottom:1px;position:relative;
@@ -292,8 +287,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .sidebar-footer .who small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .logout-btn{flex-shrink:0;width:100%;justify-content:center;margin-top:12px;}
 .logout-btn + .logout-btn{margin-top:6px;}
-/* A Platform admin felület oldalsávja tengerészkék márkajellel — hogy ránézésre is elkülönüljön az alkalmazástól. */
-.platform-sidebar .brand-mark{background:var(--brand-navy);}
+/* A Platform admin felület oldalsávja grafit márkajellel — hogy ránézésre is elkülönüljön az alkalmazástól. */
+.platform-sidebar .brand-mark{background:var(--ink);}
 /* A hidden attribútum mindig rejtsen (a .btn, .nav-item stb. saját display-e ne írja felül). */
 [hidden]{display:none !important;}
 .sidebar-version{display:block;flex-shrink:0;text-align:center;font-size:11px;color:var(--muted);padding-top:8px;}
@@ -306,19 +301,17 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
    Oldalfejléc — tájékoztat (melyik rész vagyok, mi a lista állapota), nem magyaráz.
    ============================================================ */
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px;}
-.page-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--muted);margin-bottom:5px;}
-.page-header h1{font-family:var(--font-display);font-weight:600;font-size:27px;letter-spacing:-0.025em;color:var(--ink);}
+.page-header h1{font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.02em;color:var(--ink);}
 .page-header p{color:var(--ink-soft);font-size:13.5px;margin-top:5px;font-weight:500;max-width:70ch;}
 .page-header > .btn,.page-header > div:last-child > .btn{flex-shrink:0;}
-/* Élő számlálók, amint megjön az adat — "8 aktív · 2 hiányzó rezsi". Üresen nem foglal helyet. */
-.page-state{display:flex;flex-wrap:wrap;align-items:center;gap:7px 14px;margin-top:9px;font-size:13px;font-weight:600;color:var(--ink-soft);}
+/* Élő számlálók, amint megjön az adat, egy mondatként: "8 aktív, 2 hiányzó rezsi". Üresen nem foglal helyet. */
+.page-state{margin-top:8px;font-size:13.5px;font-weight:500;color:var(--ink-soft);}
 .page-state:empty{display:none;}
-.page-state .s{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;}
-.page-state .s::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--line-strong);}
-.page-state .s.ok::before{background:var(--green-solid);}
-.page-state .s.warn::before{background:var(--amber-solid);}
-.page-state .s.crit::before{background:var(--coral-solid);}
-.page-state .s b{font-variant-numeric:tabular-nums;color:var(--ink);}
+.page-state .s{white-space:nowrap;}
+.page-state .s + .s::before{content:", ";}
+.page-state .s b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;}
+.page-state .s.warn b{color:var(--amber);}
+.page-state .s.crit b{color:var(--coral);}
 
 /* Teszt-környezet jelzése (app.js): borostyán sáv az oldal tetején; a váz ennyivel rövidebb. */
 .env-ribbon{position:fixed;top:0;left:0;right:0;z-index:400;height:26px;display:flex;align-items:center;justify-content:center;
@@ -336,7 +329,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
   border-radius:var(--radius-sm);border:1px solid var(--line);background:#fff;color:var(--ink);
   align-items:center;justify-content:center;box-shadow:var(--shadow-sm);cursor:pointer;}
 .mobile-nav-toggle svg{width:18px;height:18px;}
-.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(19,35,63,0.5);z-index:190;opacity:0;
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(36,48,44,0.5);z-index:190;opacity:0;
   pointer-events:none;transition:opacity .2s ease;}
 .app.sidebar-open .sidebar-backdrop{opacity:1;pointer-events:auto;}
 

@@ -115,7 +115,7 @@
     $('gp-pct').textContent = '0%';
     $('gp-state').textContent = 'Indítás…';
     $('gp-result').className = 'gp-result';
-    $('gp-sub').textContent = `${propertyName ? `${propertyName} · ` : ''}${year}. ${MONTH_NAMES[month - 1].toLowerCase()}`;
+    $('gp-sub').textContent = `${propertyName ? `${propertyName}, ` : ''}${year}. ${MONTH_NAMES[month - 1].toLowerCase()}`;
     const close = $('gp-close');
     close.disabled = true;
     close.textContent = 'Generálás folyamatban…';
@@ -145,8 +145,8 @@
               ended = true;
               invoice = msg.invoice;
               if (invoice.status === 'Failed') finish('error', 'A számla nem készült el.', invoice.errorMessage || '');
-              else if (invoice.status === 'Sent') finish('ok', `Kész: ${invoice.number} — elküldve a bérlőnek.`, `Összeg: ${formatCurrency(invoice.amountTotal)}`);
-              else finish('warn', `Kész: ${invoice.number} — legenerálva, de e-mailben nem ment ki.`, 'A bérlőnek nincs e-mail címe, vagy a küldés nem sikerült. A PDF a Számlázás oldalon letölthető.');
+              else if (invoice.status === 'Sent') finish('ok', `${invoice.number}: elkészült, és elküldtük a bérlőnek.`, `Összeg: ${formatCurrency(invoice.amountTotal)}`);
+              else finish('warn', `${invoice.number}: elkészült, de e-mailben nem ment ki.`, 'A bérlőnek nincs e-mail címe, vagy a küldés nem sikerült. A PDF a számlák listájából letölthető.');
             } else if (msg.type === 'error') { ended = true; finish('error', msg.message || 'Hiba történt a generálás során.'); }
           };
           for (;;) {
@@ -214,7 +214,7 @@
     $('ic-year').value = p?.nextPeriodYear ?? now.getFullYear();
     $('ic-month').value = String(p?.nextPeriodMonth ?? now.getMonth() + 1);
     $('ic-hint').textContent = p
-      ? `A következő automatikus kiküldés: ${String(p.nextBillingAt).slice(0, 10).replace(/-/g, '. ')}. — a ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}i számla.${p.isActive ? '' : ' Az ingatlan inaktív.'}`
+      ? `A következő automatikus kiküldés: ${String(p.nextBillingAt).slice(0, 10).replace(/-/g, '. ')}, ez a ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}i számla.${p.isActive ? '' : ' Az ingatlan inaktív.'}`
       : '';
   }
   $('ic-property').addEventListener('change', applyDefaults);
@@ -228,7 +228,7 @@
     $('ic-property').innerHTML = list.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
     $('ic-property-field').hidden = !!propertyId;
     $('ic-sub').textContent = propertyId && list[0]
-      ? `${list[0].name} — válaszd ki az időszakot. A számlára az időszak rezsi tételei kerülnek.`
+      ? `${list[0].name}: válaszd ki az időszakot. A számlára az időszak rezsi tételei kerülnek.`
       : 'Válaszd ki az ingatlant és az időszakot. A számlára az időszak rezsi tételei kerülnek.';
     if (!list.length) {
       await uiAlert('Nincs aktív ingatlan, amihez számla készülhetne.', { title: 'Számla készítése' });
