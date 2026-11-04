@@ -4,6 +4,12 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+Jelenleg nincs ilyen változás.
+
+## Élesben
+
+### v2026.11.04.3 — 2026. 11. 04.
+
 - **2026.11.04.3** — Rezsi felvétel: az évválasztó és a hónapok táblázata sincs külön dobozban (csak a grafikon kártya).
 - **2026.11.04.2** — Rezsi felvétel:
   - az ingatlan kiválasztása után nem ugrik fel magától a felvételi ablak, csak az ingatlan rezsi-felülete nyílik meg;
@@ -21,8 +27,6 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
     linkben is benne van (`?id=…`), így közvetlenül is megnyitható.
   - Ha csak egy ingatlan van, a lista kimarad.
   - Telefonon a lista kártyaszerű sorokból áll, nincs oldalirányú görgetés.
-
-## Élesben
 
 ### v2026.11.03.21 — 2026. 11. 03.
 
