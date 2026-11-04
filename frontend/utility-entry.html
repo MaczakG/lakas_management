@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="charts.css">
 <style>
-  .context-row{display:grid;grid-template-columns:160px;gap:12px;}
+  .context-row{display:grid;grid-template-columns:160px;gap:12px;margin-bottom:16px;}
   .picker-chevron{width:18px;height:18px;color:var(--muted);display:block;margin-left:auto;}
   #picker-tbody tr.is-inactive .cell-main{color:var(--muted);}
   .page-header .btn svg{width:16px;height:16px;}
@@ -60,11 +60,9 @@
 
     <!-- 2. lépés: a kiválasztott ingatlan rezsije -->
     <div id="ue-entry" hidden>
-    <section class="section">
-      <div class="context-row">
-        <div class="field"><label for="ue-year">Év</label><input type="number" id="ue-year"></div>
-      </div>
-    </section>
+    <div class="context-row">
+      <div class="field"><label for="ue-year">Év</label><input type="number" id="ue-year"></div>
+    </div>
 
     <section class="section viz-root">
       <div class="viz-head">
@@ -78,14 +76,12 @@
       <div class="viz-plot" id="chart-plot"></div>
     </section>
 
-    <section class="section">
-      <div class="card-table">
+    <div class="card-table">
         <table>
           <thead><tr><th>Hónap</th><th>Tételek</th><th>Összeg</th><th>Állapot</th></tr></thead>
           <tbody id="months-tbody"><tr class="empty-row"><td colspan="4">Betöltés...</td></tr></tbody>
         </table>
-      </div>
-    </section>
+    </div>
     </div>
   </main>
 </div>
