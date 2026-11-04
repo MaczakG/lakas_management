@@ -4,6 +4,7 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.04.3** — Rezsi felvétel: az évválasztó és a hónapok táblázata sincs külön dobozban (csak a grafikon kártya).
 - **2026.11.04.2** — Rezsi felvétel:
   - az ingatlan kiválasztása után nem ugrik fel magától a felvételi ablak, csak az ingatlan rezsi-felülete nyílik meg;
   - az ingatlanlista teljes szélességű, külön doboz nélküli táblázat.
