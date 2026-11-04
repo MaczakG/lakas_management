@@ -4,7 +4,19 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
-Jelenleg nincs ilyen változás.
+- **2026.11.04** — Rezsi felvétel: először a lakás kiválasztása.
+  - Ha több ingatlan van, az oldal egy listával indul. Minden sorban szerepel:
+    - a bérlő;
+    - a következő bizonylat hónapja és a kiállítás napja;
+    - a rezsi állapota (Rögzítve / Hiányzik).
+
+    Az inaktív ingatlanok a lista végén vannak.
+  - Egy sorra kattintva megnyílik az ingatlan rezsi-felülete (hónapok, grafikon), és rögtön feljön a felvételi
+    ablak a következő bizonylat hónapjára.
+  - „Másik ingatlan” gombbal vagy a böngésző Vissza gombjával lehet visszamenni a listára. Az ingatlan címe a
+    linkben is benne van (`?id=…`), így közvetlenül is megnyitható.
+  - Ha csak egy ingatlan van, a lista kimarad.
+  - Telefonon a lista kártyaszerű sorokból áll, nincs oldalirányú görgetés.
 
 ## Élesben
 
