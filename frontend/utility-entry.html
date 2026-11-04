@@ -49,14 +49,14 @@
     </div>
 
     <!-- 1. lépés: ingatlan választása (csak ha több van) -->
-    <section class="section" id="ue-picker" hidden>
+    <div id="ue-picker" hidden>
       <div class="card-table">
         <table>
           <thead><tr><th>Ingatlan</th><th>Következő bizonylat</th><th>Rezsi</th><th></th></tr></thead>
           <tbody id="picker-tbody"><tr class="empty-row"><td colspan="4">Betöltés...</td></tr></tbody>
         </table>
       </div>
-    </section>
+    </div>
 
     <!-- 2. lépés: a kiválasztott ingatlan rezsije -->
     <div id="ue-entry" hidden>
@@ -105,13 +105,13 @@ let lastChart = null; // { entries, year } — átméretezéskor újrarajzoljuk
 async function loadProperties() {
   const res = await apiFetch('/api/properties');
   properties = (await res.json()).sort((a, b) => (b.isActive - a.isActive) || a.name.localeCompare(b.name, 'hu'));
-  route(false);
+  route();
 }
 
-function route(fromPick) {
+function route() {
   const id = new URLSearchParams(location.search).get('id');
   const selected = properties.find((p) => p.id === id) || (properties.length === 1 ? properties[0] : null);
-  if (selected) showEntry(selected, fromPick);
+  if (selected) showEntry(selected);
   else showPicker();
 }
 
@@ -137,14 +137,13 @@ function showPicker() {
       <td><svg class="picker-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#chevron-right"/></svg></td>
     </tr>`).join('');
   tbody.querySelectorAll('[data-pick]').forEach((row) => {
-    const pick = () => { history.pushState(null, '', `?id=${encodeURIComponent(row.dataset.pick)}`); route(true); };
+    const pick = () => { history.pushState(null, '', `?id=${encodeURIComponent(row.dataset.pick)}`); route(); };
     row.addEventListener('click', pick);
     row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
   });
 }
 
-// fromPick: a listából választva rögtön megnyílik a felvételi ablak a következő bizonylat hónapjára.
-async function showEntry(property, fromPick) {
+async function showEntry(property) {
   current = property;
   document.title = `Rezsi: ${property.name} | Lakáskezelő`;
   document.getElementById('ue-title').textContent = property.name;
@@ -154,14 +153,13 @@ async function showEntry(property, fromPick) {
   document.getElementById('ue-entry').hidden = false;
   yearInput.value = property.nextPeriodYear || new Date().getFullYear();
   await loadMonths();
-  if (fromPick && property.isActive) openMonth(property.nextPeriodMonth);
 }
 
 document.getElementById('ue-back').addEventListener('click', () => {
   history.pushState(null, '', location.pathname);
-  route(false);
+  route();
 });
-window.addEventListener('popstate', () => route(false));
+window.addEventListener('popstate', () => route());
 
 async function loadMonths() {
   if (!current) return;
