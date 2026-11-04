@@ -8,7 +8,24 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="charts.css">
 <style>
-  .context-row{display:grid;grid-template-columns:2fr 1fr;gap:12px;max-width:520px;}
+  .context-row{display:grid;grid-template-columns:160px;gap:12px;margin-bottom:16px;}
+  .picker-chevron{width:18px;height:18px;color:var(--muted);display:block;margin-left:auto;}
+  #picker-tbody tr.is-inactive .cell-main{color:var(--muted);}
+  .page-header .btn svg{width:16px;height:16px;}
+  /* Telefonon a választólista kártyaszerű sorokká alakul (nincs oldalirányú görgetés). */
+  @media (max-width:720px){
+    #ue-picker .card-table{overflow:visible;}
+    #ue-picker table{min-width:0;width:100%;}
+    #ue-picker thead{display:none;}
+    #ue-picker table,#ue-picker tbody{display:block;}
+    #ue-picker tbody tr{display:grid;grid-template-columns:1fr auto;column-gap:12px;row-gap:6px;padding:14px 16px;border-bottom:1px solid var(--line);}
+    #ue-picker tbody tr:last-child{border-bottom:0;}
+    #ue-picker tbody td{display:block;padding:0;border:0;}
+    #ue-picker tbody td:nth-child(-n+3){grid-column:1;}
+    #ue-picker tbody td:nth-child(4){grid-column:2;grid-row:1 / span 3;align-self:center;}
+    #ue-picker tbody tr.empty-row{display:block;}
+    .page-header{flex-wrap:wrap;}
+  }
   .chart-total{font-family:var(--font-display);font-size:22px;font-weight:600;color:var(--ink);letter-spacing:-0.02em;text-align:right;}
   .chart-total small{display:block;font-family:var(--font-body);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:0;}
   #chart-legend{margin:-4px 0 12px;}
@@ -25,17 +42,27 @@
   <main class="main">
     <div class="page-header">
       <div>
-        <h1>Rezsi felvétel</h1>
-        <p>Válaszd ki az ingatlant és az évet, majd kattints egy hónapra a rezsi tételek felvételéhez vagy megtekintéséhez.</p>
+        <h1 id="ue-title">Rezsi felvétel</h1>
+        <p id="ue-lead">Válaszd ki az ingatlant, amelyhez rezsit rögzítenél.</p>
+      </div>
+      <button class="btn btn-secondary" type="button" id="ue-back" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#arrow-left"/></svg>Másik ingatlan</button>
+    </div>
+
+    <!-- 1. lépés: ingatlan választása (csak ha több van) -->
+    <div id="ue-picker" hidden>
+      <div class="card-table">
+        <table>
+          <thead><tr><th>Ingatlan</th><th>Következő bizonylat</th><th>Rezsi</th><th></th></tr></thead>
+          <tbody id="picker-tbody"><tr class="empty-row"><td colspan="4">Betöltés...</td></tr></tbody>
+        </table>
       </div>
     </div>
 
-    <section class="section">
-      <div class="context-row">
-        <div class="field"><label for="ue-property">Ingatlan</label><select id="ue-property"></select></div>
-        <div class="field"><label for="ue-year">Év</label><input type="number" id="ue-year"></div>
-      </div>
-    </section>
+    <!-- 2. lépés: a kiválasztott ingatlan rezsije -->
+    <div id="ue-entry" hidden>
+    <div class="context-row">
+      <div class="field"><label for="ue-year">Év</label><input type="number" id="ue-year"></div>
+    </div>
 
     <section class="section viz-root">
       <div class="viz-head">
@@ -49,14 +76,13 @@
       <div class="viz-plot" id="chart-plot"></div>
     </section>
 
-    <section class="section">
-      <div class="card-table">
+    <div class="card-table">
         <table>
           <thead><tr><th>Hónap</th><th>Tételek</th><th>Összeg</th><th>Állapot</th></tr></thead>
           <tbody id="months-tbody"><tr class="empty-row"><td colspan="4">Betöltés...</td></tr></tbody>
         </table>
-      </div>
-    </section>
+    </div>
+    </div>
   </main>
 </div>
 
@@ -64,31 +90,83 @@
 <script>
 requireAuth();
 
-const propertySelect = document.getElementById('ue-property');
 const yearInput = document.getElementById('ue-year');
 let properties = [];
+let current = null; // a kiválasztott ingatlan
 
 let lastChart = null; // { entries, year } — átméretezéskor újrarajzoljuk
 
+// Két lépés: több ingatlannál előbb a választólista, utána a kiválasztott ingatlan rezsije (?id=… a címben, így a
+// böngésző Vissza gombja a listára visz). Egy ingatlannál a lista kimarad.
 async function loadProperties() {
-  yearInput.value = new Date().getFullYear();
-
   const res = await apiFetch('/api/properties');
-  properties = await res.json();
-  propertySelect.innerHTML = properties.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
-  if (properties.length > 0) await loadMonths();
+  properties = (await res.json()).sort((a, b) => (b.isActive - a.isActive) || a.name.localeCompare(b.name, 'hu'));
+  route();
 }
 
+function route() {
+  const id = new URLSearchParams(location.search).get('id');
+  const selected = properties.find((p) => p.id === id) || (properties.length === 1 ? properties[0] : null);
+  if (selected) showEntry(selected);
+  else showPicker();
+}
+
+function showPicker() {
+  current = null;
+  document.getElementById('um-overlay')?.classList.remove('open'); // böngésző Vissza nyitott ablaknál
+  document.title = 'Rezsi felvétel | Lakáskezelő';
+  document.getElementById('ue-title').textContent = 'Rezsi felvétel';
+  document.getElementById('ue-lead').textContent = 'Válaszd ki az ingatlant, amelyhez rezsit rögzítenél.';
+  document.getElementById('ue-back').hidden = true;
+  document.getElementById('ue-entry').hidden = true;
+  document.getElementById('ue-picker').hidden = false;
+  const tbody = document.getElementById('picker-tbody');
+  if (!properties.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Még nincs ingatlan. Az Ingatlanok oldalon vehetsz fel.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = properties.map((p) => `
+    <tr class="clickable${p.isActive ? '' : ' is-inactive'}" data-pick="${escapeHtml(p.id)}" tabindex="0">
+      <td class="cell-main">${escapeHtml(p.name)}${p.tenantNames ? `<div class="cell-sub">${escapeHtml(p.tenantNames)}</div>` : ''}</td>
+      <td>${p.isActive ? `${p.nextPeriodYear}. ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}<div class="cell-sub">kiállítás: ${formatDate(p.nextBillingAt)}</div>` : '<span class="status-tag inactive">Inaktív</span>'}</td>
+      <td>${!p.isActive ? '' : p.utilityComplete ? '<span class="status-tag ok">Rögzítve</span>' : '<span class="status-tag missing">Hiányzik</span>'}</td>
+      <td><svg class="picker-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#chevron-right"/></svg></td>
+    </tr>`).join('');
+  tbody.querySelectorAll('[data-pick]').forEach((row) => {
+    const pick = () => { history.pushState(null, '', `?id=${encodeURIComponent(row.dataset.pick)}`); route(); };
+    row.addEventListener('click', pick);
+    row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+}
+
+async function showEntry(property) {
+  current = property;
+  document.title = `Rezsi: ${property.name} | Lakáskezelő`;
+  document.getElementById('ue-title').textContent = property.name;
+  document.getElementById('ue-lead').textContent = 'Kattints egy hónapra a rezsi tételek felvételéhez vagy megtekintéséhez.';
+  document.getElementById('ue-back').hidden = properties.length < 2;
+  document.getElementById('ue-picker').hidden = true;
+  document.getElementById('ue-entry').hidden = false;
+  yearInput.value = property.nextPeriodYear || new Date().getFullYear();
+  await loadMonths();
+}
+
+document.getElementById('ue-back').addEventListener('click', () => {
+  history.pushState(null, '', location.pathname);
+  route();
+});
+window.addEventListener('popstate', () => route());
+
 async function loadMonths() {
-  const propertyId = propertySelect.value;
-  if (!propertyId) return;
+  if (!current) return;
+  const propertyId = current.id;
   const year = Number(yearInput.value);
 
   const entries = await (await apiFetch(`/api/properties/${propertyId}/utility-costs`)).json();
 
 
   // A következő kiküldés időszaka (annak a rezsije kerül a bizonylatra) — a táblázatban jelöljük.
-  const property = properties.find((p) => p.id === propertyId);
+  const property = current;
   const isNext = (month) => property && property.isActive && property.nextPeriodYear === year && property.nextPeriodMonth === month;
 
   const tbody = document.getElementById('months-tbody');
@@ -173,12 +251,11 @@ window.addEventListener('resize', () => {
 });
 
 window.openMonth = (month) => {
-  const property = properties.find((p) => p.id === propertySelect.value);
+  const property = current;
   if (!property) return;
   openUtilityModal(property.id, property.name, Number(yearInput.value), month, { onClose: loadMonths, onSaved: loadMonths });
 };
 
-propertySelect.addEventListener('change', loadMonths);
 yearInput.addEventListener('input', loadMonths);
 
 loadProperties();

@@ -8,6 +8,26 @@ Jelenleg nincs ilyen változás.
 
 ## Élesben
 
+### v2026.11.04.3 — 2026. 11. 04.
+
+- **2026.11.04.3** — Rezsi felvétel: az évválasztó és a hónapok táblázata sincs külön dobozban (csak a grafikon kártya).
+- **2026.11.04.2** — Rezsi felvétel:
+  - az ingatlan kiválasztása után nem ugrik fel magától a felvételi ablak, csak az ingatlan rezsi-felülete nyílik meg;
+  - az ingatlanlista teljes szélességű, külön doboz nélküli táblázat.
+- **2026.11.04** — Rezsi felvétel: először a lakás kiválasztása.
+  - Ha több ingatlan van, az oldal egy listával indul. Minden sorban szerepel:
+    - a bérlő;
+    - a következő bizonylat hónapja és a kiállítás napja;
+    - a rezsi állapota (Rögzítve / Hiányzik).
+
+    Az inaktív ingatlanok a lista végén vannak.
+  - Egy sorra kattintva megnyílik az ingatlan rezsi-felülete (hónapok, grafikon), és rögtön feljön a felvételi
+    ablak a következő bizonylat hónapjára.
+  - „Másik ingatlan” gombbal vagy a böngésző Vissza gombjával lehet visszamenni a listára. Az ingatlan címe a
+    linkben is benne van (`?id=…`), így közvetlenül is megnyitható.
+  - Ha csak egy ingatlan van, a lista kimarad.
+  - Telefonon a lista kártyaszerű sorokból áll, nincs oldalirányú görgetés.
+
 ### v2026.11.03.21 — 2026. 11. 03.
 
 - **2026.11.03.21** — A felvett, de még bizonylatra nem került rezsitétel is tartozásként jelenik meg a bérlő
