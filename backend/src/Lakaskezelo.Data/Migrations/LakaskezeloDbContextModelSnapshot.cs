@@ -1376,6 +1376,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<bool>("ExcludedFromBilling")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("ForwardBilled")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("InvoiceId")
                         .HasColumnType("uuid");
 
@@ -1394,6 +1397,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<Guid>("PropertyId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("UtilityItemId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Year")
                         .HasColumnType("integer");
 
@@ -1403,9 +1409,83 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.HasIndex("InvoiceId");
 
+                    b.HasIndex("UtilityItemId");
+
                     b.HasIndex("PropertyId", "Year", "Month");
 
                     b.ToTable("UtilityCostEntries");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.UtilityItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ForwardBilled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsFixed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.ToTable("UtilityItems");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.UtilityPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("PreparedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("PropertyId", "Year", "Month")
+                        .IsUnique();
+
+                    b.ToTable("UtilityPeriods");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.UtilityReminderLog", b =>
@@ -1779,7 +1859,48 @@ namespace Lakaskezelo.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Lakaskezelo.Domain.Entities.UtilityItem", "UtilityItem")
+                        .WithMany()
+                        .HasForeignKey("UtilityItemId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Invoice");
+
+                    b.Navigation("Property");
+
+                    b.Navigation("UtilityItem");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.UtilityItem", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Property");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.UtilityPeriod", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Property");
                 });

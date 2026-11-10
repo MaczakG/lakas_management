@@ -4,6 +4,26 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.10.8** — Rezsi reform: rezsi tételek, a hónap rezsije magától elkészül (V1.1 / 7. és 8. pont).
+  - Az ingatlan adatlapján új „Rezsi tételek” fül a havonta ismétlődő rezsinek, négy oszloppal: Megnevezés,
+    Összeg, Fix, Tovább számlázandó.
+    - Fix tétel: minden hónapban a megadott összeggel kerül a hónap rezsijébe.
+    - Nem fix tétel: az összeget havonta kell kitölteni („Kitöltendő”). Amíg nincs kitöltve, nem kerül
+      bizonylatra; ha később kitöltik, a következő bizonylatra kerül, a hónapjával jelölve.
+    - Tovább számlázandó = Igen: a bérleti díj már tartalmazza, ezért nem kerül külön a bérlő bizonylatára (és az
+      egyenlegébe sem); csak a tulajdonosi elszámolásban szerepel. Nem: külön sorként rákerül a bizonylatra.
+  - A hónap rezsije a rezsi tételekből készül el, nem kell minden hónapban kézzel felvenni:
+    - gombbal: a havi rezsi ablakban a „Rezsi tételek behúzása” gomb pótolja a hiányzó tételeket;
+    - magától: a rezsi-határnapon (a bizonylat előtt, hogy legyen idő kitölteni a nem fix tételeket), és
+      legkésőbb a bizonylat kiállításakor, kézi és időzített kiállításnál is.
+  - Az automatikus előkészítés hónaponként egyszer fut: a kézzel törölt havi tétel nem jön vissza magától.
+  - Az egyedi (kézzel, akár utólag felvett) tételek továbbra is bekerülnek a bizonylatba. Az egyedi tételnél is
+    beállítható a „Tovább számlázandó”.
+  - A rezsi állapota három értékű lett: Rendben / Kitöltendő / Hiányzik (ingatlanlista, rezsi felvétel,
+    ingatlan adatlap). A rezsi-emlékeztető a kitöltendő tételekre is szól.
+  - Az összeg nélküli tétel már nem kerül (nullás sorként sem) bizonylatra, és nem zárolódik.
+  - Migráció: `UtilityItems` (két új tábla, két új mező a havi tételeken; meglévő adatot nem módosít: a meglévő
+    tételek egyediek, és nem „tovább számlázandók”).
 - **2026.11.10.7** — Csatolmány a rezsitételhez, kiküldés a bizonylattal (V1.1 / 6. pont).
   - A rezsi felvételénél minden tételhez csatolható fájl (pl. a szolgáltatói számla vagy a mérőóra fotója): új
     tételnél a „Csatolmány” gombbal, meglévő tételnél a sor „Csatolmány” gombjával. Egy tételhez legfeljebb 10

@@ -282,14 +282,17 @@ function renderSummary() {
   const thisYear = issued.filter((i) => i.periodYear === year).reduce((sum, i) => sum + Number(i.amountTotal), 0);
   const failed = invoices.filter((i) => i.status === 'Failed' && (!i.cancelledAt && !i.cancelsInvoiceId)).length;
   // A következő kiküldés időszakának rezsije kerül a bizonylatra — ezt nézzük, nem az aktuális hónapot.
-  const utilityNext = utilityEntries.some((u) => u.year === property.nextPeriodYear && u.month === property.nextPeriodMonth);
+  // Ha a hónapnak már vannak tételei, azokból számolunk (a rezsi ablak bezárása után is friss); különben a
+  // szerver állapota dönt (pl. csak fix rezsi tételek: maguktól bekerülnek).
+  const nextEntries = utilityEntries.filter((u) => u.year === property.nextPeriodYear && u.month === property.nextPeriodMonth);
+  const utilityState = nextEntries.length ? (nextEntries.some((u) => u.isPending) ? 'Pending' : 'Ok') : property.utilityState;
   const nextLabel = `${MONTH_NAMES[property.nextPeriodMonth - 1].toLowerCase()}i bizonylathoz`;
   const row = (label, value) => `<div class="prop"><dt>${label}</dt><dd>${value}</dd></div>`;
   document.getElementById('summary').innerHTML = [
     row('Utolsó bizonylat', last ? `<span class="mono">${escapeHtml(last.number)}</span> <span class="dim">${formatDate(last.issuedAt)}</span>` : '<span class="dim">Még nincs</span>'),
     row(`Kiállítva ${year}-ben`, formatCurrency(thisYear)),
     row('Kiállított bizonylatok', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
-    row(`Rezsi a ${nextLabel}`, utilityNext ? '<span class="status-tag ok">Rögzítve</span>' : '<span class="status-tag missing">Hiányzik</span>'),
+    row(`Rezsi a ${nextLabel}`, utilityStateTag(utilityState, nextEntries.length ? 'Rögzítve' : 'Automatikus')),
     row('Kaució', property.sheet.deposit != null ? formatCurrency(property.sheet.deposit) : '<span class="dim">–</span>'),
   ].join('');
 }
@@ -369,6 +372,118 @@ function renderTenantsTab() {
 window.openUtility = (year, month) => {
   window.openUtilityModal(propertyId, property.name, year, month, { onSaved: loadUtility, onClose: loadUtility });
 };
+
+// ---------- Rezsi tételek fül (havonta ismétlődő rezsi) ----------
+
+let utilityItems = [];
+let editingItemId = null;
+const FORWARD_HINT = {
+  true: 'A bérleti díj már tartalmazza: nem kerül külön a bérlő bizonylatára, csak a tulajdonosi elszámolásban szerepel.',
+  false: 'Külön sorként rákerül a bérlő bizonylatára a bérleti díj mellé.',
+};
+
+function renderUtilityItems() {
+  document.getElementById('count-utilityitems').textContent = utilityItems.length || '';
+  const body = document.getElementById('utilityitems-body');
+  if (!utilityItems.length) {
+    body.innerHTML = '<div class="panel-empty">Még nincs rezsi tétel. Az „Új rezsi tétel” gombbal veheted fel a havonta ismétlődő rezsit.</div>';
+    return;
+  }
+  body.innerHTML = `<table>
+    <thead><tr><th>Megnevezés</th><th class="num">Összeg</th><th>Fix</th><th>Tovább számlázandó</th><th></th></tr></thead>
+    <tbody>${utilityItems.map((i) => `
+      <tr>
+        <td class="cell-main">${escapeHtml(i.label)}</td>
+        <td class="num">${i.isFixed ? formatCurrency(i.amount) : '<span class="dim">havonta kitöltendő</span>'}</td>
+        <td>${i.isFixed ? '<span class="status-tag ok">Fix</span>' : '<span class="status-tag warn">Nem fix</span>'}</td>
+        <td title="${escapeHtml(FORWARD_HINT[i.forwardBilled])}">${i.forwardBilled ? '<span class="status-tag inactive">Igen</span>' : 'Nem'}</td>
+        <td class="num row-actions"><button class="btn btn-ghost btn-sm" type="button" onclick="editUtilityItem('${i.id}')">Szerkesztés</button>
+          <button class="btn btn-danger btn-sm" type="button" onclick="deleteUtilityItem('${i.id}')">Törlés</button></td>
+      </tr>`).join('')}</tbody></table>`;
+}
+
+async function loadUtilityItems() {
+  const res = await apiFetch(`/api/properties/${propertyId}/utility-items`);
+  utilityItems = res.ok ? await res.json() : [];
+  renderUtilityItems();
+}
+
+// A rezsi tételek változása után a következő bizonylat rezsi-állapota is változhat (Összegzés tábla).
+async function refreshUtilityState() {
+  const res = await apiFetch(`/api/properties/${propertyId}`);
+  if (!res.ok) return;
+  property.utilityState = (await res.json()).utilityState;
+  renderSummary();
+}
+
+function syncItemForm() {
+  const fixed = document.getElementById('ui-item-fixed').checked;
+  document.getElementById('ui-item-amount-field').hidden = !fixed;
+  document.getElementById('ui-item-fixed-hint').textContent = fixed
+    ? 'Minden hónapban ezzel az összeggel kerül a hónap rezsijébe.'
+    : 'Az összeget havonta kell kitölteni. Amíg nincs kitöltve, a tétel nem kerül bizonylatra.';
+  document.getElementById('ui-item-forward-hint').textContent = FORWARD_HINT[document.getElementById('ui-item-forward').checked];
+}
+
+function openItemDialog(item = null) {
+  editingItemId = item?.id || null;
+  document.getElementById('ui-item-title').textContent = item ? 'Rezsi tétel szerkesztése' : 'Új rezsi tétel';
+  document.getElementById('ui-item-label').value = item?.label || '';
+  document.getElementById('ui-item-fixed').checked = item ? item.isFixed : true;
+  document.getElementById('ui-item-amount').value = item?.amount ?? '';
+  document.getElementById('ui-item-forward').checked = item?.forwardBilled || false;
+  document.getElementById('ui-item-error').classList.remove('show');
+  syncItemForm();
+  document.getElementById('ui-item-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('ui-item-label').focus(), 50);
+}
+const closeItemDialog = () => document.getElementById('ui-item-overlay').classList.remove('open');
+
+window.editUtilityItem = (id) => openItemDialog(utilityItems.find((i) => i.id === id));
+window.deleteUtilityItem = async (id) => {
+  const item = utilityItems.find((i) => i.id === id);
+  if (!item) return;
+  const ok = await uiConfirm(`Törlöd a(z) „${item.label}” rezsi tételt? A már elkészült havi tételek megmaradnak, de a következő hónapokba már nem kerül be.`,
+    { title: 'Rezsi tétel törlése', confirmText: 'Törlés', danger: true });
+  if (!ok) return;
+  const res = await apiFetch(`/api/properties/${propertyId}/utility-items/${id}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 204) { await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült törölni.'), { title: 'Törlés sikertelen' }); return; }
+  await loadUtilityItems();
+  refreshUtilityState();
+};
+
+document.getElementById('add-utility-item').addEventListener('click', () => openItemDialog());
+document.querySelectorAll('[data-close-item]').forEach((b) => b.addEventListener('click', closeItemDialog));
+document.getElementById('ui-item-overlay').addEventListener('mousedown', (e) => { if (e.target.id === 'ui-item-overlay') closeItemDialog(); });
+document.getElementById('ui-item-fixed').addEventListener('change', syncItemForm);
+document.getElementById('ui-item-forward').addEventListener('change', syncItemForm);
+document.getElementById('ui-item-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('ui-item-error');
+  const fail = (message) => { errorEl.textContent = message; errorEl.classList.add('show'); };
+  const isFixed = document.getElementById('ui-item-fixed').checked;
+  const amount = Number(document.getElementById('ui-item-amount').value);
+  const payload = {
+    label: document.getElementById('ui-item-label').value.trim(),
+    isFixed,
+    amount: isFixed ? amount : null,
+    forwardBilled: document.getElementById('ui-item-forward').checked,
+  };
+  if (!payload.label) { fail('Add meg a tétel megnevezését.'); return; }
+  if (isFixed && !(amount > 0)) { fail('Fix tételnél add meg az összeget.'); return; }
+  const save = document.getElementById('ui-item-save');
+  save.disabled = true;
+  try {
+    const res = await apiFetch(`/api/properties/${propertyId}/utility-items${editingItemId ? `/${editingItemId}` : ''}`,
+      { method: editingItemId ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+    if (!res.ok) { fail(errorMessage(res, await readJson(res), 'Nem sikerült menteni.')); return; }
+    closeItemDialog();
+    await loadUtilityItems();
+    refreshUtilityState();
+  } finally {
+    save.disabled = false;
+  }
+});
 
 // ---------- Beköltözés fül ----------
 
@@ -669,11 +784,12 @@ async function load() {
   let tab = 'invoices';
   try { tab = localStorage.getItem('propertyDetailTab') || tab; } catch { /* nem baj */ }
   // #fülnév a címben (pl. a dokumentum adatlapjáról visszalépve: …#documents) elsőbbséget kap.
-  const tabs = ['invoices', 'utility', 'tenants', 'movein', 'documents'];
+  const tabs = ['invoices', 'utility', 'utilityitems', 'tenants', 'movein', 'documents'];
   if (tabs.includes(location.hash.slice(1))) tab = location.hash.slice(1);
   activateTab(tabs.includes(tab) ? tab : 'invoices');
   mountPropertyDocuments();
   loadMoveIn();
+  loadUtilityItems();
 }
 
 load();

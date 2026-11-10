@@ -8,7 +8,8 @@ namespace Lakaskezelo.Api.Billing;
 public static class TenantBalances
 {
     // A még bizonylatra nem került (nyitott) rezsitételek, az ingatlan jelenlegi bérlőjéhez rendelve — ő kapja a következő
-    // bizonylaton. Csak a következő bizonylatra kerülhetők számítanak: nem kizárt, és legfeljebb 36 hónapos.
+    // bizonylaton. Csak a következő bizonylatra kerülhetők számítanak: nem kizárt, legfeljebb 36 hónapos, van összege, és nem
+    // „tovább számlázandó” (azt a bérleti díj tartalmazza, nem a bérlő tartozása).
     public static async Task<List<(Guid TenantId, UtilityCostEntry Entry)>> OpenUtilitiesAsync(LakaskezeloDbContext db, Guid? tenantId, CancellationToken ct)
     {
         var now = BudapestClock.Now;
@@ -24,7 +25,7 @@ public static class TenantBalances
         var (fromYear, fromMonth) = InvoiceGenerationService.BillingWindowStart(now.Year, now.Month);
         var fromKey = fromYear * 12 + fromMonth;
         var entries = await db.UtilityCostEntries
-            .Where(u => propertyIds.Contains(u.PropertyId) && u.InvoiceId == null && !u.ExcludedFromBilling && u.Amount != 0
+            .Where(u => propertyIds.Contains(u.PropertyId) && u.InvoiceId == null && !u.ExcludedFromBilling && u.Amount != 0 && !u.ForwardBilled
                 && u.Year * 12 + u.Month >= fromKey)
             .ToListAsync(ct);
         return [.. entries.Select(u => (current[u.PropertyId], u))];

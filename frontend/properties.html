@@ -160,7 +160,7 @@ async function loadProperties() {
   setPageState([
     { n: active.length, label: 'aktív', tone: 'ok' },
     { n: properties.length - active.length, label: 'inaktív' },
-    { n: active.filter((p) => !p.utilityComplete).length, label: 'hiányzó rezsi a következő bizonylathoz', tone: 'warn' },
+    { n: active.filter((p) => !p.utilityComplete).length, label: 'hiányos rezsi a következő bizonylathoz', tone: 'warn' },
   ]);
   renderProperties();
 }
@@ -181,7 +181,7 @@ function renderProperties() {
       <td>${escapeHtml(p.ownerNames || '–')}</td>
       <td>${escapeHtml(p.tenantNames || '–')}</td>
       <td>${formatMoney(p.rentAmount, p.rentCurrency)}</td>
-      <td title="A következő bizonylat (${p.nextPeriodYear}. ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}) rezsije"><span class="status-tag ${p.utilityComplete ? 'ok' : 'missing'}">${p.utilityComplete ? 'Rendben' : 'Hiányzik'}</span><div class="cell-sub">${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}i bizonylathoz</div></td>
+      <td title="A következő bizonylat (${p.nextPeriodYear}. ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}) rezsije">${utilityStateTag(p.utilityState)}<div class="cell-sub">${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}i bizonylathoz</div></td>
       <td>${String(p.billingDayOfMonth).padStart(2, '0')}. nap ${String(p.billingHour).padStart(2, '0')}:${String(p.billingMinute).padStart(2, '0')}</td>
       <td>${p.isActive ? formatNextBilling(p.nextBillingAt, p.billingDayOfMonth) : '–'}</td>
     </tr>

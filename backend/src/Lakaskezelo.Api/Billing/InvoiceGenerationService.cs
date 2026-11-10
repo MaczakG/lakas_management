@@ -70,8 +70,16 @@ public class InvoiceGenerationService(
                 $"Erre az időszakra már ki van állítva: {existing.Number}. Javításhoz sztornózd, és utána készíts újat.");
         }
         var tenant = await FindTenantAsync(property.Id, year, month, ct);
+        // A hónap rezsije a rezsi tételekből, ha még nem készült el (kézi és időzített kiállításnál is): a fix tételek
+        // összeggel, a nem fixek kitöltendőként jönnek létre.
+        await UtilityPeriods.PrepareAsync(db, property.Id, year, month, force: false, ct);
+        await db.SaveChangesAsync(ct);
+
         var utilityLines = await BillableEntriesAsync(property.Id, year, month, existing?.Id, ct);
         foreach (var u in utilityLines) u.InvoiceId = null;
+        // Bizonylatra csak az a tétel kerül, amelynek van összege (a kitöltendő nem fix tétel kimarad, és ha később
+        // kitöltik, a következő bizonylatra kerül), és nem „tovább számlázandó” (azt a bérleti díj már tartalmazza).
+        var billable = utilityLines.Where(u => u.Amount != 0 && !u.ForwardBilled).ToList();
 
         // A bizonylat "Bérleti díj jogosultjai" táblázatához kell a tulajdonos-lista Owner-navigációval.
         await db.Entry(property).Collection(p => p.PropertyOwners).Query().Include(po => po.Owner).LoadAsync(ct);
@@ -144,7 +152,7 @@ public class InvoiceGenerationService(
             // A rezsi tételesen kerül a számlára: a Rezsi felvételben rögzített minden tétel külön sor, a felvett
             // megnevezéssel (pl. Áram, Gáz, Közös költség); előbb az időszak tételei a rögzítés sorrendjében, utána a
             // korábbi hónapokra utólag felvettek, a hónapjukkal jelölve.
-            var billed = utilityLines.Where(u => u.Amount != 0)
+            var billed = billable
                 .OrderBy(u => u.Year == year && u.Month == month ? 0 : 1)
                 .ThenBy(u => u.Year).ThenBy(u => u.Month)
                 .ThenBy(u => u.CreatedAt).ThenBy(u => u.Label)
@@ -264,14 +272,14 @@ public class InvoiceGenerationService(
             invoice.Status = emailed ? InvoiceStatus.Sent : InvoiceStatus.Generated;
             invoice.SentAt = emailed ? DateTime.UtcNow : null;
             // A bizonylatra került rezsitételek innentől zárolva vannak, amíg a bizonylatot nem sztornózzák.
-            foreach (var u in utilityLines) { u.InvoiceId = invoice.Id; u.ExcludedFromBilling = false; }
+            foreach (var u in billable) { u.InvoiceId = invoice.Id; u.ExcludedFromBilling = false; }
             invoice.ErrorMessage = pdfBytes is null ? "A számla elkészült, de a PDF-je még nem tölthető le a számlázóból, ezért e-mailben nem ment ki." : null;
         }
         catch (Exception ex) when (issuedAtProvider)
         {
             logger.LogWarning(ex, "Post-issue step failed for provider invoice {Number}", invoice.Number);
             invoice.Status = InvoiceStatus.Generated;
-            foreach (var u in utilityLines) { u.InvoiceId = invoice.Id; u.ExcludedFromBilling = false; }
+            foreach (var u in billable) { u.InvoiceId = invoice.Id; u.ExcludedFromBilling = false; }
             invoice.ErrorMessage = $"A számla elkészült, de utána hiba történt: {ex.Message}";
         }
         catch (Exception ex)
@@ -346,7 +354,7 @@ public class InvoiceGenerationService(
                 && i.CancelledAt == null && i.CancelsInvoiceId == null)
             .Select(i => (Guid?)i.Id).FirstOrDefaultAsync(ct);
         var tenant = await FindTenantAsync(property.Id, year, month, ct);
-        var entries = (await BillableEntriesAsync(property.Id, year, month, existingId, ct)).Where(u => u.Amount != 0)
+        var entries = (await BillableEntriesAsync(property.Id, year, month, existingId, ct)).Where(u => u.Amount != 0 && !u.ForwardBilled)
             .OrderBy(u => u.Year == year && u.Month == month ? 0 : 1)
             .ThenBy(u => u.Year).ThenBy(u => u.Month).ThenBy(u => u.CreatedAt).ThenBy(u => u.Label)
             .ToList();

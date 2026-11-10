@@ -421,14 +421,27 @@ const uiPrompt = (message, opts) => uiDialog('prompt', message, opts);
   });
 })();
 
-// Egy rezsi-hónap állapota a tételei alapján (tételenkénti zárolás): mind bizonylaton → „Bizonylaton”; van bizonylaton
-// lévő és még nyitott is (utólag felvett) → „Utólagos tétel” (a következő bizonylatra kerül); egyik sem → „Rögzítve”.
+// Egy rezsi-hónap állapota a tételei alapján (tételenkénti zárolás): van kitöltendő (még összeg nélküli) tétel →
+// „Kitöltendő”; mind bizonylaton → „Bizonylaton”; van bizonylaton lévő és még nyitott is (utólag felvett) →
+// „Utólagos tétel” (a következő bizonylatra kerül); egyik sem → „Rögzítve”. A „tovább számlázandó” tétel soha nem
+// kerül bizonylatra, ezért a zárolásnál nem számít.
 function utilityPeriodTag(entries) {
-  const locked = entries.filter((e) => e.isLocked).length;
   if (!entries.length) return '<span class="status-tag missing">Nincs adat</span>';
-  if (locked === entries.length) {
-    return entries.some((e) => e.invoiceId) ? '<span class="status-tag inactive">Bizonylaton</span>' : '<span class="status-tag inactive">Lezárva</span>';
+  if (entries.some((e) => e.isPending && !e.isLocked)) {
+    return '<span class="status-tag warn" title="Van még összeg nélküli tétel: amíg nincs kitöltve, nem kerül bizonylatra">Kitöltendő</span>';
+  }
+  const billable = entries.filter((e) => !e.forwardBilled);
+  const locked = billable.filter((e) => e.isLocked).length;
+  if (billable.length && locked === billable.length) {
+    return billable.some((e) => e.invoiceId) ? '<span class="status-tag inactive">Bizonylaton</span>' : '<span class="status-tag inactive">Lezárva</span>';
   }
   if (locked > 0) return '<span class="status-tag warn" title="Az utólag felvett tételek a következő bizonylatra kerülnek">Utólagos tétel</span>';
   return '<span class="status-tag ok">Rögzítve</span>';
+}
+
+// A következő bizonylat rezsijének állapota (PropertyDto.utilityState): Ok / Pending / Missing.
+function utilityStateTag(state, okLabel = 'Rendben') {
+  if (state === 'Pending') return '<span class="status-tag warn" title="Van kitöltendő (nem fix) rezsi tétel">Kitöltendő</span>';
+  if (state === 'Missing') return '<span class="status-tag missing">Hiányzik</span>';
+  return `<span class="status-tag ok">${okLabel}</span>`;
 }

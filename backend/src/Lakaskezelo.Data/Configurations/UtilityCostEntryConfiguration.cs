@@ -14,6 +14,7 @@ public class UtilityCostEntryConfiguration : IEntityTypeConfiguration<UtilityCos
         builder.Property(u => u.Note).HasMaxLength(500);
         builder.HasOne(u => u.Property).WithMany(p => p.UtilityCostEntries).HasForeignKey(u => u.PropertyId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(u => new { u.PropertyId, u.Year, u.Month });
+        builder.HasOne(u => u.UtilityItem).WithMany().HasForeignKey(u => u.UtilityItemId).OnDelete(DeleteBehavior.SetNull);
         builder.HasOne(u => u.Invoice).WithMany().HasForeignKey(u => u.InvoiceId).OnDelete(DeleteBehavior.SetNull);
     }
 }

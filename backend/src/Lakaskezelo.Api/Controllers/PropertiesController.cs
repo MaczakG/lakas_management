@@ -29,14 +29,9 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         // következő számla dec. 5-én megy ki, akkor a decemberi rezsinek kell meglennie — akár már november végén.
         var next = properties.ToDictionary(p => p.Id,
             p => BillingCalendar.NextBilling(now, p.BillingDayOfMonth, p.BillingHour, p.BillingMinute));
-        var periods = next.Values.Select(n => n.Period.Year * 100 + n.Period.Month).Distinct().ToList();
-        var periodsWithEntries = (await db.UtilityCostEntries
-                .Where(u => periods.Contains(u.Year * 100 + u.Month))
-                .Select(u => new { u.PropertyId, u.Year, u.Month })
-                .Distinct()
-                .ToListAsync(ct))
-            .Select(u => (u.PropertyId, u.Year, u.Month))
-            .ToHashSet();
+        var states = await UtilityPeriods.StatesAsync(db,
+            [.. properties.Select(p => (p.Id, next[p.Id].Period.Year, next[p.Id].Period.Month))], ct);
+        string StateOf(Property p) => states[(p.Id, next[p.Id].Period.Year, next[p.Id].Period.Month)];
 
         return Ok(properties.Select(p => new PropertyListItemDto(
             p.Id, p.Name, p.RentAmount,
@@ -44,9 +39,9 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             p.IsActive,
             string.Join(", ", p.PropertyOwners.Select(po => po.Owner!.Name)),
             string.Join(", ", p.Tenants.Where(t => t.MoveOutDate == null).Select(t => t.Name)),
-            periodsWithEntries.Contains((p.Id, next[p.Id].Period.Year, next[p.Id].Period.Month)),
+            StateOf(p) == UtilityPeriods.Ok,
             p.BillingDayOfMonth, p.BillingHour, p.BillingMinute,
-            next[p.Id].At, next[p.Id].Period.Year, next[p.Id].Period.Month)));
+            next[p.Id].At, next[p.Id].Period.Year, next[p.Id].Period.Month, StateOf(p))));
     }
 
     [HttpGet("{id:guid}")]
@@ -56,7 +51,11 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             .Include(p => p.PropertyOwners).ThenInclude(po => po.Owner)
             .Include(p => p.Tenants)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
-        return property is null ? NotFound() : Ok(ToDetailDto(property));
+        if (property is null) return NotFound();
+        var next = BillingCalendar.NextBilling(BudapestClock.Now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute);
+        var key = (property.Id, next.Period.Year, next.Period.Month);
+        var states = await UtilityPeriods.StatesAsync(db, [key], ct);
+        return Ok(ToDetailDto(property, states[key]));
     }
 
     [HttpPost]
@@ -109,7 +108,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
     {
         var entries = await db.UtilityCostEntries.Where(u => u.PropertyId == id)
             .Include(u => u.Invoice).Include(u => u.Attachments)
-            .OrderByDescending(u => u.Year).ThenByDescending(u => u.Month).ThenBy(u => u.Label)
+            .OrderByDescending(u => u.Year).ThenByDescending(u => u.Month).ThenBy(u => u.CreatedAt).ThenBy(u => u.Label)
             .ToListAsync(ct);
         return Ok(entries.Select(ToDto));
     }
@@ -139,6 +138,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             Label = request.Label.Trim(),
             Amount = request.Amount,
             Note = CleanNote(request.Note),
+            ForwardBilled = request.ForwardBilled,
             CreatedByUserId = User.GetUserId(),
             CreatedAt = DateTime.UtcNow,
         };
@@ -165,6 +165,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         entry.Label = label;
         entry.Amount = request.Amount;
         entry.Note = CleanNote(request.Note);
+        if (request.ForwardBilled is { } forwardBilled) entry.ForwardBilled = forwardBilled;
         await db.SaveChangesAsync(ct);
         return Ok(ToDto(entry));
     }
@@ -182,6 +183,105 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         await db.SaveChangesAsync(ct);
         return NoContent();
     }
+
+    // A hónap rezsijének előkészítése gombnyomásra: az ingatlan rezsi tételeiből pótolja a hónapból hiányzókat (a fix
+    // tételek összeggel, a nem fixek kitöltendőként jönnek létre). Ugyanez magától lefut a rezsi-határnapon és a
+    // bizonylat kiállításakor is.
+    [HttpPost("{id:guid}/utility-costs/prepare")]
+    public async Task<ActionResult<PrepareUtilityPeriodResponse>> PrepareUtilityPeriod(Guid id, PrepareUtilityPeriodRequest request, CancellationToken ct)
+    {
+        if (!await db.Properties.AnyAsync(p => p.Id == id, ct)) return NotFound();
+        if (request.Month is < 1 or > 12 || request.Year is < 2000 or > 2100) return BadRequest(new { message = "Érvénytelen időszak." });
+        var now = BudapestClock.Now;
+        var (fromYear, fromMonth) = InvoiceGenerationService.BillingWindowStart(now.Year, now.Month);
+        if (request.Year * 12 + request.Month < fromYear * 12 + fromMonth)
+        {
+            return BadRequest(new { message = $"Legfeljebb {InvoiceGenerationService.LateUtilityMonths} hónapra visszamenőleg lehet rezsit rögzíteni." });
+        }
+        if (!await db.UtilityItems.AnyAsync(i => i.PropertyId == id, ct))
+        {
+            return BadRequest(new { message = "Az ingatlannak még nincs rezsi tétele. Vedd fel őket a Rezsi tételek fülön." });
+        }
+        var created = await UtilityPeriods.PrepareAsync(db, id, request.Year, request.Month, force: true, ct);
+        await db.SaveChangesAsync(ct);
+        return Ok(new PrepareUtilityPeriodResponse(created));
+    }
+
+    // ---------- Rezsi tételek (havonta ismétlődő rezsi) ----------
+
+    [HttpGet("{id:guid}/utility-items")]
+    public async Task<ActionResult<List<UtilityItemDto>>> ListUtilityItems(Guid id, CancellationToken ct)
+    {
+        if (!await db.Properties.AnyAsync(p => p.Id == id, ct)) return NotFound();
+        var items = await db.UtilityItems.Where(i => i.PropertyId == id).OrderBy(i => i.SortOrder).ThenBy(i => i.CreatedAt).ToListAsync(ct);
+        return Ok(items.Select(ToDto));
+    }
+
+    [HttpPost("{id:guid}/utility-items")]
+    public async Task<ActionResult<UtilityItemDto>> AddUtilityItem(Guid id, UpsertUtilityItemRequest request, CancellationToken ct)
+    {
+        if (!await db.Properties.AnyAsync(p => p.Id == id, ct)) return NotFound();
+        if (ValidateItem(request) is { } error) return BadRequest(new { message = error });
+        if (await db.UtilityItems.CountAsync(i => i.PropertyId == id, ct) >= MaxUtilityItems)
+        {
+            return BadRequest(new { message = $"Egy ingatlanhoz legfeljebb {MaxUtilityItems} rezsi tétel tartozhat." });
+        }
+        var item = new UtilityItem
+        {
+            Id = Guid.NewGuid(),
+            PropertyId = id,
+            SortOrder = (await db.UtilityItems.Where(i => i.PropertyId == id).MaxAsync(i => (int?)i.SortOrder, ct) ?? -1) + 1,
+            CreatedAt = DateTime.UtcNow,
+        };
+        Apply(item, request);
+        db.UtilityItems.Add(item);
+        await db.SaveChangesAsync(ct);
+        return Ok(ToDto(item));
+    }
+
+    // A módosítás a később előkészített hónapokra hat; a már elkészült havi tételek változatlanok maradnak.
+    [HttpPut("{id:guid}/utility-items/{itemId:guid}")]
+    public async Task<ActionResult<UtilityItemDto>> UpdateUtilityItem(Guid id, Guid itemId, UpsertUtilityItemRequest request, CancellationToken ct)
+    {
+        var item = await db.UtilityItems.FirstOrDefaultAsync(i => i.Id == itemId && i.PropertyId == id, ct);
+        if (item is null) return NotFound();
+        if (ValidateItem(request) is { } error) return BadRequest(new { message = error });
+        Apply(item, request);
+        await db.SaveChangesAsync(ct);
+        return Ok(ToDto(item));
+    }
+
+    // Törléskor a már elkészült havi tételek megmaradnak (egyedi tételként élnek tovább).
+    [HttpDelete("{id:guid}/utility-items/{itemId:guid}")]
+    public async Task<IActionResult> DeleteUtilityItem(Guid id, Guid itemId, CancellationToken ct)
+    {
+        var item = await db.UtilityItems.FirstOrDefaultAsync(i => i.Id == itemId && i.PropertyId == id, ct);
+        if (item is null) return NotFound();
+        db.UtilityItems.Remove(item);
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    private const int MaxUtilityItems = 30;
+
+    private static string? ValidateItem(UpsertUtilityItemRequest request)
+    {
+        if ((request.Label ?? "").Trim().Length is 0 or > 200) return "Add meg a tétel megnevezését (legfeljebb 200 karakter).";
+        if (request.IsFixed && request.Amount is not > 0) return "Fix tételnél add meg az összeget.";
+        if (request.Amount is > 99_999_999) return "Az összeg túl nagy.";
+        return null;
+    }
+
+    private static void Apply(UtilityItem item, UpsertUtilityItemRequest request)
+    {
+        item.Label = request.Label.Trim();
+        item.IsFixed = request.IsFixed;
+        // Nem fix tételnek nincs összege: havonta kell kitölteni.
+        item.Amount = request.IsFixed ? request.Amount : null;
+        item.ForwardBilled = request.ForwardBilled;
+    }
+
+    private static UtilityItemDto ToDto(UtilityItem item) => new(item.Id, item.Label, item.IsFixed, item.Amount, item.ForwardBilled);
 
     // Egy rezsitétel akkor zárolt, ha egy aktív (nem sztornózott) bizonylaton szerepel — sztornózáskor a kapcsolat
     // megszűnik. A bevezetés előtti, bizonylat nélkül lezárt korábbi időszakok tételei (ExcludedFromBilling) is zároltak.
@@ -314,7 +414,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             : null;
     }
 
-    private static PropertyDetailDto ToDetailDto(Property property)
+    private static PropertyDetailDto ToDetailDto(Property property, string utilityState)
     {
         var next = BillingCalendar.NextBilling(BudapestClock.Now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute);
         return new(
@@ -325,7 +425,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         new PropertySheetDto(property.PropertyType, property.PostalCode, property.City, property.Street, property.FloorDoor, property.Hrsz,
             property.FloorArea, property.Rooms, property.BuildYear, property.ElectricityMeter, property.GasMeter, property.WaterMeter,
             property.Deposit, property.Notes, property.RentVat, property.UtilityVat),
-        next.At, next.Period.Year, next.Period.Month);
+        next.At, next.Period.Year, next.Period.Month, utilityState);
     }
 
     private const string NoteTooLong = "A megjegyzés legfeljebb 500 karakter lehet.";
@@ -333,5 +433,6 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
 
     private static UtilityCostEntryDto ToDto(UtilityCostEntry entry) => new(entry.Id, entry.Year, entry.Month, entry.Label, entry.Amount, entry.CreatedAt,
         IsLocked(entry), entry.InvoiceId, entry.Invoice?.Number, entry.Note,
-        [.. entry.Attachments.OrderBy(d => d.UploadedAt).Select(d => new UtilityAttachmentDto(d.Id, d.Name, d.FileName, d.ContentType, d.SizeBytes))]);
+        [.. entry.Attachments.OrderBy(d => d.UploadedAt).Select(d => new UtilityAttachmentDto(d.Id, d.Name, d.FileName, d.ContentType, d.SizeBytes))],
+        entry.ForwardBilled, entry.Amount == 0, entry.UtilityItemId is not null);
 }

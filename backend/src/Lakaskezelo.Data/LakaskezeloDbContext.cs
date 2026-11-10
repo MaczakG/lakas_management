@@ -22,6 +22,8 @@ public class LakaskezeloDbContext(DbContextOptions<LakaskezeloDbContext> options
     public DbSet<PropertyOwner> PropertyOwners => Set<PropertyOwner>();
     public DbSet<UtilityCostEntry> UtilityCostEntries => Set<UtilityCostEntry>();
     public DbSet<UtilityReminderLog> UtilityReminderLogs => Set<UtilityReminderLog>();
+    public DbSet<UtilityItem> UtilityItems => Set<UtilityItem>();
+    public DbSet<UtilityPeriod> UtilityPeriods => Set<UtilityPeriod>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<TenantPayment> TenantPayments => Set<TenantPayment>();
