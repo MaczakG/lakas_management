@@ -28,6 +28,26 @@ helyben élesített munka emiatt veszett el élesben (ld. lent).
 | ✅ Kész | Számla PDF valódi csatolmányként | Az e-mailben a PDF melléklet, nem link. |
 | ⏸️ Elhalasztva | Bérlő kiválasztása az ingatlanoknál | Jelenleg a Bérlők oldalon rendelhető ingatlanhoz bérlő; az Ingatlan modal Alapadatok tabjából egyelőre csak olvasható. Nem kezdődött el. |
 
+## V1.1 fejlesztési pontok
+
+2026-11-10: a tulajdonos listája. Egyesével haladunk rajta; a Státusz oszlopot menet közben frissítjük
+(⚪ Nyitott → 🔵 Folyamatban → 🟡 Teszten → ✅ Élesben).
+
+| # | Megnevezés | Leírás | Verzió | Státusz |
+|---|---|---|---|---|
+| 1 | Tételsor megjegyzés | Számla tételek rögzítéséhez kell tétel megjegyzés ami opcionális | V1.1 | ⚪ Nyitott |
+| 2 | Dashboard lakásválasztó | Dashboardon lakást is lehessen választani valamint ha egy lakás van kiválasztva akkor csak annak a számai jelenjenek meg | V1.1 | ⚪ Nyitott |
+| 3 | Dashboard összesített egyenleg | Dashboardon kell összesített egyenleg. A legördülő listában kell, hogy ki lehessen választani az összes lakást lehetőséget és egyenként az ingatlanokat is. Kell egy diagram is ahol az oszlopok a kifizetett és várt összeg X tengelyen lakások, Y tengelyen összeg | V1.1 | ⚪ Nyitott |
+| 4 | Beköltözés e-mail | Az alap beköltözési adatokat egy gombbal ki tudja küldeni a felhasználó. Nyilvántartva egy új taboldalon legyen szabadszövegesként ami a ki lehet választani, hogy kiküld vagy sem. | V1.1 | ⚪ Nyitott |
+| 5 | Adatlap figyelmeztetés | Az adatlapon ha volt változás és a felhasználó ki akar lépni akkor szóljon, hogy volt módosított adatlapon akkor egy megerősítést kérjen, hogy biztosan módosítani szeretted volna? | V1.1 | ⚪ Nyitott |
+| 6 | Csatolmány rögzítés | A tételhez csatolmányt rögzíteni lehessen. A számlázáshoz csapja hozzá és a számlázásnál kérdezzen rá, hogy mellékeltekkel szeretné kiküldeni. Bérlő adatlapon lehessen beállítani, hogy menjen neki alapból vagy sem. Akinél nincsen beállítva ott kérdezzen rá és ha egynél több van akkor egy listában kérdezzen rá ne egyesével. | V1.1 | ⚪ Nyitott |
+| 7 | Rezsi reform | Új taboldal Rezsi tételek amikben 4 oszlop van. Megnevezés, Összeg, Fix, Tovább számlázandó ez ami bekerül a bérleti díjba és már alapból úgy van megadva az adatlapon, hogy bele van kalkulálva így nem kell belevenni mert már a bérleti díj tartalmazza.<br><br>A tételek kerüljenek bele automatikusan a hónap rezsijébe, amit behúz számlázáskor. A számlázásos hónapot létre kell hoznia ami, így nem minden hónapra kell megadni a rezsit hanem a számlázás hozza létre automatikusan vagy gombról.<br><br>A fix költségek fix díjjal belekerülnek a nem fixeket pedig ki kell tölteni. Az egyedi tételnél is lehessen tovább számlázandót is beállítani de az nem kerül bele a díjba csak tulajdonosnak elszámolás. | V1.1 | ⚪ Nyitott |
+| 8 | Rezsi reform | A rezsi felvétel reformja: A rezsit a rezsi tételekből húzza be a számlázás csomagba amit előkészít a rendszer gombnyomásra vagy beállított időre; utólagos felvétellel felvett egyedi tételek továbbra is kerüljenek bele. | V1.1 | ⚪ Nyitott |
+| 9 | Rezsi értesítő | A kitöltendő rezsi tételekre értesítsen a rezsi emlékeztető, hogy vannak nem fix tételek amiket ki kell tölteni. Ettől függetlenül ki kell menni és ami nem fix tétel és nem lett összeg hozzá írva az ne szerepeljen a bizonylaton mint tétel. Utólagosan ha megküldi a szolgáltató a számlát majd fel lesz rögzítve. | V1.1 | ⚪ Nyitott |
+| 10 | Több e-mail, címzett | Több címzett is legyen az értesítőkhöz. Bérlőknek. | V1.1 | ⚪ Nyitott |
+| 11 | Bérleti szerződés lejárat | A bérlő adatlapján legyen egy bérleti szerződés lejárat amiről menjen értesítő a beállításokban beállított e-mail címre, ahol meg lehet adni napot is, hogy mennyivel előtte szóljon. Több e-mailt is lehessen megadni. | V1.1 | ⚪ Nyitott |
+| 12 | Adózás kimutatás | Dashboardon legyen két csempe ami a 10% költséghányaddal ennyit fizetne és az aktuális költségeivel mennyit fizetne. Semmi, ami tovább számlázandó nem vonható le költségként. Ezt úgy kell számolni, hogy a havi profitot kell kimutatni a két esetben. Minden ami egyedi és nem továbbszámlázandó az költségként levonható. Legyen egy figyelmeztető, hogy minden egyedileg felvitt tétel beleszámít a költségekbe. | V1.1 | ⚪ Nyitott |
+
 ## Állapot-jelölés
 
 - 🔴 **Sürgős** — azonnali teendő, valami most nem működik.
