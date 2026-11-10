@@ -96,7 +96,7 @@ function renderProperties() {
     <thead><tr><th>Ingatlan</th><th>Település</th><th>Tulajdoni hányad</th><th>Jelenlegi bérlő</th><th class="num">Bérleti díj</th><th>Állapot</th></tr></thead>
     <tbody>${ownedProperties.map((p) => {
       const share = shareValue(p.share);
-      return `<tr class="clickable" onclick="location.href='property-detail.html?id=${encodeURIComponent(p.propertyId)}'">
+      return `<tr class="clickable" onclick="ChangeGuard.go('property-detail.html?id=${encodeURIComponent(p.propertyId)}')">
         <td class="cell-main">${escapeHtml(p.name)}</td>
         <td>${escapeHtml(p.city || '–')}</td>
         <td>${p.share ? `${escapeHtml(p.share)}${share != null ? ` <span class="dim">(${Math.round(share * 100)}%)</span>` : ''}` : '<span class="dim">egyenlő arány</span>'}</td>

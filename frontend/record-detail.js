@@ -9,6 +9,13 @@ const DETAIL_INVOICE_STATUS = { Sent: 'Kiküldve', Generated: 'Nem küldött', F
 // Mező: { path, label, type?: 'text'|'email'|'textarea'|'select'|'date'|'number', options?: [{value,label}],
 //         required?, placeholder?, wide? }
 function createInlineEditor({ getRecord, save }) {
+  // Kilépéskor a módosítások visszaállíthatók (ld. change-guard.js): az eredeti értékek egy mentéssel mennek vissza.
+  const guard = window.ChangeGuard;
+  guard?.group('record', async (items) => {
+    const draft = structuredClone(getRecord());
+    items.forEach((item) => set(draft, item.key, item.before));
+    return save(draft);
+  });
   const idOf = (field) => `f-${field.path.replace(/\./g, '-')}`;
   const get = (path) => path.split('.').reduce((o, k) => o?.[k], getRecord());
   const set = (target, path, value) => {
@@ -21,6 +28,14 @@ function createInlineEditor({ getRecord, save }) {
     if (field.type === 'date') { const [y, m, d] = String(value).split('-'); return `${y}. ${m}. ${d}.`; }
     if (field.type === 'number') return String(value).replace('.', ',');
     return String(value);
+  };
+  // Az érték úgy, ahogy a felhasználó látja (a listáknál a felirat, nem a belső érték).
+  const display = (field, value) => {
+    if (field.type === 'select') {
+      const option = field.options.find((o) => String(o.value) === String(value ?? ''));
+      return option ? option.label : (value == null || value === '' ? 'Nincs megadva' : String(value));
+    }
+    return shown(field, value);
   };
 
   function renderField(field) {
@@ -82,8 +97,12 @@ function createInlineEditor({ getRecord, save }) {
         state.className = 'istate';
         state.textContent = 'Mentés…';
         const draft = structuredClone(getRecord());
+        const before = get(field.path);
         set(draft, field.path, parsed.value);
-        const error = await save(draft);
+        const saving = save(draft);
+        guard?.track(saving);
+        const error = await saving;
+        if (!error) guard?.record({ key: field.path, label: field.label, before, after: parsed.value, text: (v) => display(field, v) });
         if (error) {
           input.setAttribute('aria-invalid', 'true');
           state.className = 'istate err';
