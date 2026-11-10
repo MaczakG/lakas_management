@@ -8,18 +8,18 @@ using Microsoft.EntityFrameworkCore;
 namespace Lakaskezelo.Api.UtilityReminder;
 
 // Naponta egyszer (helyi idő 9:00-kor) ellenőrzi ingatlanonként a KÖVETKEZŐ SZÁMLA időszakát (ugyanazt, amit a
-// „Rezsi: Rendben / Hiányzik” jelzés): ha elérkezett a rögzítési határidő (a számlázás előtti utolsó, a Beállításokban
-// megadott sorszámú nap, ld. BillingCalendar.ReminderDate), a hónap rezsije elkészül az ingatlan rezsi tételeiből
-// (UtilityPeriods.PrepareAsync); ha ezután az időszak rezsije hiányos (nincs tétel, vagy van kitöltendő), és még nem ment
-// ki érte emlékeztető (UtilityReminderLog, időszakonként) — egy összesített digest e-mailt küld a rezsi kontaktnak az
-// összes érintett ingatlannal, majd naplózza, hogy ne menjen ki minden nap újra ugyanazért az időszakért.
-public class UtilityReminderService(IServiceScopeFactory scopeFactory, ILogger<UtilityReminderService> logger) : BackgroundService
+// „Rezsi: Rendben / Kitöltendő / Hiányzik” jelzés). Ha elérkezett a rögzítési határidő (a számlázás előtti utolsó, a
+// Beállításokban megadott sorszámú nap, ld. BillingCalendar.ReminderDate):
+//  1. a hónap rezsije elkészül az ingatlan rezsi tételeiből (UtilityPeriods.PrepareAsync);
+//  2. ha a hónap rezsije hiányos (nincs tétel, vagy van kitöltendő), vagy korábbi hónapból maradt kitöltetlen tétel,
+//     és még nem ment ki érte emlékeztető (UtilityReminderLog, ingatlanonként és időszakonként egyszer), egy
+//     összesített levél megy a rezsi kontaktnak, amely ingatlanonként felsorolja a kitöltendő tételeket.
+// A bizonylat ettől függetlenül kimegy; az összeg nélküli tétel nem kerül rá.
+public class UtilityReminderService(IServiceScopeFactory scopeFactory, IConfiguration configuration, ILogger<UtilityReminderService> logger) : BackgroundService
 {
-    private const int CheckHour = 9;
+    // Az ellenőrzés órája (helyi idő); a UtilityReminder:CheckHour beállítással felülírható (pl. helyi próbához).
+    private int CheckHour => configuration.GetValue("UtilityReminder:CheckHour", 9);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(30);
-
-    private static readonly string[] HungarianMonths =
-        ["január", "február", "március", "április", "május", "június", "július", "augusztus", "szeptember", "október", "november", "december"];
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -104,32 +104,39 @@ public class UtilityReminderService(IServiceScopeFactory scopeFactory, ILogger<U
         var reminded = (await db.UtilityReminderLogs.Where(l => ids.Contains(l.PropertyId))
             .Select(l => new { l.PropertyId, l.Year, l.Month }).ToListAsync(ct))
             .Select(l => (l.PropertyId, l.Year, l.Month)).ToHashSet();
-        // Hiányos az időszak, ha nincs rezsije (se rezsi tétel, se rögzített tétel), vagy van még kitöltendő tétele.
         var states = await UtilityPeriods.StatesAsync(db, [.. due.Select(x => (x.Property.Id, x.Period.Year, x.Period.Month))], ct);
 
+        // A kitöltendő (összeg nélküli, még bizonylatra nem került) tételek: a következő bizonylat hónapjáé és a
+        // korábbi hónapokból megmaradtak (a 36 hónapos ablakon belül, amíg bizonylatra kerülhetnek).
+        var (fromYear, fromMonth) = InvoiceGenerationService.BillingWindowStart(now.Year, now.Month);
+        var fromKey = fromYear * 12 + fromMonth;
+        var pendingEntries = await db.UtilityCostEntries
+            .Where(u => ids.Contains(u.PropertyId) && u.Amount == 0 && u.InvoiceId == null && !u.ExcludedFromBilling
+                && u.Year * 12 + u.Month >= fromKey)
+            .OrderBy(u => u.Year).ThenBy(u => u.Month).ThenBy(u => u.CreatedAt)
+            .Select(u => new { u.PropertyId, u.Year, u.Month, u.Label })
+            .ToListAsync(ct);
+
+        // Szólunk, ha a hónap rezsije hiányos (nincs tétel, vagy van kitöltendő), vagy korábbról maradt kitöltetlen
+        // tétel; ingatlanonként és időszakonként egyszer.
         var missing = due
-            .Where(x => states[(x.Property.Id, x.Period.Year, x.Period.Month)] != UtilityPeriods.Ok
-                && !reminded.Contains((x.Property.Id, x.Period.Year, x.Period.Month)))
+            .Where(x => !reminded.Contains((x.Property.Id, x.Period.Year, x.Period.Month)))
+            .Select(x =>
+            {
+                var periodKey = x.Period.Year * 12 + x.Period.Month;
+                var mine = pendingEntries.Where(p => p.PropertyId == x.Property.Id).ToList();
+                return (x.Property, x.Period, x.At, Item: new UtilityReminderContent.Item(
+                    x.Property.Name, x.Period, x.At, states[(x.Property.Id, x.Period.Year, x.Period.Month)],
+                    [.. mine.Where(p => p.Year * 12 + p.Month == periodKey).Select(p => p.Label)],
+                    [.. mine.Where(p => p.Year * 12 + p.Month < periodKey).Select(p => (p.Label, p.Year, p.Month))]));
+            })
+            .Where(x => UtilityReminderContent.NeedsReminder(x.Item.State, x.Item.PendingEarlier.Count))
             .OrderBy(x => x.At).ThenBy(x => x.Property.Name)
             .ToList();
         if (missing.Count == 0) return;
 
-        string Period(DateOnly d) => $"{d.Year}. {HungarianMonths[d.Month - 1]}";
-        string Line(DateOnly period, DateTime at, string name) => $"{name}: {Period(period)} (kiállítás: {at:yyyy.MM.dd. HH:mm})";
-        var listHtml = string.Join("", missing.Select(x => $"<li>{System.Net.WebUtility.HtmlEncode(Line(x.Period, x.At, x.Property.Name))}</li>"));
-        var listText = string.Join("\n", missing.Select(x => $"- {Line(x.Period, x.At, x.Property.Name)}"));
-
-        var htmlBody = EmailTemplate.Render(
-            preheader: $"{missing.Count} ingatlannál hiányos a rezsi a következő bizonylathoz",
-            heading: "Hiányzó rezsi tételek",
-            bodyHtml: $"""
-                <p style="margin:0 0 12px;">A következő ingatlanoknál a soron következő bizonylat rezsije hiányos: nincs rögzített tétel, vagy van még kitöltendő (összeg nélküli) tétel.</p>
-                <ul style="margin:0 0 12px;padding-left:20px;">{listHtml}</ul>
-                <p style="margin:0 0 12px;">A rezsit a kiállítás előtt rögzítsd, hogy rákerüljön a bizonylatra. Ami addig nincs kitöltve, kimarad, és a következő bizonylatra kerül.</p>
-                """);
-        var textBody = $"A soron következő bizonylat rezsije hiányos (nincs tétel, vagy van még kitöltendő):\n{listText}";
-
-        var sent = await emailSender.SendAsync(settings.UtilityContactEmail, EmailTemplate.UniqueSubject("Hiányzó rezsi tételek"), htmlBody, textBody, null, ct);
+        var mail = UtilityReminderContent.Build([.. missing.Select(x => x.Item)], configuration["Frontend:BaseUrl"]);
+        var sent = await emailSender.SendAsync(settings.UtilityContactEmail, EmailTemplate.UniqueSubject(mail.Subject), mail.Html, mail.Text, null, ct);
         if (!sent)
         {
             logger.LogWarning("Failed to send utility reminder digest: {Error}", emailSender.LastError);
