@@ -418,7 +418,11 @@ async function refreshUtilityState() {
 
 function syncItemForm() {
   const fixed = document.getElementById('ui-item-fixed').checked;
-  document.getElementById('ui-item-amount-field').hidden = !fixed;
+  // Az összeg mező a helyén marad (a pipák ne ugráljanak): nem fix tételnél nem tölthető ki.
+  const amount = document.getElementById('ui-item-amount');
+  amount.disabled = !fixed;
+  amount.placeholder = fixed ? '' : 'havonta kell kitölteni';
+  if (!fixed) amount.value = '';
   document.getElementById('ui-item-fixed-hint').textContent = fixed
     ? 'Minden hónapban ezzel az összeggel kerül a hónap rezsijébe.'
     : 'Az összeget havonta kell kitölteni. Amíg nincs kitöltve, a tétel nem kerül bizonylatra.';
