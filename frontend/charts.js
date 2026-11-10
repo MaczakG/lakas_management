@@ -90,15 +90,22 @@ window.VizCharts = (function () {
   // series: [{ name, color, values[12] }], stacked: bool, tooltip(i) → { title, rows, foot }, capSeries: a kiemelt
   // sorozat indexe, amelynek a legnagyobb oszlopa értékfeliratot kap (csak az az egy — a többit a buborék adja).
   // onSelect(i): kattintásra / Enterre (pl. a hónap megnyitása); capTotal: egymásra rakottnál a legnagyobb
-  // havi összeg kap feliratot.
-  function renderColumns(container, { series, stacked, tooltip, capSeries, capTotal, emptyText, ariaLabel, onSelect }) {
+  // havi összeg kap feliratot. labels: az X tengely feliratai (alapból a 12 hónap); a hosszú felirat a sávjához vágódik.
+  function renderColumns(container, { series, stacked, tooltip, capSeries, capTotal, emptyText, ariaLabel, onSelect, labels }) {
     const css = (name) => cssVar(container, name);
     container.replaceChildren();
     const W = Math.max(280, container.clientWidth);
     const H = 250;
     const top = 22, bottom = 26;
     const plotH = H - top - bottom;
-    const n = 12;
+    const n = labels ? labels.length : 12;
+    if (n === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'viz-empty';
+      empty.textContent = emptyText || '';
+      container.appendChild(empty);
+      return;
+    }
     const totals = Array.from({ length: n }, (_, i) => stacked
       ? series.reduce((s, ser) => s + ser.values[i], 0)
       : Math.max(...series.map((ser) => ser.values[i])));
@@ -122,9 +129,12 @@ window.VizCharts = (function () {
       svgEl('text', { x: left - 8, y: y(t) + 4, 'text-anchor': 'end', class: 'tick' }, svg).textContent = compact(t, useCompact);
     }
     // Keskeny kijelzőn minden második hónap kap feliratot, hogy ne csússzanak egymásba.
-    const every = band < 30 ? 2 : 1;
+    const every = !labels && band < 30 ? 2 : 1;
+    const maxChars = Math.max(3, Math.floor((band - 8) / 6.4));
     for (let i = 0; i < n; i += every) {
-      svgEl('text', { x: left + band * i + band / 2, y: H - 8, 'text-anchor': 'middle', class: 'tick' }, svg).textContent = MONTH_SHORT[i];
+      const full = labels ? labels[i] : MONTH_SHORT[i];
+      const tick = svgEl('text', { x: left + band * i + band / 2, y: H - 8, 'text-anchor': 'middle', class: 'tick' }, svg);
+      tick.textContent = full.length > maxChars ? `${full.slice(0, maxChars - 1).trimEnd()}…` : full;
     }
 
     const washes = [];

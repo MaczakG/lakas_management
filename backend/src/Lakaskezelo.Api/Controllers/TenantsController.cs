@@ -40,7 +40,7 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
         if (!await db.Tenants.AnyAsync(t => t.Id == id, ct)) return NotFound();
         var invoices = await ChargedInvoices().Where(i => i.TenantId == id).ToListAsync(ct);
         var payments = await db.TenantPayments.Include(p => p.Invoice).Where(p => p.TenantId == id).ToListAsync(ct);
-        var openUtilities = (await OpenUtilitiesAsync(id, ct)).Select(o => o.Entry).ToList();
+        var openUtilities = (await Billing.TenantBalances.OpenUtilitiesAsync(db, id, ct)).Select(o => o.Entry).ToList();
 
         var rows = invoices.Select(i => new
             {
@@ -138,31 +138,8 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
             .GroupBy(p => p.TenantId).Select(g => new { g.Key, Sum = g.Sum(p => p.Amount) }).ToListAsync(ct);
         var result = charged.ToDictionary(c => c.Key, c => c.Sum);
         foreach (var p in paid) result[p.Key] = result.GetValueOrDefault(p.Key) - p.Sum;
-        foreach (var o in await OpenUtilitiesAsync(tenantId, ct)) result[o.TenantId] = result.GetValueOrDefault(o.TenantId) + o.Entry.Amount;
+        foreach (var o in await Billing.TenantBalances.OpenUtilitiesAsync(db, tenantId, ct)) result[o.TenantId] = result.GetValueOrDefault(o.TenantId) + o.Entry.Amount;
         return result;
-    }
-
-    // A még bizonylatra nem került (nyitott) rezsitételek, az ingatlan jelenlegi bérlőjéhez rendelve — ő kapja a következő
-    // bizonylaton. Csak a következő bizonylatra kerülhetők számítanak: nem kizárt, és legfeljebb 36 hónapos.
-    private async Task<List<(Guid TenantId, UtilityCostEntry Entry)>> OpenUtilitiesAsync(Guid? tenantId, CancellationToken ct)
-    {
-        var now = Billing.BudapestClock.Now;
-        var today = DateOnly.FromDateTime(now);
-        var current = (await db.Tenants
-                .Where(t => t.PropertyId != null && (t.MoveOutDate == null || t.MoveOutDate >= today))
-                .Select(t => new { t.Id, PropertyId = t.PropertyId!.Value, t.MoveOutDate, t.MoveInDate })
-                .ToListAsync(ct))
-            .GroupBy(t => t.PropertyId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.MoveOutDate == null).ThenByDescending(t => t.MoveInDate).First().Id);
-        var propertyIds = current.Where(kv => tenantId == null || kv.Value == tenantId).Select(kv => kv.Key).ToList();
-        if (propertyIds.Count == 0) return [];
-        var (fromYear, fromMonth) = Billing.InvoiceGenerationService.BillingWindowStart(now.Year, now.Month);
-        var fromKey = fromYear * 12 + fromMonth;
-        var entries = await db.UtilityCostEntries
-            .Where(u => propertyIds.Contains(u.PropertyId) && u.InvoiceId == null && !u.ExcludedFromBilling && u.Amount != 0
-                && u.Year * 12 + u.Month >= fromKey)
-            .ToListAsync(ct);
-        return [.. entries.Select(u => (current[u.PropertyId], u))];
     }
 
     // A bérlő adatlapjához: a neki kiállított számlák.
