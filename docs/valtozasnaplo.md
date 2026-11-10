@@ -4,6 +4,16 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.10.9** — Finomítások a tesztelés után (Mentés gomb, rezsi ablak, rezsi tétel ablak).
+  - Adatlap: a módosított tábla fejléce a „Mégsem” és a „Mentés” gombbal görgetéskor a képernyő tetején marad,
+    amíg a tábla látszik. Ugyanígy a fülsáv, amíg a Beköltözés fül szövege mentetlen.
+  - Rezsi ablak: másfélszer szélesebb lett; a „Bezárás” és a „Mentés” gombsor görgetéskor is az ablak alján marad.
+  - Rezsi ablak, kitöltendő tétel: a sorban rögtön beviteli mező van az összegnek (nincs külön „Kitöltés” gomb).
+    Menthető a sor „Mentés” gombjával, Enterrel, vagy az ablak alján a „Mentés” gombbal, amely az összes kitöltött
+    mezőt egyszerre menti.
+  - Rezsi tétel ablak: a két beviteli mező (Megnevezés, Összeg) után következik egymás alatt a két pipa (Fix,
+    Tovább számlázandó). Nem fix tételnél az Összeg mező a helyén marad, de nem tölthető ki.
+  - Migráció nincs.
 - **2026.11.10.8** — Rezsi reform: rezsi tételek, a hónap rezsije magától elkészül (V1.1 / 7. és 8. pont).
   - Az ingatlan adatlapján új „Rezsi tételek” fül a havonta ismétlődő rezsinek, négy oszloppal: Megnevezés,
     Összeg, Fix, Tovább számlázandó.

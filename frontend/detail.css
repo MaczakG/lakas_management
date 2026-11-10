@@ -113,6 +113,16 @@
 .panel-head:has(.panel-save:not([hidden])) > .panel-title{display:block;min-width:0;margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .panel-head:has(.panel-save:not([hidden])) > .panel-title svg{display:inline-block;vertical-align:-3px;margin-right:8px;}
 .panel.is-dirty{border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-ring);}
+/* A módosított tábla fejléce (benne a Mentés / Mégsem gomb) görgetéskor a képernyő tetején marad, amíg a tábla
+   látszik. A −32px a görgetett terület (.main) felső belső margóját ellensúlyozza, hogy a fejléc a tetejéig
+   felcsússzon. Telefonon (ott az ablak görög) a menügomb és a tesztkörnyezet sávja alá kerül. */
+.panel.is-dirty > .panel-head{position:sticky;top:-32px;z-index:20;background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;box-shadow:0 8px 12px -10px rgba(36,48,44,.45);}
+/* Ugyanígy a fülsáv, amíg a Beköltözés fül szövege mentetlen. */
+.record-tabbar:has(#mi-save:not([hidden])){position:sticky;top:-32px;z-index:20;background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;}
+@media (max-width:768px){
+  .panel.is-dirty > .panel-head,.record-tabbar:has(#mi-save:not([hidden])){top:62px;}
+  .has-env-ribbon .panel.is-dirty > .panel-head,.has-env-ribbon .record-tabbar:has(#mi-save:not([hidden])){top:88px;}
+}
 
 .owner-list{display:grid;}
 .owner-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--surface-2);font-size:13.5px;}
@@ -153,4 +163,4 @@
 .tab-note{margin:0;padding:12px 16px;font-size:12.5px;font-weight:500;color:var(--muted);line-height:1.55;border-bottom:1px solid var(--line);}
 .item-hint{margin:-8px 0 14px;line-height:1.5;}
 #ui-item-form .checkbox-row{margin-bottom:12px;}
-#ui-item-form .field[hidden]{display:none;}
+#ui-item-form .item-hint:last-child{margin-bottom:4px;}

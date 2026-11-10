@@ -7,10 +7,12 @@
   const styleTag = document.createElement('style');
   styleTag.textContent = `
     #um-overlay{z-index:300;}
-    #um-overlay .modal{max-width:760px;}
+    #um-overlay .modal{max-width:1140px;}
+    /* A Bezárás / Mentés gombsor görgetéskor is az ablak alján marad. */
+    #um-overlay .modal-footer{position:sticky;bottom:0;z-index:3;background:var(--surface);border-top:1px solid var(--line);padding-top:16px;margin-top:8px;border-radius:0 0 var(--radius-lg) var(--radius-lg);}
     #um-existing-tbody td:nth-child(2){white-space:nowrap;}
     /* Telefonon a sor két szintre törik: fent a megnevezés és az összeg, alatta a gombok (nem kell oldalra görgetni). */
-    @media (max-width:640px){
+    @media (max-width:900px){
       #um-overlay thead{display:none;}
       #um-overlay .card-table table,#um-existing-tbody{display:block;width:100%;min-width:0;}
       #um-existing-tbody tr:not(.empty-row){display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;}
@@ -28,6 +30,7 @@
     .um-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:4px 0 16px;}
     .um-existing-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:10px 0 20px;text-align:right;}
     #um-existing-tbody input{height:36px;font-size:13.5px;}
+    #um-existing-tbody .um-pending-amount{width:130px;}
     #um-existing-tbody .row-actions{white-space:nowrap;}
     .um-note{display:none;font-size:13px;line-height:1.5;color:var(--ink-soft);border-left:2px solid var(--line-strong);padding:2px 0 2px 12px;margin:0 0 18px;}
     .um-note.show{display:block;}
@@ -222,22 +225,29 @@
 
     const entries = allEntries.filter((e) => e.year === state.year && e.month === state.month);
     state.entries = entries;
+    // A kitöltendő sorokba beírt, még nem mentett összegek újrarajzolás után is megmaradnak.
+    const typed = new Map([...document.querySelectorAll('.um-pending-amount')].filter((i) => i.value).map((i) => [i.dataset.entry, i.value]));
     const tbody = document.getElementById('um-existing-tbody');
     tbody.innerHTML = entries.length === 0
       ? `<tr class="empty-row"><td colspan="3">Nincs még rögzített tétel.</td></tr>`
       : entries.map((e) => `
         <tr>
           <td>${escapeHtml(e.label)}<span class="um-flags">${e.isPending ? '<span class="status-tag warn" title="Még nincs összege: amíg nincs kitöltve, nem kerül bizonylatra">Kitöltendő</span>' : ''}${e.forwardBilled ? `<span class="status-tag inactive" title="${FORWARD_TITLE}">Tovább számlázandó</span>` : ''}</span>${e.note ? `<div class="um-entry-note">${escapeHtml(e.note)}</div>` : ''}<div class="um-atts">${attachmentsHtml(e)}</div></td>
-          <td>${e.isPending ? '<span class="dim">–</span>' : formatCurrency(e.amount)}</td>
+          <td>${e.isPending && !e.isLocked
+            ? `<input type="number" class="um-pending-amount" data-entry="${e.id}" min="1" step="1" inputmode="numeric" placeholder="Összeg (Ft)" aria-label="${escapeHtml(e.label)} összege (Ft)">`
+            : e.isPending ? '<span class="dim">–</span>' : formatCurrency(e.amount)}</td>
           <td class="row-actions"><button class="um-attach-btn" type="button" title="Csatolmány hozzáadása (pl. a szolgáltatói számla)" onclick="window.__umAttach('${e.id}')" aria-label="Csatolmány hozzáadása">${ATTACH_ICON}<span>Csatolmány</span></button>
             ${e.isLocked
             ? (e.invoiceId
               ? `<a class="link mono" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}" title="Ezen a bizonylaton szerepel; sztornóig zárolt">${escapeHtml(e.invoiceNumber || 'Bizonylaton')}</a>`
               : '<span class="status-tag inactive">Lezárva</span>')
-            : `<button class="btn ${e.isPending ? 'btn-primary' : 'btn-ghost'} btn-sm" type="button" onclick="window.__umEditEntry('${e.id}', this)">${e.isPending ? 'Kitöltés' : 'Szerkesztés'}</button>
+            : `${e.isPending ? `<button class="btn btn-primary btn-sm" type="button" onclick="window.__umFillEntry('${e.id}')">Mentés</button>` : ''}
+               <button class="btn btn-ghost btn-sm" type="button" onclick="window.__umEditEntry('${e.id}', this)">Szerkesztés</button>
                <button class="btn btn-danger btn-sm" type="button" onclick="window.__umDeleteEntry('${e.id}')">Törlés</button>`}</td>
         </tr>
       `).join('');
+
+    if (keepDrafts) typed.forEach((value, id) => { const input = tbody.querySelector(`.um-pending-amount[data-entry="${id}"]`); if (input) input.value = value; });
 
     // A bérlő bizonylatára csak a nem „tovább számlázandó” tételek kerülnek.
     const billed = entries.filter((e) => !e.forwardBilled).reduce((acc, e) => acc + e.amount, 0);
@@ -263,6 +273,35 @@
 
     if (!keepDrafts) resetDraftRows();
   }
+
+  // Kitöltendő tétel összegének mentése a sorban lévő mezőből: a sor Mentés gombja, Enter a mezőben, vagy az ablak
+  // alján a Mentés gomb (az minden kitöltött mezőt egyszerre ment). Hibánál az üzenetet adja vissza (különben null).
+  async function savePendingAmount(entryId, amount) {
+    const entry = state.entries.find((e) => e.id === entryId);
+    if (!entry) return null;
+    const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/${entryId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ label: entry.label, amount, note: entry.note || null, forwardBilled: !!entry.forwardBilled }),
+    });
+    return res.ok ? null : errorMessage(res, await readJson(res), `Nem sikerült menteni: ${entry.label}.`);
+  }
+  // A kitöltött (0-nál nagyobb) összegű kitöltendő sorok: [{ id, amount }].
+  const filledPending = () => [...document.querySelectorAll('.um-pending-amount')]
+    .map((input) => ({ id: input.dataset.entry, amount: Number(input.value) }))
+    .filter((p) => p.amount > 0);
+
+  window.__umFillEntry = async (entryId) => {
+    const input = document.querySelector(`.um-pending-amount[data-entry="${entryId}"]`);
+    const amount = Number(input?.value);
+    if (!(amount > 0)) { input?.focus(); return; }
+    const error = await savePendingAmount(entryId, amount);
+    if (error) { await uiAlert(error, { title: 'Mentés sikertelen' }); return; }
+    await refresh({ keepDrafts: true });
+    if (typeof state.onSaved === 'function') state.onSaved();
+  };
+  document.getElementById('um-existing-tbody').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.classList.contains('um-pending-amount')) { e.preventDefault(); window.__umFillEntry(e.target.dataset.entry); }
+  });
 
   // Meglévő tétel helyben szerkesztése: a sor mezőkké alakul, Mentés / Mégse.
   window.__umEditEntry = (entryId, btn) => {
@@ -344,10 +383,21 @@
       files: r.umFiles || [],
     })).filter((r) => r.label && r.amount);
 
-    if (rows.length === 0) {
-      errorEl.textContent = 'Adj meg legalább egy tételt (megnevezéssel és összeggel).';
+    // A kitöltendő tételek sorába beírt összegek is mentődnek (nem kell soronként a Mentés gombot nyomni).
+    const pending = filledPending();
+    if (rows.length === 0 && pending.length === 0) {
+      errorEl.textContent = 'Adj meg legalább egy tételt (megnevezéssel és összeggel), vagy töltsd ki egy kitöltendő tétel összegét.';
       errorEl.classList.add('show');
       return;
+    }
+    for (const p of pending) {
+      const error = await savePendingAmount(p.id, p.amount);
+      if (error) {
+        errorEl.textContent = error;
+        errorEl.classList.add('show');
+        await refresh({ keepDrafts: true });
+        return;
+      }
     }
 
     const saveBtn = document.getElementById('um-save-btn');
@@ -380,6 +430,7 @@
       errorEl.textContent = `A tételek rögzítve, de nem minden csatolmány töltődött fel. ${uploadErrors.join(' ')}`;
       errorEl.classList.add('show');
     } else {
+      successEl.textContent = rows.length ? 'A tételek sikeresen rögzítve.' : 'Az összegek sikeresen rögzítve.';
       successEl.classList.add('show');
     }
     await refresh();
