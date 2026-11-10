@@ -141,8 +141,12 @@ function bindFields(fields) {
       state.className = 'istate';
       state.textContent = 'Mentés…';
       const draft = structuredClone(property);
+      const before = getValue(field.path);
       setValue(draft, field.path, parsed.value);
-      const error = await save(draft);
+      const saving = save(draft);
+      ChangeGuard.track(saving);
+      const error = await saving;
+      if (!error) ChangeGuard.record({ key: field.path, label: field.label, before, after: parsed.value, text: (v) => displayValue(field, v) });
       if (error) {
         input.setAttribute('aria-invalid', 'true');
         state.className = 'istate err';
@@ -160,6 +164,28 @@ function bindFields(fields) {
     });
   });
 }
+
+// Az érték úgy, ahogy a felhasználó látja — a kilépéskori „mi változott” listához (ld. change-guard.js).
+function displayValue(field, value) {
+  if (field.type === 'select') {
+    if (value == null || value === '') return field.emptyLabel ? field.emptyLabel() : 'Nincs megadva';
+    const options = (typeof field.options === 'function' ? field.options() : field.options).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
+    return options.find((o) => o.value === value)?.label ?? String(value);
+  }
+  if (value == null || value === '') return '';
+  if (field.type === 'number') {
+    const text = field.group ? formatNumber(value, value % 1 ? 2 : 0) : String(value).replace('.', ',');
+    return field.suffix ? `${text} ${field.suffix()}` : text;
+  }
+  return String(value);
+}
+
+// Kilépéskor a módosított mezők visszaállíthatók: az eredeti értékek egy mentéssel mennek vissza.
+ChangeGuard.group('record', async (items) => {
+  const draft = structuredClone(property);
+  items.forEach((item) => setValue(draft, item.key, item.before));
+  return save(draft);
+});
 
 // A teljes ingatlan mentése (a szerver PUT-ot vár minden mezővel). Hibánál a hibaüzenetet adja vissza.
 async function save(draft) {
@@ -469,7 +495,11 @@ function saveMoveIn() {
         moveInState((await res.json().catch(() => null))?.message || 'A mentés nem sikerült.', 'error');
         return false;
       }
+      const before = moveIn;
       moveIn = await res.json();
+      ChangeGuard.record({ group: 'movein', key: 'text', label: 'Beköltözési tudnivalók', before: before.text, after: moveIn.text });
+      ChangeGuard.record({ group: 'movein', key: 'sendable', label: 'A bérlőnek kiküldhető', before: before.sendable, after: moveIn.sendable,
+        text: (v) => (v === true || v === 'true' ? 'Igen' : 'Nem') });
       moveInState('Mentve', 'ok');
       renderMoveInSide();
       return true;
@@ -480,8 +510,21 @@ function saveMoveIn() {
       moveInSaving = null;
     }
   })();
+  ChangeGuard.track(moveInSaving);
   return moveInSaving;
 }
+
+ChangeGuard.group('movein', async (items) => {
+  const original = (key, current) => { const item = items.find((i) => i.key === key); return item ? item.before : current; };
+  const res = await apiFetch(`/api/properties/${propertyId}/move-in-info`, {
+    method: 'PUT',
+    body: JSON.stringify({ text: original('text', moveIn.text), sendable: original('sendable', moveIn.sendable) }),
+  });
+  if (!res.ok) return (await res.json().catch(() => null))?.message || 'A beköltözési tudnivalókat nem sikerült visszaállítani.';
+  moveIn = await res.json();
+  renderMoveIn();
+  return null;
+});
 
 mi('mi-text').addEventListener('input', () => {
   mi('mi-count').textContent = `${mi('mi-text').value.length} / ${MOVEIN_MAX}`;

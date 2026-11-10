@@ -64,7 +64,8 @@
 
   document.getElementById('logout-link')?.addEventListener('click', (e) => {
     e.preventDefault();
-    logout();
+    // Módosított adatlapról kilépve előbb rákérdez (ld. change-guard.js); máshol azonnal kiléptet.
+    if (window.ChangeGuard) window.ChangeGuard.leave(logout); else logout();
   });
 
   const renderWho = () => {

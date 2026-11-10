@@ -4,6 +4,18 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.10.5** — Figyelmeztetés módosított adatlap elhagyásakor (V1.1 / 5. pont).
+  - Az adatlap mezői továbbra is azonnal mentődnek. Ha viszont módosítás után továbblépnél, a program felsorolja,
+    mi változott az adatlap megnyitása óta (régi → új érték), és megkérdezi, biztosan módosítani akartad-e.
+  - Három választás: „Igen, maradjon így”, „Visszaállítás” (az eredeti értékek visszakerülnek, utána lép tovább),
+    „Vissza az adatlapra”.
+  - Érvényes az ingatlan, a bérlő, a tulajdonos és a dokumentum adatlapján, az ingatlannál a „Beköltözés” fül
+    szövegére is.
+  - Rákérdez: menüpontra vagy hivatkozásra kattintáskor, a Kilépés gombnál és a böngésző Vissza gombjánál. Ha a
+    mentés még fut, megvárja.
+  - Nem kérdez, ha nem volt módosítás, vagy ha az értéket visszaírtad az eredetire.
+  - Korlát: a böngészőfül bezárásakor és az oldal frissítésekor nem tud rákérdezni, ott a módosítás megmarad.
+  - Migráció nincs.
 - **2026.11.10.4** — Beköltözési tudnivalók e-mailben (V1.1 / 4. pont).
   - Az ingatlan adatlapján új „Beköltözés” fül: egyetlen szabad szöveg (pl. kapukód, wifi, mérőórák helye,
     szemétszállítás, hibabejelentés, házirend), legfeljebb 5000 karakter. A mező elhagyásakor magától mentődik.
