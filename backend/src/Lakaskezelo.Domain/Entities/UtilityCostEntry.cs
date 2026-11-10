@@ -21,6 +21,15 @@ public class UtilityCostEntry : ICompanyOwned
     // Az egyenlegkövetés bevezetése előtti, korábbi hónapra szóló, bizonylathoz nem köthető tétel: nem kerül
     // automatikusan bizonylatra (nehogy egy régi, máshol már elszámolt tétel hirtelen felbukkanjon).
     public bool ExcludedFromBilling { get; set; }
+    // Ha a tétel az ingatlan egyik rezsi tételéből (UtilityItem) készült a hónap előkészítésekor; egyedi (kézzel
+    // felvett) tételnél null. Nem fix rezsi tételből 0 összeggel jön létre: ez „kitöltendő”, és amíg nincs összege,
+    // nem kerül bizonylatra.
+    public Guid? UtilityItemId { get; set; }
+    public UtilityItem? UtilityItem { get; set; }
+    // Tovább számlázandó: a bérleti díj már tartalmazza, ezért nem kerül a bérlő bizonylatára (és az egyenlegébe sem);
+    // csak a tulajdonossal való elszámolásban szerepel.
+    public bool ForwardBilled { get; set; }
+
     // A tételhez csatolt dokumentumok (Document.UtilityCostEntryId).
     public List<Document> Attachments { get; set; } = [];
 

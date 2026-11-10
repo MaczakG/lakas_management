@@ -129,7 +129,7 @@ function showPicker() {
     <tr class="clickable${p.isActive ? '' : ' is-inactive'}" data-pick="${escapeHtml(p.id)}" tabindex="0">
       <td class="cell-main">${escapeHtml(p.name)}${p.tenantNames ? `<div class="cell-sub">${escapeHtml(p.tenantNames)}</div>` : ''}</td>
       <td>${p.isActive ? `${p.nextPeriodYear}. ${MONTH_NAMES[p.nextPeriodMonth - 1].toLowerCase()}<div class="cell-sub">kiállítás: ${formatDate(p.nextBillingAt)}</div>` : '<span class="status-tag inactive">Inaktív</span>'}</td>
-      <td>${!p.isActive ? '' : p.utilityComplete ? '<span class="status-tag ok">Rögzítve</span>' : '<span class="status-tag missing">Hiányzik</span>'}</td>
+      <td>${!p.isActive ? '' : utilityStateTag(p.utilityState, 'Rögzítve')}</td>
       <td><svg class="picker-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#chevron-right"/></svg></td>
     </tr>`).join('');
   tbody.querySelectorAll('[data-pick]').forEach((row) => {

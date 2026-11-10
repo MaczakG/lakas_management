@@ -45,6 +45,15 @@
     .um-draft-row .um-file-field{grid-column:1 / -1;display:flex;flex-direction:column;gap:6px;}
     .um-draft-row .um-attach-btn,#um-existing-tbody .um-attach-btn{display:inline-flex;align-items:center;gap:6px;width:auto;height:32px;padding:0 10px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;align-self:flex-start;}
     .um-draft-row .um-attach-btn svg,#um-existing-tbody .um-attach-btn svg{width:14px;height:14px;margin:0;display:inline-block;color:var(--muted);}
+    .um-flags{display:inline-flex;flex-wrap:wrap;gap:8px;margin-left:8px;vertical-align:middle;}
+    .um-flags .status-tag{font-size:12px;}
+    .um-check{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;}
+    .um-check input{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
+    .um-draft-row .um-forward-field{grid-column:1 / -1;}
+    #um-existing-tbody .um-check{margin-top:6px;}
+    .um-prepare{display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);font-size:13px;color:var(--ink-soft);}
+    .um-prepare.show{display:flex;}
+    .um-prepare .btn{height:34px;padding:0 12px;font-size:12.5px;flex-shrink:0;}
     .um-section-title{font-family:var(--font-display);font-weight:700;font-size:14.5px;margin:0 0 10px;color:var(--ink);}
   `;
   document.head.appendChild(styleTag);
@@ -59,6 +68,9 @@
         <div class="modal-body">
           <div class="um-note" id="um-late-note"></div>
           <div class="form-error" id="um-locked-note"></div>
+
+          <div class="um-prepare" id="um-prepare"><span id="um-prepare-text">Az ingatlan rezsi tételeiből elkészíthető a hónap rezsije.</span>
+            <button class="btn btn-secondary" type="button" id="um-prepare-btn">Rezsi tételek behúzása</button></div>
 
           <h3 class="um-section-title">Rögzített tételek</h3>
           <div class="card-table" style="margin-bottom:4px;">
@@ -92,6 +104,7 @@
   const ATTACH_MAX_BYTES = 15 * 1024 * 1024;
   const ATTACH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#paperclip"/></svg>';
   const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg>';
+  const FORWARD_TITLE = 'A bérleti díj már tartalmazza: nem kerül külön a bérlő bizonylatára, csak a tulajdonosi elszámolásban szerepel.';
   const sizeText = (bytes) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 
   function pickFiles() {
@@ -161,6 +174,7 @@
       <div class="field"><label>Összeg (Ft)</label><input type="number" class="um-draft-amount" min="0"></div>
       <button type="button" title="Sor eltávolítása" aria-label="Sor eltávolítása"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
       <div class="field um-note-field"><label>Megjegyzés <span class="dim">(nem kötelező, a bizonylatra nem kerül rá)</span></label><input type="text" class="um-draft-note" maxlength="500" placeholder="pl. mérőállás, a szolgáltatói számla száma"></div>
+      <div class="um-forward-field"><label class="um-check" title="${FORWARD_TITLE}"><input type="checkbox" class="um-draft-forward">Tovább számlázandó <span class="dim">(a bérleti díj tartalmazza, nem kerül a bérlő bizonylatára)</span></label></div>
       <div class="um-file-field"><button type="button" class="um-attach-btn">${ATTACH_ICON}Csatolmány</button><div class="um-atts"></div></div>
     `;
     // A sorhoz kiválasztott fájlok a tétel mentésekor töltődnek fel.
@@ -191,12 +205,14 @@
 
   // keepDrafts: csatolmány feltöltése / törlése után a még el nem mentett új sorok megmaradnak.
   async function refresh({ keepDrafts = false } = {}) {
-    const [entriesRes, invoicesRes] = await Promise.all([
+    const [entriesRes, invoicesRes, itemsRes] = await Promise.all([
       apiFetch(`/api/properties/${state.propertyId}/utility-costs`),
       apiFetch(`/api/properties/${state.propertyId}/invoices`),
+      apiFetch(`/api/properties/${state.propertyId}/utility-items`),
     ]);
     const allEntries = await entriesRes.json();
     const invoices = await invoicesRes.json();
+    const items = itemsRes.ok ? await itemsRes.json() : [];
     // Tételenkénti zárolás: a bizonylatra került tétel sztornóig nem módosítható. A már bizonylatolt hónapra utólag
     // felvett tétel nem zárolt, és a következő bizonylatra kerül, a hónapjával jelölve — legfeljebb 36 hónapra visszamenőleg.
     const periodInvoice = invoices.find((i) => (!i.cancelledAt && !i.cancelsInvoiceId) && (i.status === 'Sent' || i.status === 'Generated')
@@ -211,20 +227,27 @@
       ? `<tr class="empty-row"><td colspan="3">Nincs még rögzített tétel.</td></tr>`
       : entries.map((e) => `
         <tr>
-          <td>${escapeHtml(e.label)}${e.note ? `<div class="um-entry-note">${escapeHtml(e.note)}</div>` : ''}<div class="um-atts">${attachmentsHtml(e)}</div></td>
-          <td>${formatCurrency(e.amount)}</td>
+          <td>${escapeHtml(e.label)}<span class="um-flags">${e.isPending ? '<span class="status-tag warn" title="Még nincs összege: amíg nincs kitöltve, nem kerül bizonylatra">Kitöltendő</span>' : ''}${e.forwardBilled ? `<span class="status-tag inactive" title="${FORWARD_TITLE}">Tovább számlázandó</span>` : ''}</span>${e.note ? `<div class="um-entry-note">${escapeHtml(e.note)}</div>` : ''}<div class="um-atts">${attachmentsHtml(e)}</div></td>
+          <td>${e.isPending ? '<span class="dim">–</span>' : formatCurrency(e.amount)}</td>
           <td class="row-actions"><button class="um-attach-btn" type="button" title="Csatolmány hozzáadása (pl. a szolgáltatói számla)" onclick="window.__umAttach('${e.id}')" aria-label="Csatolmány hozzáadása">${ATTACH_ICON}<span>Csatolmány</span></button>
             ${e.isLocked
             ? (e.invoiceId
               ? `<a class="link mono" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}" title="Ezen a bizonylaton szerepel; sztornóig zárolt">${escapeHtml(e.invoiceNumber || 'Bizonylaton')}</a>`
               : '<span class="status-tag inactive">Lezárva</span>')
-            : `<button class="btn btn-ghost btn-sm" type="button" onclick="window.__umEditEntry('${e.id}', this)">Szerkesztés</button>
+            : `<button class="btn ${e.isPending ? 'btn-primary' : 'btn-ghost'} btn-sm" type="button" onclick="window.__umEditEntry('${e.id}', this)">${e.isPending ? 'Kitöltés' : 'Szerkesztés'}</button>
                <button class="btn btn-danger btn-sm" type="button" onclick="window.__umDeleteEntry('${e.id}')">Törlés</button>`}</td>
         </tr>
       `).join('');
 
-    const sum = entries.reduce((acc, e) => acc + e.amount, 0);
-    document.getElementById('um-existing-total').textContent = entries.length > 0 ? `Összesen: ${formatCurrency(sum)}` : '';
+    // A bérlő bizonylatára csak a nem „tovább számlázandó” tételek kerülnek.
+    const billed = entries.filter((e) => !e.forwardBilled).reduce((acc, e) => acc + e.amount, 0);
+    const forwarded = entries.filter((e) => e.forwardBilled).reduce((acc, e) => acc + e.amount, 0);
+    document.getElementById('um-existing-total').textContent = entries.length === 0 ? ''
+      : forwarded > 0 ? `Bizonylatra kerül: ${formatCurrency(billed)} · Tovább számlázandó: ${formatCurrency(forwarded)}`
+        : `Összesen: ${formatCurrency(billed)}`;
+
+    // Ha az ingatlannak vannak rezsi tételei, a hónap rezsije gombbal is elkészíthető belőlük.
+    document.getElementById('um-prepare').classList.toggle('show', items.length > 0 && !tooOld);
 
     const lateNote = document.getElementById('um-late-note');
     lateNote.textContent = periodInvoice && !tooOld
@@ -248,20 +271,24 @@
     if (!entry || !row) return;
     row.innerHTML = `
       <td><input type="text" class="um-edit-label" aria-label="Megnevezés">
-        <input type="text" class="um-edit-note" maxlength="500" aria-label="Megjegyzés" placeholder="Megjegyzés (nem kötelező)"></td>
+        <input type="text" class="um-edit-note" maxlength="500" aria-label="Megjegyzés" placeholder="Megjegyzés (nem kötelező)">
+        <label class="um-check" title="${FORWARD_TITLE}"><input type="checkbox" class="um-edit-forward">Tovább számlázandó</label></td>
       <td><input type="number" class="um-edit-amount" min="0" aria-label="Összeg (Ft)"></td>
       <td class="row-actions"><button class="btn btn-primary btn-sm" type="button" data-save>Mentés</button>
         <button class="btn btn-ghost btn-sm" type="button" data-cancel>Mégse</button></td>`;
     row.querySelector('.um-edit-label').value = entry.label;
-    row.querySelector('.um-edit-amount').value = entry.amount;
+    row.querySelector('.um-edit-amount').value = entry.isPending ? '' : entry.amount;
     row.querySelector('.um-edit-note').value = entry.note || '';
-    row.querySelector('.um-edit-label').focus();
+    row.querySelector('.um-edit-forward').checked = !!entry.forwardBilled;
+    // Kitöltendő tételnél rögtön az összeg következik.
+    row.querySelector(entry.isPending ? '.um-edit-amount' : '.um-edit-label').focus();
     row.querySelector('[data-cancel]').addEventListener('click', () => refresh({ keepDrafts: true }));
     row.querySelector('[data-save]').addEventListener('click', async () => {
       const label = row.querySelector('.um-edit-label').value.trim();
       const amount = Number(row.querySelector('.um-edit-amount').value);
       const note = row.querySelector('.um-edit-note').value.trim() || null;
-      const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/${entryId}`, { method: 'PUT', body: JSON.stringify({ label, amount, note }) });
+      const forwardBilled = row.querySelector('.um-edit-forward').checked;
+      const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/${entryId}`, { method: 'PUT', body: JSON.stringify({ label, amount, note, forwardBilled }) });
       if (!res.ok) {
         await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült menteni a tételt.'), { title: 'Mentés sikertelen' });
         return;
@@ -284,6 +311,25 @@
 
   document.getElementById('um-add-row-btn').addEventListener('click', addDraftRow);
 
+  // A hónap rezsijének elkészítése az ingatlan rezsi tételeiből: a hiányzókat pótolja (a fix tételek összeggel, a
+  // nem fixek kitöltendőként jönnek létre).
+  document.getElementById('um-prepare-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('um-prepare-btn');
+    btn.disabled = true;
+    try {
+      const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/prepare`, { method: 'POST', body: JSON.stringify({ year: state.year, month: state.month }) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { await uiAlert(data?.message || 'Nem sikerült behúzni a rezsi tételeket.', { title: 'Nem sikerült' }); return; }
+      await refresh({ keepDrafts: true });
+      document.getElementById('um-prepare-text').textContent = data.created > 0
+        ? `${data.created} tétel került a hónapba a rezsi tételekből.`
+        : 'Minden rezsi tétel szerepel már a hónapban.';
+      if (typeof state.onSaved === 'function') state.onSaved();
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   document.getElementById('um-save-btn').addEventListener('click', async () => {
     const errorEl = document.getElementById('um-form-error');
     const successEl = document.getElementById('um-form-success');
@@ -294,6 +340,7 @@
       label: r.querySelector('.um-draft-label').value.trim(),
       amount: Number(r.querySelector('.um-draft-amount').value),
       note: r.querySelector('.um-draft-note').value.trim() || null,
+      forwardBilled: r.querySelector('.um-draft-forward').checked,
       files: r.umFiles || [],
     })).filter((r) => r.label && r.amount);
 
@@ -356,6 +403,7 @@
     document.getElementById('um-subtitle').textContent = `${year}. ${MONTH_NAMES[month - 1]}`;
     document.getElementById('um-form-error').classList.remove('show');
     document.getElementById('um-form-success').classList.remove('show');
+    document.getElementById('um-prepare-text').textContent = 'Az ingatlan rezsi tételeiből elkészíthető a hónap rezsije.';
     document.getElementById('um-overlay').classList.add('open');
     await refresh();
   };

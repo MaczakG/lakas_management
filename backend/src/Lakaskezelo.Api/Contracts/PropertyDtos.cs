@@ -8,13 +8,15 @@ public record PropertyListItemDto(
     bool UtilityComplete, int BillingDayOfMonth, int BillingHour, int BillingMinute,
     DateTime NextBillingAt, // budapesti helyi idő, munkanapra tolva (ld. Billing.BillingCalendar)
     // A következő kiküldés időszaka — a UtilityComplete erre az időszakra vonatkozik (ennek a rezsije kerül a számlára).
-    int NextPeriodYear, int NextPeriodMonth);
+    int NextPeriodYear, int NextPeriodMonth,
+    // Részletesebben: Ok / Pending (kitöltendő tétel van) / Missing (ld. Billing.UtilityPeriods).
+    string UtilityState = "Ok");
 
 public record PropertyDetailDto(
     Guid Id, string Name, decimal RentAmount, string? InvoicePrefix,
     int BillingDayOfMonth, int BillingHour, int BillingMinute, bool IsActive,
     List<PropertyOwnerDto> Owners, List<TenantDto> Tenants,
-    PropertySheetDto Sheet, DateTime NextBillingAt, int NextPeriodYear, int NextPeriodMonth);
+    PropertySheetDto Sheet, DateTime NextBillingAt, int NextPeriodYear, int NextPeriodMonth, string UtilityState = "Ok");
 
 // Az ingatlan adatlapja (property-detail.html) — mind opcionális.
 public record PropertySheetDto(
@@ -36,12 +38,23 @@ public record UpsertPropertyRequest(
     PropertySheetDto? Sheet = null); // null: az adatlap változatlan marad (pl. az "Új ingatlan" dialógus)
 
 public record UtilityCostEntryDto(Guid Id, int Year, int Month, string Label, decimal Amount, DateTime CreatedAt, bool IsLocked,
-    Guid? InvoiceId = null, string? InvoiceNumber = null, string? Note = null, List<UtilityAttachmentDto>? Attachments = null);
+    Guid? InvoiceId = null, string? InvoiceNumber = null, string? Note = null, List<UtilityAttachmentDto>? Attachments = null,
+    // ForwardBilled: „tovább számlázandó” (a bérleti díj tartalmazza, nem kerül a bérlő bizonylatára).
+    // IsPending: kitöltendő (még nincs összege). FromItem: rezsi tételből készült (nem egyedi).
+    bool ForwardBilled = false, bool IsPending = false, bool FromItem = false);
 
 // A rezsitételhez csatolt dokumentum (pl. a szolgáltatói számla).
 public record UtilityAttachmentDto(Guid Id, string Name, string FileName, string ContentType, long SizeBytes);
-public record UpsertUtilityCostEntryRequest(int Year, int Month, string Label, decimal Amount, string? Note = null);
-public record UpdateUtilityCostEntryRequest(string Label, decimal Amount, string? Note = null);
+public record UpsertUtilityCostEntryRequest(int Year, int Month, string Label, decimal Amount, string? Note = null, bool ForwardBilled = false);
+// ForwardBilled null: változatlan marad (régebbi kliensekhez).
+public record UpdateUtilityCostEntryRequest(string Label, decimal Amount, string? Note = null, bool? ForwardBilled = null);
+
+// Rezsi tétel: az ingatlan havonta ismétlődő rezsije (ld. UtilityItem).
+public record UtilityItemDto(Guid Id, string Label, bool IsFixed, decimal? Amount, bool ForwardBilled);
+public record UpsertUtilityItemRequest(string Label, bool IsFixed, decimal? Amount, bool ForwardBilled);
+
+public record PrepareUtilityPeriodRequest(int Year, int Month);
+public record PrepareUtilityPeriodResponse(int Created);
 
 // Beköltözési tudnivalók (az ingatlan adatlapjának „Beköltözés” füle).
 public record MoveInInfoDto(string? Text, bool Sendable, bool EmailConfigured, List<MoveInRecipientDto> Recipients);
