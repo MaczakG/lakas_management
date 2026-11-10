@@ -4,7 +4,12 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
-Jelenleg nincs ilyen változás.
+- **2026.11.10** — Megjegyzés a rezsitételhez (V1.1 / 1. pont).
+  - A rezsi-felvételi ablakban minden tételhez megadható egy nem kötelező megjegyzés (pl. mérőállás, a szolgáltatói
+    számla száma), legfeljebb 500 karakter.
+  - A rögzített tétel neve alatt látszik, és a tétel szerkesztésekor módosítható vagy törölhető.
+  - Csak belső: a bizonylatra (PDF, bizonylat adatlapja, e-mail) nem kerül rá.
+  - Migráció: UtilityEntryNote. Egy új oszlop kerül be; meglévő adatot nem módosít.
 
 ## Élesben
 

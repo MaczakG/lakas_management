@@ -36,6 +36,6 @@ public record UpsertPropertyRequest(
     PropertySheetDto? Sheet = null); // null: az adatlap változatlan marad (pl. az "Új ingatlan" dialógus)
 
 public record UtilityCostEntryDto(Guid Id, int Year, int Month, string Label, decimal Amount, DateTime CreatedAt, bool IsLocked,
-    Guid? InvoiceId = null, string? InvoiceNumber = null);
-public record UpsertUtilityCostEntryRequest(int Year, int Month, string Label, decimal Amount);
-public record UpdateUtilityCostEntryRequest(string Label, decimal Amount);
+    Guid? InvoiceId = null, string? InvoiceNumber = null, string? Note = null);
+public record UpsertUtilityCostEntryRequest(int Year, int Month, string Label, decimal Amount, string? Note = null);
+public record UpdateUtilityCostEntryRequest(string Label, decimal Amount, string? Note = null);

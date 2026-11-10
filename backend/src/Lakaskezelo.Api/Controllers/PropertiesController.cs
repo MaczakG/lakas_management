@@ -128,6 +128,8 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             return BadRequest(new { message = $"Legfeljebb {Billing.InvoiceGenerationService.LateUtilityMonths} hónapra visszamenőleg lehet rezsitételt felvenni ({fromYear}. {fromMonth:D2}. hónaptól)." });
         }
 
+        if (CleanNote(request.Note) is { Length: > 500 }) return BadRequest(new { message = NoteTooLong });
+
         var entry = new UtilityCostEntry
         {
             Id = Guid.NewGuid(),
@@ -136,6 +138,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             Month = request.Month,
             Label = request.Label.Trim(),
             Amount = request.Amount,
+            Note = CleanNote(request.Note),
             CreatedByUserId = User.GetUserId(),
             CreatedAt = DateTime.UtcNow,
         };
@@ -158,8 +161,10 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         var label = (request.Label ?? "").Trim();
         if (label.Length is 0 or > 200) return BadRequest(new { message = "Add meg a tétel megnevezését." });
         if (request.Amount < 0) return BadRequest(new { message = "Az összeg nem lehet negatív." });
+        if (CleanNote(request.Note) is { Length: > 500 }) return BadRequest(new { message = NoteTooLong });
         entry.Label = label;
         entry.Amount = request.Amount;
+        entry.Note = CleanNote(request.Note);
         await db.SaveChangesAsync(ct);
         return Ok(ToDto(entry));
     }
@@ -321,6 +326,9 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         next.At, next.Period.Year, next.Period.Month);
     }
 
+    private const string NoteTooLong = "A megjegyzés legfeljebb 500 karakter lehet.";
+    private static string? CleanNote(string? note) => string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+
     private static UtilityCostEntryDto ToDto(UtilityCostEntry entry) => new(entry.Id, entry.Year, entry.Month, entry.Label, entry.Amount, entry.CreatedAt,
-        IsLocked(entry), entry.InvoiceId, entry.Invoice?.Number);
+        IsLocked(entry), entry.InvoiceId, entry.Invoice?.Number, entry.Note);
 }
