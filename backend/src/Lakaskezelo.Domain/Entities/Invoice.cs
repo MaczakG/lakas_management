@@ -51,6 +51,10 @@ public class Invoice : ICompanyOwned
     public DateOnly? PaidAt { get; set; }
 
     // Sztornó bizonylat-e. (Aktív bizonylat: nem sztornó, és nem is sztornózták — ilyenből egy lehet időszakonként.)
+    // A bizonylat rezsitételeihez tartozó csatolmányok száma a kiállításkor, és ebből hány ment ki az e-maillel.
+    public int AttachmentsAvailable { get; set; }
+    public int AttachmentsSent { get; set; }
+
     public bool IsStorno => CancelsInvoiceId != null;
 
     public List<InvoiceLine> Lines { get; set; } = [];

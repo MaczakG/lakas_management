@@ -7,7 +7,16 @@
   const styleTag = document.createElement('style');
   styleTag.textContent = `
     #um-overlay{z-index:300;}
-    #um-overlay .modal{max-width:640px;}
+    #um-overlay .modal{max-width:760px;}
+    #um-existing-tbody td:nth-child(2){white-space:nowrap;}
+    /* Telefonon a sor két szintre törik: fent a megnevezés és az összeg, alatta a gombok (nem kell oldalra görgetni). */
+    @media (max-width:640px){
+      #um-overlay thead{display:none;}
+      #um-overlay .card-table table,#um-existing-tbody{display:block;width:100%;min-width:0;}
+      #um-existing-tbody tr:not(.empty-row){display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;}
+      #um-existing-tbody tr:not(.empty-row) td:not(.row-actions){border-bottom:none;padding-bottom:4px;}
+      #um-existing-tbody td.row-actions{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;justify-content:flex-start;white-space:normal;padding-top:4px;text-align:left;}
+    }
     .um-draft-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px;}
     .um-draft-row .field{margin-bottom:0;}
     .um-draft-row .um-note-field{grid-column:1 / -1;}
@@ -22,6 +31,20 @@
     #um-existing-tbody .row-actions{white-space:nowrap;}
     .um-note{display:none;font-size:13px;line-height:1.5;color:var(--ink-soft);border-left:2px solid var(--line-strong);padding:2px 0 2px 12px;margin:0 0 18px;}
     .um-note.show{display:block;}
+    .um-atts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+    .um-atts:empty{display:none;}
+    .um-att{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:3px 4px 3px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);font-size:12px;font-weight:500;color:var(--ink-soft);}
+    .um-att svg{width:13px;height:13px;flex-shrink:0;color:var(--muted);}
+    .um-att a,.um-att .um-att-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit;text-decoration:none;}
+    .um-att a:hover{color:var(--accent);text-decoration:underline;}
+    .um-att .dim{flex-shrink:0;}
+    .um-att button{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:4px;flex-shrink:0;}
+    .um-att button:hover{color:var(--coral);background:var(--coral-bg);}
+    .um-att button svg{width:12px;height:12px;color:inherit;}
+    .um-draft-row .um-att button{border:none;width:20px;height:20px;background:none;color:var(--muted);}
+    .um-draft-row .um-file-field{grid-column:1 / -1;display:flex;flex-direction:column;gap:6px;}
+    .um-draft-row .um-attach-btn,#um-existing-tbody .um-attach-btn{display:inline-flex;align-items:center;gap:6px;width:auto;height:32px;padding:0 10px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;align-self:flex-start;}
+    .um-draft-row .um-attach-btn svg,#um-existing-tbody .um-attach-btn svg{width:14px;height:14px;margin:0;display:inline-block;color:var(--muted);}
     .um-section-title{font-family:var(--font-display);font-weight:700;font-size:14.5px;margin:0 0 10px;color:var(--ink);}
   `;
   document.head.appendChild(styleTag);
@@ -64,6 +87,72 @@
   const LATE_UTILITY_MONTHS = 36;
   let state = { propertyId: null, year: null, month: null, onClose: null };
 
+  // ---------- csatolmányok (pl. a szolgáltatói számla): a bizonylat levelével kiküldhetők a bérlőnek ----------
+  const ATTACH_ACCEPT = '.pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.doc,.docx,.xls,.xlsx,.odt,.ods,.txt,.csv';
+  const ATTACH_MAX_BYTES = 15 * 1024 * 1024;
+  const ATTACH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#paperclip"/></svg>';
+  const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg>';
+  const sizeText = (bytes) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+
+  function pickFiles() {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.multiple = true;
+      input.accept = ATTACH_ACCEPT;
+      input.addEventListener('change', () => resolve([...input.files]));
+      input.addEventListener('cancel', () => resolve([]));
+      input.click();
+    });
+  }
+
+  // Feltölt egy fájlt a tételhez. Hibánál az üzenetet adja vissza (különben null).
+  async function uploadAttachment(entryId, file) {
+    if (file.size > ATTACH_MAX_BYTES) return `A(z) „${file.name}” túl nagy: egy fájl legfeljebb 15 MB lehet.`;
+    const form = new FormData();
+    form.append('file', file);
+    form.append('utilityCostEntryId', entryId);
+    try {
+      const res = await fetch(`${API_BASE}/api/documents`, { method: 'POST', headers: authHeaders(), body: form });
+      if (res.status === 401) { clearAuth(); location.href = 'login.html'; return 'Lejárt a munkamenet.'; }
+      if (!res.ok) return (await res.json().catch(() => null))?.message || `A(z) „${file.name}” feltöltése nem sikerült.`;
+      return null;
+    } catch {
+      return `A(z) „${file.name}” feltöltése nem sikerült. Ellenőrizd az internetkapcsolatot.`;
+    }
+  }
+
+  function attachmentsHtml(entry) {
+    return (entry.attachments || []).map((a) => `
+      <span class="um-att">${ATTACH_ICON}<a href="document-detail.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener" title="Megnyitás új lapon">${escapeHtml(a.fileName)}</a>
+        <span class="dim">${sizeText(a.sizeBytes)}</span>
+        <button type="button" title="Csatolmány törlése" aria-label="Csatolmány törlése: ${escapeHtml(a.fileName)}" onclick="window.__umDeleteAttachment('${a.id}')">${X_ICON}</button></span>`).join('');
+  }
+
+  window.__umAttach = async (entryId) => {
+    const files = await pickFiles();
+    if (!files.length) return;
+    const errors = [];
+    for (const file of files) {
+      const error = await uploadAttachment(entryId, file);
+      if (error) errors.push(error);
+    }
+    await refresh({ keepDrafts: true });
+    if (typeof state.onSaved === 'function') state.onSaved();
+    if (errors.length) await uiAlert(errors.join('\n'), { title: 'Nem minden fájl töltődött fel' });
+  };
+
+  window.__umDeleteAttachment = async (documentId) => {
+    if (!(await uiConfirm('Biztosan törlöd ezt a csatolmányt? A fájl véglegesen törlődik.', { title: 'Csatolmány törlése', confirmText: 'Törlés', danger: true }))) return;
+    const res = await apiFetch(`/api/documents/${documentId}`, { method: 'DELETE' });
+    if (!res.ok && res.status !== 204) {
+      await uiAlert((await res.json().catch(() => null))?.message || 'Nem sikerült törölni a csatolmányt.', { title: 'Törlés sikertelen' });
+      return;
+    }
+    await refresh({ keepDrafts: true });
+    if (typeof state.onSaved === 'function') state.onSaved();
+  };
+
   function addDraftRow() {
     const row = document.createElement('div');
     row.className = 'um-draft-row';
@@ -72,8 +161,18 @@
       <div class="field"><label>Összeg (Ft)</label><input type="number" class="um-draft-amount" min="0"></div>
       <button type="button" title="Sor eltávolítása" aria-label="Sor eltávolítása"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
       <div class="field um-note-field"><label>Megjegyzés <span class="dim">(nem kötelező, a bizonylatra nem kerül rá)</span></label><input type="text" class="um-draft-note" maxlength="500" placeholder="pl. mérőállás, a szolgáltatói számla száma"></div>
+      <div class="um-file-field"><button type="button" class="um-attach-btn">${ATTACH_ICON}Csatolmány</button><div class="um-atts"></div></div>
     `;
-    row.querySelector('button').addEventListener('click', () => { row.remove(); updateDraftTotal(); });
+    // A sorhoz kiválasztott fájlok a tétel mentésekor töltődnek fel.
+    row.umFiles = [];
+    const renderFiles = () => {
+      row.querySelector('.um-atts').innerHTML = row.umFiles.map((f, i) => `
+        <span class="um-att">${ATTACH_ICON}<span class="um-att-name">${escapeHtml(f.name)}</span><span class="dim">${sizeText(f.size)}</span>
+          <button type="button" data-remove-file="${i}" title="Eltávolítás" aria-label="Eltávolítás: ${escapeHtml(f.name)}">${X_ICON}</button></span>`).join('');
+      row.querySelectorAll('[data-remove-file]').forEach((b) => b.addEventListener('click', () => { row.umFiles.splice(Number(b.dataset.removeFile), 1); renderFiles(); }));
+    };
+    row.querySelector('.um-attach-btn').addEventListener('click', async () => { row.umFiles.push(...await pickFiles()); renderFiles(); });
+    row.querySelector(':scope > button').addEventListener('click', () => { row.remove(); updateDraftTotal(); });
     row.querySelector('.um-draft-amount').addEventListener('input', updateDraftTotal);
     document.getElementById('um-draft-rows').appendChild(row);
   }
@@ -90,7 +189,8 @@
     updateDraftTotal();
   }
 
-  async function refresh() {
+  // keepDrafts: csatolmány feltöltése / törlése után a még el nem mentett új sorok megmaradnak.
+  async function refresh({ keepDrafts = false } = {}) {
     const [entriesRes, invoicesRes] = await Promise.all([
       apiFetch(`/api/properties/${state.propertyId}/utility-costs`),
       apiFetch(`/api/properties/${state.propertyId}/invoices`),
@@ -111,9 +211,10 @@
       ? `<tr class="empty-row"><td colspan="3">Nincs még rögzített tétel.</td></tr>`
       : entries.map((e) => `
         <tr>
-          <td>${escapeHtml(e.label)}${e.note ? `<div class="um-entry-note">${escapeHtml(e.note)}</div>` : ''}</td>
+          <td>${escapeHtml(e.label)}${e.note ? `<div class="um-entry-note">${escapeHtml(e.note)}</div>` : ''}<div class="um-atts">${attachmentsHtml(e)}</div></td>
           <td>${formatCurrency(e.amount)}</td>
-          <td class="row-actions">${e.isLocked
+          <td class="row-actions"><button class="um-attach-btn" type="button" title="Csatolmány hozzáadása (pl. a szolgáltatói számla)" onclick="window.__umAttach('${e.id}')" aria-label="Csatolmány hozzáadása">${ATTACH_ICON}<span>Csatolmány</span></button>
+            ${e.isLocked
             ? (e.invoiceId
               ? `<a class="link mono" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}" title="Ezen a bizonylaton szerepel; sztornóig zárolt">${escapeHtml(e.invoiceNumber || 'Bizonylaton')}</a>`
               : '<span class="status-tag inactive">Lezárva</span>')
@@ -137,7 +238,7 @@
       document.getElementById(id).style.display = tooOld ? 'none' : '';
     }
 
-    resetDraftRows();
+    if (!keepDrafts) resetDraftRows();
   }
 
   // Meglévő tétel helyben szerkesztése: a sor mezőkké alakul, Mentés / Mégse.
@@ -155,7 +256,7 @@
     row.querySelector('.um-edit-amount').value = entry.amount;
     row.querySelector('.um-edit-note').value = entry.note || '';
     row.querySelector('.um-edit-label').focus();
-    row.querySelector('[data-cancel]').addEventListener('click', refresh);
+    row.querySelector('[data-cancel]').addEventListener('click', () => refresh({ keepDrafts: true }));
     row.querySelector('[data-save]').addEventListener('click', async () => {
       const label = row.querySelector('.um-edit-label').value.trim();
       const amount = Number(row.querySelector('.um-edit-amount').value);
@@ -193,6 +294,7 @@
       label: r.querySelector('.um-draft-label').value.trim(),
       amount: Number(r.querySelector('.um-draft-amount').value),
       note: r.querySelector('.um-draft-note').value.trim() || null,
+      files: r.umFiles || [],
     })).filter((r) => r.label && r.amount);
 
     if (rows.length === 0) {
@@ -201,22 +303,38 @@
       return;
     }
 
-    const payloadBase = { year: state.year, month: state.month };
-    for (const row of rows) {
-      const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs`, {
-        method: 'POST',
-        body: JSON.stringify({ ...payloadBase, ...row }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        errorEl.textContent = data.message || 'Nem sikerült minden tételt rögzíteni.';
-        errorEl.classList.add('show');
-        await refresh();
-        return;
+    const saveBtn = document.getElementById('um-save-btn');
+    saveBtn.disabled = true;
+    const uploadErrors = [];
+    try {
+      for (const { files, ...row } of rows) {
+        const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs`, {
+          method: 'POST',
+          body: JSON.stringify({ year: state.year, month: state.month, ...row }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          errorEl.textContent = data.message || 'Nem sikerült minden tételt rögzíteni.';
+          errorEl.classList.add('show');
+          await refresh();
+          return;
+        }
+        const entry = await res.json();
+        for (const file of files) {
+          const error = await uploadAttachment(entry.id, file);
+          if (error) uploadErrors.push(error);
+        }
       }
+    } finally {
+      saveBtn.disabled = false;
     }
 
-    successEl.classList.add('show');
+    if (uploadErrors.length) {
+      errorEl.textContent = `A tételek rögzítve, de nem minden csatolmány töltődött fel. ${uploadErrors.join(' ')}`;
+      errorEl.classList.add('show');
+    } else {
+      successEl.classList.add('show');
+    }
     await refresh();
     if (typeof state.onSaved === 'function') state.onSaved();
   });

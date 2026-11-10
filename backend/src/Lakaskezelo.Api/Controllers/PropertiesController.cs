@@ -108,7 +108,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
     public async Task<ActionResult<List<UtilityCostEntryDto>>> ListUtilityCosts(Guid id, CancellationToken ct)
     {
         var entries = await db.UtilityCostEntries.Where(u => u.PropertyId == id)
-            .Include(u => u.Invoice)
+            .Include(u => u.Invoice).Include(u => u.Attachments)
             .OrderByDescending(u => u.Year).ThenByDescending(u => u.Month).ThenBy(u => u.Label)
             .ToListAsync(ct);
         return Ok(entries.Select(ToDto));
@@ -155,7 +155,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
     [HttpPut("{id:guid}/utility-costs/{entryId:guid}")]
     public async Task<ActionResult<UtilityCostEntryDto>> UpdateUtilityCost(Guid id, Guid entryId, UpdateUtilityCostEntryRequest request, CancellationToken ct)
     {
-        var entry = await db.UtilityCostEntries.Include(u => u.Invoice).FirstOrDefaultAsync(u => u.Id == entryId && u.PropertyId == id, ct);
+        var entry = await db.UtilityCostEntries.Include(u => u.Invoice).Include(u => u.Attachments).FirstOrDefaultAsync(u => u.Id == entryId && u.PropertyId == id, ct);
         if (entry is null) return NotFound();
         if (IsLocked(entry)) return Conflict(new { message = LockedMessage(entry) });
         var label = (request.Label ?? "").Trim();
@@ -176,6 +176,8 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         if (entry is null) return NotFound();
         if (IsLocked(entry)) return Conflict(new { message = LockedMessage(entry) });
 
+        // A tétel csatolmányai vele együtt törlődnek (a tárhelyről is).
+        await documents.DeleteExclusiveAsync(d => d.UtilityCostEntryId == entryId, ct);
         db.UtilityCostEntries.Remove(entry);
         await db.SaveChangesAsync(ct);
         return NoContent();
@@ -330,5 +332,6 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
     private static string? CleanNote(string? note) => string.IsNullOrWhiteSpace(note) ? null : note.Trim();
 
     private static UtilityCostEntryDto ToDto(UtilityCostEntry entry) => new(entry.Id, entry.Year, entry.Month, entry.Label, entry.Amount, entry.CreatedAt,
-        IsLocked(entry), entry.InvoiceId, entry.Invoice?.Number, entry.Note);
+        IsLocked(entry), entry.InvoiceId, entry.Invoice?.Number, entry.Note,
+        [.. entry.Attachments.OrderBy(d => d.UploadedAt).Select(d => new UtilityAttachmentDto(d.Id, d.Name, d.FileName, d.ContentType, d.SizeBytes))]);
 }

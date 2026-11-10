@@ -25,7 +25,7 @@ public class EmailSenderRouter(
         return platform.EmailProvider == EmailProvider.Smtp ? await smtp.IsConfiguredAsync(ct) : await mailgun.IsConfiguredAsync(ct);
     }
 
-    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
+    public async Task<bool> SendWithAttachmentsAsync(string to, string subject, string htmlBody, string textBody, IReadOnlyList<EmailAttachment> attachments, CancellationToken ct)
     {
         if (await IsSuppressedAsync(db, configuration, to, ct))
         {
@@ -45,12 +45,12 @@ public class EmailSenderRouter(
         bool result;
         if (platform.EmailProvider == EmailProvider.Smtp)
         {
-            result = await smtp.SendWithAsync(platform, fromName, replyTo, to, subject, htmlBody, textBody, attachment, ct);
+            result = await smtp.SendWithAsync(platform, fromName, replyTo, to, subject, htmlBody, textBody, attachments, ct);
             LastError = smtp.LastError;
         }
         else
         {
-            result = await mailgun.SendWithAsync(platform, fromName, replyTo, to, subject, htmlBody, textBody, attachment, ct);
+            result = await mailgun.SendWithAsync(platform, fromName, replyTo, to, subject, htmlBody, textBody, attachments, ct);
             LastError = mailgun.LastError;
         }
         return result;

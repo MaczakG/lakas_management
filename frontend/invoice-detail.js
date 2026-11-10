@@ -87,6 +87,16 @@ function render() {
   if (invoice.cancelledAt) {
     rows.push(detailRow('Sztornózva', `${Docs.formatDateTime(invoice.cancelledAt)}${detail.cancelledByName ? `<small class="prop-sub">${escapeHtml(detail.cancelledByName)}</small>` : ''}${storno ? `<small class="prop-sub">sztornó: ${link(storno)}</small>` : ''}`));
   }
+  // A rezsitételek csatolmányai: kimentek-e a bizonylat levelével.
+  if (invoice.attachmentsAvailable > 0) {
+    const all = invoice.attachmentsAvailable;
+    const sent = invoice.attachmentsSent;
+    rows.push(detailRow('Mellékletek', sent >= all
+      ? `<span class="status-tag ok">${all} db elküldve</span>`
+      : sent > 0
+        ? `<span class="status-tag missing">${all} db-ból ${sent} ment ki</span> <span class="dim">a többi nem fért a levélbe</span>`
+        : `<span class="status-tag inactive">${all} db, nem lett elküldve</span>`));
+  }
   if (invoice.errorMessage) rows.push(detailRow('Hiba', `<span class="inv-error">${escapeHtml(invoice.errorMessage)}</span>`));
   if (detail.rentConversionNote) rows.push(detailRow('Árfolyam', `<span class="inv-note">${escapeHtml(detail.rentConversionNote)}</span>`));
   $('props').innerHTML = rows.join('');

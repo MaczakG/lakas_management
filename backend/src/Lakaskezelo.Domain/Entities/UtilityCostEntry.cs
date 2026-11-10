@@ -21,6 +21,9 @@ public class UtilityCostEntry : ICompanyOwned
     // Az egyenlegkövetés bevezetése előtti, korábbi hónapra szóló, bizonylathoz nem köthető tétel: nem kerül
     // automatikusan bizonylatra (nehogy egy régi, máshol már elszámolt tétel hirtelen felbukkanjon).
     public bool ExcludedFromBilling { get; set; }
+    // A tételhez csatolt dokumentumok (Document.UtilityCostEntryId).
+    public List<Document> Attachments { get; set; } = [];
+
     public Guid? CreatedByUserId { get; set; }
     public DateTime CreatedAt { get; set; }
 }

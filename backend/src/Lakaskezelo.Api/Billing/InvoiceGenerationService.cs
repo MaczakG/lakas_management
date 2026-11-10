@@ -17,6 +17,7 @@ public class InvoiceGenerationService(
     AppSettingsService settingsService,
     S3InvoiceStorage storage,
     IEmailSender emailSender,
+    Documents.DocumentStorage documents,
     Invoicing.InvoiceProviderResolver providers,
     ILogger<InvoiceGenerationService> logger)
 {
@@ -28,10 +29,17 @@ public class InvoiceGenerationService(
     private const string DefaultProviderEmailBody = "Elkészült a(z) {ingatlan} ingatlanhoz tartozó számlád a(z) {időszak} időszakra.\n\nFizetendő összeg: {összeg}";
     private const string DefaultInvoiceEmailBody = "Elkészült a(z) {ingatlan} ingatlanhoz tartozó bizonylatod a(z) {időszak} időszakra.\n\nFizetendő összeg: {összeg}";
 
+    // A levélhez csatolt fájlok (a bizonylat PDF-je és a rezsitételek csatolmányai) együttes mérete legfeljebb ennyi
+    // lehet: a levelezőrendszerek jellemzően 20–25 MB-nál nagyobb levelet nem fogadnak. Ami nem fér bele, kimarad.
+    public const long MaxEmailAttachmentBytes = 18 * 1024 * 1024;
+
+    // sendAttachments: kézi bizonylatkészítésnél a felhasználó döntése arról, menjenek-e a rezsitételek csatolmányai
+    // a levéllel. Csak akkor számít, ha a bérlőnél nincs beállítva (InvoiceAttachmentPreference.Ask); null (pl. az
+    // időzített küldésnél, ahol nincs kit megkérdezni): mellékletek nélkül megy.
     // onProgress (opcionális): a felület folyamatjelzőjének — előbb a lépések terve („plan”), aztán minden lépés
     // kezdete (data, pdf, upload, email, save). A visszahívás hibája (pl. bezárt böngésző) a generálást nem állítja meg.
     public async Task<Invoice> GenerateAndSendAsync(Property property, int year, int month, CancellationToken ct,
-        Func<GenerationProgress, Task>? onProgress = null)
+        Func<GenerationProgress, Task>? onProgress = null, bool? sendAttachments = null)
     {
         async Task Report(GenerationProgress progress)
         {
@@ -61,32 +69,8 @@ public class InvoiceGenerationService(
             throw new InvalidOperationException(
                 $"Erre az időszakra már ki van állítva: {existing.Number}. Javításhoz sztornózd, és utána készíts újat.");
         }
-        // A bizonylat az időszakban ott lakó bérlőé (a kiköltözött korábbi bérlő nem kaphatja, és az egyenlegébe sem
-        // kerülhet); több jelölt közül a legutóbb beköltözött.
-        var periodStart = new DateOnly(year, month, 1);
-        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
-        var tenant = await db.Tenants
-            .Where(t => t.PropertyId == property.Id
-                && (t.MoveOutDate == null || t.MoveOutDate >= periodStart)
-                && (t.MoveInDate == null || t.MoveInDate <= periodEnd))
-            .OrderByDescending(t => t.MoveOutDate == null).ThenByDescending(t => t.MoveInDate)
-            .FirstOrDefaultAsync(ct);
-        // Ha a beköltözés dátuma pontatlan (az időszak utánra esik), a jelenlegi bérlő kapja.
-        tenant ??= await db.Tenants.Where(t => t.PropertyId == property.Id && t.MoveOutDate == null)
-            .OrderByDescending(t => t.MoveInDate).FirstOrDefaultAsync(ct);
-        // A bizonylatra az ingatlan minden még nem zárolt (bizonylathoz nem kötött) rezsitétele kerül, amely az időszakra
-        // vagy legfeljebb 35 hónappal korábbra (összesen 36 hónap) szól: a később felvett tételek így a következő
-        // bizonylaton számlázódnak. Az újragenerált bizonylat saját korábbi tételei is ide tartoznak. A bevezetés előtti,
-        // kizárt (ExcludedFromBilling) tétel csak a saját hónapja bizonylatára kerülhet.
-        var (fromYear, fromMonth) = BillingWindowStart(year, month);
-        var fromKey = fromYear * 12 + fromMonth;
-        var toKey = year * 12 + month;
-        var existingId = existing?.Id;
-        var utilityLines = await db.UtilityCostEntries
-            .Where(u => u.PropertyId == property.Id && (!u.ExcludedFromBilling || (u.Year == year && u.Month == month))
-                && (u.InvoiceId == null || u.InvoiceId == existingId)
-                && u.Year * 12 + u.Month >= fromKey && u.Year * 12 + u.Month <= toKey)
-            .ToListAsync(ct);
+        var tenant = await FindTenantAsync(property.Id, year, month, ct);
+        var utilityLines = await BillableEntriesAsync(property.Id, year, month, existing?.Id, ct);
         foreach (var u in utilityLines) u.InvoiceId = null;
 
         // A bizonylat "Bérleti díj jogosultjai" táblázatához kell a tulajdonos-lista Owner-navigációval.
@@ -174,6 +158,11 @@ public class InvoiceGenerationService(
             db.InvoiceLines.AddRange(newLines);
             invoice.AmountTotal = newLines.Sum(l => l.Amount);
 
+            // A bizonylatra került rezsitételek csatolmányai (pl. szolgáltatói számlák), a tételek sorrendjében.
+            var attachmentDocs = await AttachmentsOfAsync(billed, ct);
+            invoice.AttachmentsAvailable = attachmentDocs.Count;
+            invoice.AttachmentsSent = 0;
+
             byte[]? pdfBytes;
             if (provider is null)
             {
@@ -251,8 +240,25 @@ public class InvoiceGenerationService(
                     .Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
                     .Select(p => $"""<p style="margin:0 0 12px;">{System.Net.WebUtility.HtmlEncode(p).Replace("\n", "<br>")}</p>"""));
                 var htmlBody = EmailTemplate.Render(preheader: $"{subject} — {periodLabel}", heading: subject, bodyHtml: bodyParagraphsHtml);
-                var attachment = new EmailAttachment($"{invoice.Number}.pdf", pdfBytes, "application/pdf");
-                emailed = await emailSender.SendAsync(tenant.Email!, EmailTemplate.UniqueSubject(subject), htmlBody, bodyText, attachment, ct);
+                var attachments = new List<EmailAttachment> { new($"{invoice.Number}.pdf", pdfBytes, "application/pdf") };
+                // A rezsitételek csatolmányai: a bérlő beállítása dönt; ha nincs beállítva, a kézi készítéskor adott válasz.
+                if (ShouldSendAttachments(tenant, sendAttachments))
+                {
+                    var room = MaxEmailAttachmentBytes - pdfBytes.LongLength;
+                    foreach (var doc in attachmentDocs)
+                    {
+                        if (doc.SizeBytes > room) continue;
+                        var version = await db.DocumentVersions.FirstOrDefaultAsync(v => v.DocumentId == doc.Id && v.Number == doc.CurrentVersion, ct);
+                        byte[]? data = null;
+                        try { if (version is not null) data = await documents.ReadAsync(version, ct); }
+                        catch (Exception ex) { logger.LogWarning(ex, "Attachment {DocumentId} of invoice {Number} could not be read", doc.Id, invoice.Number); }
+                        if (data is null) continue;
+                        attachments.Add(new EmailAttachment(doc.FileName, data, doc.ContentType));
+                        room -= data.LongLength;
+                    }
+                }
+                emailed = await emailSender.SendWithAttachmentsAsync(tenant.Email!, EmailTemplate.UniqueSubject(subject), htmlBody, bodyText, attachments, ct);
+                if (emailed) invoice.AttachmentsSent = attachments.Count - 1;
             }
 
             invoice.Status = emailed ? InvoiceStatus.Sent : InvoiceStatus.Generated;
@@ -278,6 +284,77 @@ public class InvoiceGenerationService(
         if (existing is null) db.Invoices.Add(invoice);
         await db.SaveChangesAsync(ct);
         return invoice;
+    }
+
+    // A bizonylat az időszakban ott lakó bérlőé (a kiköltözött korábbi bérlő nem kaphatja, és az egyenlegébe sem
+    // kerülhet); több jelölt közül a legutóbb beköltözött.
+    private async Task<Tenant?> FindTenantAsync(Guid propertyId, int year, int month, CancellationToken ct)
+    {
+        var periodStart = new DateOnly(year, month, 1);
+        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+        var tenant = await db.Tenants
+            .Where(t => t.PropertyId == propertyId
+                && (t.MoveOutDate == null || t.MoveOutDate >= periodStart)
+                && (t.MoveInDate == null || t.MoveInDate <= periodEnd))
+            .OrderByDescending(t => t.MoveOutDate == null).ThenByDescending(t => t.MoveInDate)
+            .FirstOrDefaultAsync(ct);
+        // Ha a beköltözés dátuma pontatlan (az időszak utánra esik), a jelenlegi bérlő kapja.
+        return tenant ?? await db.Tenants.Where(t => t.PropertyId == propertyId && t.MoveOutDate == null)
+            .OrderByDescending(t => t.MoveInDate).FirstOrDefaultAsync(ct);
+    }
+
+    // A bizonylatra az ingatlan minden még nem zárolt (bizonylathoz nem kötött) rezsitétele kerül, amely az időszakra
+    // vagy legfeljebb 35 hónappal korábbra (összesen 36 hónap) szól: a később felvett tételek így a következő
+    // bizonylaton számlázódnak. Az újragenerált bizonylat saját korábbi tételei is ide tartoznak. A bevezetés előtti,
+    // kizárt (ExcludedFromBilling) tétel csak a saját hónapja bizonylatára kerülhet.
+    private async Task<List<UtilityCostEntry>> BillableEntriesAsync(Guid propertyId, int year, int month, Guid? existingId, CancellationToken ct)
+    {
+        var (fromYear, fromMonth) = BillingWindowStart(year, month);
+        var fromKey = fromYear * 12 + fromMonth;
+        var toKey = year * 12 + month;
+        return await db.UtilityCostEntries
+            .Where(u => u.PropertyId == propertyId && (!u.ExcludedFromBilling || (u.Year == year && u.Month == month))
+                && (u.InvoiceId == null || u.InvoiceId == existingId)
+                && u.Year * 12 + u.Month >= fromKey && u.Year * 12 + u.Month <= toKey)
+            .ToListAsync(ct);
+    }
+
+    // A megadott rezsitételek csatolmányai, a tételek sorrendjében (tételen belül a feltöltés sorrendjében).
+    private async Task<List<Document>> AttachmentsOfAsync(IReadOnlyList<UtilityCostEntry> entries, CancellationToken ct)
+    {
+        if (entries.Count == 0) return [];
+        var ids = entries.Select(e => e.Id).ToList();
+        var docs = await db.Documents.Where(d => d.UtilityCostEntryId != null && ids.Contains(d.UtilityCostEntryId.Value)).ToListAsync(ct);
+        return [.. docs.OrderBy(d => ids.IndexOf(d.UtilityCostEntryId!.Value)).ThenBy(d => d.UploadedAt)];
+    }
+
+    // Mennek-e a csatolmányok a levéllel: a bérlő beállítása dönt; ha nincs beállítva, a kézi készítéskor adott válasz
+    // (ennek hiányában, pl. az időzített küldésnél: nem).
+    public static bool ShouldSendAttachments(Tenant? tenant, bool? answer) => tenant?.InvoiceAttachments switch
+    {
+        InvoiceAttachmentPreference.Send => true,
+        InvoiceAttachmentPreference.DontSend => false,
+        _ => answer ?? false,
+    };
+
+    // Kézi bizonylatkészítés előtt: milyen csatolmányok mennének a levéllel, és kell-e rákérdezni. Ugyanazokat a
+    // tételeket nézi, amelyek a bizonylatra kerülnének.
+    public async Task<Contracts.InvoiceAttachmentPlanDto> PlanAttachmentsAsync(Property property, int year, int month, CancellationToken ct)
+    {
+        var existingId = await db.Invoices
+            .Where(i => i.PropertyId == property.Id && i.PeriodYear == year && i.PeriodMonth == month
+                && i.CancelledAt == null && i.CancelsInvoiceId == null)
+            .Select(i => (Guid?)i.Id).FirstOrDefaultAsync(ct);
+        var tenant = await FindTenantAsync(property.Id, year, month, ct);
+        var entries = (await BillableEntriesAsync(property.Id, year, month, existingId, ct)).Where(u => u.Amount != 0)
+            .OrderBy(u => u.Year == year && u.Month == month ? 0 : 1)
+            .ThenBy(u => u.Year).ThenBy(u => u.Month).ThenBy(u => u.CreatedAt).ThenBy(u => u.Label)
+            .ToList();
+        var labels = entries.ToDictionary(e => e.Id, e => e.Label);
+        var docs = await AttachmentsOfAsync(entries, ct);
+        return new Contracts.InvoiceAttachmentPlanDto(
+            tenant?.Name, tenant?.InvoiceAttachments ?? InvoiceAttachmentPreference.Ask, !string.IsNullOrWhiteSpace(tenant?.Email),
+            [.. docs.Select(d => new Contracts.InvoiceAttachmentDto(d.Id, d.Name, d.FileName, d.SizeBytes, labels[d.UtilityCostEntryId!.Value]))]);
     }
 
     // Sztornózás: a kiállított (legenerált vagy kiküldött) bizonylatról sztornó bizonylat készül az eredeti sorok

@@ -30,6 +30,13 @@ const FIELDS = {
       { value: 'Advance', label: 'Előre (tárgyhó)' },
       { value: 'Arrears', label: 'Utólag (előző hó)' },
     ] },
+    // A rezsitételek csatolmányai (pl. szolgáltatói számlák) a bizonylat levelével: ha nincs beállítva, kézi
+    // bizonylatkészítésnél a program rákérdez, az időzített küldés pedig mellékletek nélkül megy.
+    { path: 'invoiceAttachments', label: 'Rezsi mellékletek', type: 'select', required: true, options: [
+      { value: 'Ask', label: 'Nincs beállítva (rákérdez)' },
+      { value: 'Send', label: 'Kapja a bizonylattal' },
+      { value: 'DontSend', label: 'Nem kapja' },
+    ] },
     // Csak magánszemély bérbeadónál: ha a bérlő fizeti be az SZJA-t, a bizonylaton a lakbér 15%-a levonódik.
     ...(company && !company.isBusiness ? [{ path: 'tenantPaysSzja', label: 'SZJA-t fizeti', type: 'select', required: true, options: [
       { value: 'false', label: 'A bérbeadó' },
@@ -47,6 +54,7 @@ async function save(draft) {
     propertyId: draft.propertyId || null, moveInDate: draft.moveInDate, moveOutDate: draft.moveOutDate,
     notes: draft.notes, rentCurrency: draft.rentCurrency,
     rentPaymentTiming: draft.rentPaymentTiming,
+    invoiceAttachments: draft.invoiceAttachments,
     tenantPaysSzja: draft.tenantPaysSzja === true || draft.tenantPaysSzja === 'true',
   };
   const res = await apiFetch(`/api/tenants/${tenantId}`, { method: 'PUT', body: JSON.stringify(payload) });

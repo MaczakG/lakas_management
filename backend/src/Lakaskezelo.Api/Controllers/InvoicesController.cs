@@ -69,6 +69,17 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
 
     // Manuális "Generálás most" / "Újraküldés" — ugyanazt a logikát futtatja, mint az automatikus
     // ütemező (InvoiceGenerationService), így egy korábban Failed számla is újrapróbálható innen.
+    // Kézi bizonylatkészítés előtt: milyen csatolmányok mennének a levéllel, és kell-e rákérdezni (a bérlőnél nincs
+    // beállítva, hogy kéri-e őket).
+    [HttpGet("attachment-plan")]
+    public async Task<ActionResult<InvoiceAttachmentPlanDto>> AttachmentPlan([FromQuery] Guid propertyId, [FromQuery] int year, [FromQuery] int month, CancellationToken ct)
+    {
+        if (month is < 1 or > 12 || year is < 2000 or > 2100) return BadRequest(new { message = "Érvénytelen időszak." });
+        var property = await db.Properties.FindAsync([propertyId], ct);
+        if (property is null) return NotFound(new { message = "Az ingatlan nem található." });
+        return Ok(await generator.PlanAttachmentsAsync(property, year, month, ct));
+    }
+
     [HttpPost("generate")]
     public async Task<ActionResult<InvoiceDto>> Generate(GenerateInvoiceRequest request, CancellationToken ct)
     {
@@ -78,7 +89,7 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         Invoice invoice;
         try
         {
-            invoice = await generator.GenerateAndSendAsync(property, request.Year, request.Month, ct);
+            invoice = await generator.GenerateAndSendAsync(property, request.Year, request.Month, ct, sendAttachments: request.SendAttachments);
         }
         catch (InvalidOperationException ex)
         {
@@ -124,7 +135,8 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
             var invoice = await generator.GenerateAndSendAsync(property, request.Year, request.Month, CancellationToken.None,
                 progress => progress.Step == GenerationSteps.Plan
                     ? Write(new { type = "plan", steps = progress.Plan })
-                    : Write(new { type = "step", step = progress.Step }));
+                    : Write(new { type = "step", step = progress.Step }),
+                request.SendAttachments);
 
             await db.Entry(invoice).Reference(i => i.Property).LoadAsync();
             await db.Entry(invoice).Reference(i => i.Tenant).LoadAsync();
@@ -223,5 +235,5 @@ public class InvoicesController(LakaskezeloDbContext db, InvoiceGenerationServic
         invoice.PeriodYear, invoice.PeriodMonth, invoice.Number, invoice.IssuedAt, invoice.DueDate,
         invoice.AmountTotal, invoice.Status, invoice.SentAt, invoice.ErrorMessage,
         [.. InvoiceLine.InDisplayOrder(invoice.Lines).Select(l => new InvoiceLineDto(l.Label, l.Amount))], invoice.CancelledAt, invoice.CancelsInvoiceId, invoice.Provider,
-        invoice.PaidAt, invoice.PaidAmount);
+        invoice.PaidAt, invoice.PaidAmount, invoice.AttachmentsAvailable, invoice.AttachmentsSent);
 }

@@ -19,6 +19,8 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
         builder.HasOne(d => d.Property).WithMany().HasForeignKey(d => d.PropertyId).OnDelete(DeleteBehavior.SetNull);
         builder.HasOne(d => d.Tenant).WithMany().HasForeignKey(d => d.TenantId).OnDelete(DeleteBehavior.SetNull);
         builder.HasOne(d => d.Owner).WithMany().HasForeignKey(d => d.OwnerId).OnDelete(DeleteBehavior.SetNull);
+        // A rezsitétel törlésekor a csatolmányai a törlő végponton törlődnek; ez csak biztonsági háló.
+        builder.HasOne(d => d.UtilityCostEntry).WithMany(u => u.Attachments).HasForeignKey(d => d.UtilityCostEntryId).OnDelete(DeleteBehavior.SetNull);
         builder.HasOne(d => d.DocumentType).WithMany().HasForeignKey(d => d.DocumentTypeId).OnDelete(DeleteBehavior.SetNull);
         builder.HasOne(d => d.UploadedBy).WithMany().HasForeignKey(d => d.UploadedByUserId).OnDelete(DeleteBehavior.SetNull);
         builder.HasMany(d => d.Versions).WithOne(v => v.Document).HasForeignKey(v => v.DocumentId).OnDelete(DeleteBehavior.Cascade);
@@ -27,6 +29,7 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
         builder.HasIndex(d => d.PropertyId);
         builder.HasIndex(d => d.TenantId);
         builder.HasIndex(d => d.OwnerId);
+        builder.HasIndex(d => d.UtilityCostEntryId);
     }
 }
 
