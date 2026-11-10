@@ -1,5 +1,5 @@
 // Közös építőkövek az adatlapokhoz (bérlő, tulajdonos) — az ingatlan-adatlap (property-detail.js) mintájára:
-// helyben szerkeszthető mezők (elhagyáskor / Enterre mentenek), panelek „masonry” elrendezése, fülek és a
+// helyben szerkeszthető mezők (a tábla Mentés gombjával mentenek), panelek „masonry” elrendezése, fülek és a
 // bizonylatok táblája.
 const DETAIL_ICON = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#${id}"/></svg>`;
 const DETAIL_INVOICE_STATUS = { Sent: 'Kiküldve', Generated: 'Nem küldött', Failed: 'Sikertelen' };
@@ -9,13 +9,6 @@ const DETAIL_INVOICE_STATUS = { Sent: 'Kiküldve', Generated: 'Nem küldött', F
 // Mező: { path, label, type?: 'text'|'email'|'textarea'|'select'|'date'|'number', options?: [{value,label}],
 //         required?, placeholder?, wide? }
 function createInlineEditor({ getRecord, save }) {
-  // Kilépéskor a módosítások visszaállíthatók (ld. change-guard.js): az eredeti értékek egy mentéssel mennek vissza.
-  const guard = window.ChangeGuard;
-  guard?.group('record', async (items) => {
-    const draft = structuredClone(getRecord());
-    items.forEach((item) => set(draft, item.key, item.before));
-    return save(draft);
-  });
   const idOf = (field) => `f-${field.path.replace(/\./g, '-')}`;
   const get = (path) => path.split('.').reduce((o, k) => o?.[k], getRecord());
   const set = (target, path, value) => {
@@ -28,14 +21,6 @@ function createInlineEditor({ getRecord, save }) {
     if (field.type === 'date') { const [y, m, d] = String(value).split('-'); return `${y}. ${m}. ${d}.`; }
     if (field.type === 'number') return String(value).replace('.', ',');
     return String(value);
-  };
-  // Az érték úgy, ahogy a felhasználó látja (a listáknál a felirat, nem a belső érték).
-  const display = (field, value) => {
-    if (field.type === 'select') {
-      const option = field.options.find((o) => String(o.value) === String(value ?? ''));
-      return option ? option.label : (value == null || value === '' ? 'Nincs megadva' : String(value));
-    }
-    return shown(field, value);
   };
 
   function renderField(field) {
@@ -69,57 +54,26 @@ function createInlineEditor({ getRecord, save }) {
       return { value: iso };
     }
     if (field.type === 'number') {
-      const n = Number(text.replace(/[\s ]/g, '').replace(',', '.'));
+      const n = Number(text.replace(/[\s\u00A0]/g, '').replace(',', '.'));
       return Number.isFinite(n) ? { value: n } : { error: 'Számot adj meg.' };
     }
     return { value: text };
   }
 
-  function bind(fields) {
-    fields.forEach((field) => {
-      const input = document.getElementById(idOf(field));
-      if (!input) return;
-      let lastSaved = input.value;
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && field.type !== 'textarea') { e.preventDefault(); input.blur(); }
-        if (e.key === 'Escape') { input.value = lastSaved; input.blur(); }
-      });
-      input.addEventListener('change', async () => {
-        const state = document.querySelector(`[data-state="${field.path}"]`);
-        const parsed = parse(field, input.value);
-        if (parsed.error) {
-          input.setAttribute('aria-invalid', 'true');
-          state.className = 'istate err';
-          state.textContent = parsed.error;
-          return;
-        }
-        input.removeAttribute('aria-invalid');
-        state.className = 'istate';
-        state.textContent = 'Mentés…';
-        const draft = structuredClone(getRecord());
-        const before = get(field.path);
-        set(draft, field.path, parsed.value);
-        const saving = save(draft);
-        guard?.track(saving);
-        const error = await saving;
-        if (!error) guard?.record({ key: field.path, label: field.label, before, after: parsed.value, text: (v) => display(field, v) });
-        if (error) {
-          input.setAttribute('aria-invalid', 'true');
-          state.className = 'istate err';
-          state.textContent = 'Hiba';
-          state.title = error;
-          return;
-        }
-        if (field.type !== 'select' && field.type !== 'textarea') input.value = shown(field, parsed.value);
-        lastSaved = input.value;
-        state.className = 'istate ok';
-        state.textContent = 'Mentve';
-        setTimeout(() => { if (state.textContent === 'Mentve') state.textContent = ''; }, 2000);
-      });
-    });
-  }
+  // A mezők nem mentődnek maguktól: a módosított tábla jobb felső sarkában megjelenő Mentés gomb menti a tábla
+  // összes módosított mezőjét egyszerre, a Mégsem visszaírja őket (ld. change-guard.js).
+  const sheet = ChangeGuard.sheet({
+    getValue: (field) => get(field.path),
+    parse,
+    format: shown,
+    save: (changes) => {
+      const draft = structuredClone(getRecord());
+      changes.forEach(({ field, value }) => set(draft, field.path, value));
+      return save(draft);
+    },
+  });
 
-  return { renderField, bind };
+  return { renderField, bind: sheet.bind };
 }
 
 // A panelek a mindenkori legrövidebb oszlopba kerülnek (mint az ingatlan-adatlapon).

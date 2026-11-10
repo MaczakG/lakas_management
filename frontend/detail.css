@@ -103,6 +103,16 @@
 .ifield .istate{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;}
 .ifield .istate.ok{color:var(--green);}
 .ifield .istate.err{color:var(--coral);}
+.ifield .istate.dirty{color:var(--amber);}
+/* Mentés / Mégsem a módosított tábla jobb felső sarkában (change-guard.js) */
+.panel-save{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.panel-save[hidden]{display:none;}
+.panel-save .btn{padding:0 10px;}
+/* A gombok megjelenésekor a fejléc nem törik két sorba (a mezők nem ugranak el gépelés közben): a hosszú cím rövidül. */
+.panel-head:has(.panel-save:not([hidden])){justify-content:flex-end;}
+.panel-head:has(.panel-save:not([hidden])) > .panel-title{display:block;min-width:0;margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.panel-head:has(.panel-save:not([hidden])) > .panel-title svg{display:inline-block;vertical-align:-3px;margin-right:8px;}
+.panel.is-dirty{border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-ring);}
 
 .owner-list{display:grid;}
 .owner-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--surface-2);font-size:13.5px;}

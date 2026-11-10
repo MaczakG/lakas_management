@@ -224,6 +224,7 @@ $('delete-btn').addEventListener('click', async () => {
   if (!ok) return;
   const res = await apiFetch(`/api/documents/${docId}`, { method: 'DELETE' });
   if (!res.ok && res.status !== 204) { showError(errorMessage(res, await readJson(res), 'Nem sikerült törölni.')); return; }
+  ChangeGuard.allowLeave();
   location.href = contextUrl(context());
 });
 

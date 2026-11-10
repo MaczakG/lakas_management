@@ -1,7 +1,7 @@
-// Ingatlan adatlap (property-detail.html?id=...). A panelek értékei helyben szerkeszthetők: egy mező
-// elhagyásakor (vagy Enterre) a teljes ingatlan PUT-tal mentődik — a szerver a frissített adatlapot adja
-// vissza, abból frissül a fejléc és a számolt értékek (pl. a munkanapra tolt következő kiállítás).
-// A mezőket mentés után nem rajzoljuk újra, hogy a fókusz ne ugorjon el.
+// Ingatlan adatlap (property-detail.html?id=...). A panelek értékei helyben szerkeszthetők: a módosított
+// tábla jobb felső sarkában megjelenő Mentés gombra (vagy Enterre) a teljes ingatlan PUT-tal mentődik — a szerver
+// a frissített adatlapot adja vissza, abból frissül a fejléc és a számolt értékek (pl. a munkanapra tolt
+// következő kiállítás). A mezőket mentés után nem rajzoljuk újra, hogy a fókusz ne ugorjon el.
 requireAuth();
 
 const propertyId = new URLSearchParams(location.search).get('id');
@@ -119,72 +119,23 @@ function parseInput(field, raw) {
   return { value: field.upper ? text.toUpperCase() : text };
 }
 
-function bindFields(fields) {
-  fields.forEach((field) => {
-    const input = document.getElementById(`f-${field.path.replace(/\./g, '-')}`);
-    if (!input) return;
-    let lastSaved = input.value;
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && field.type !== 'textarea') { e.preventDefault(); input.blur(); }
-      if (e.key === 'Escape') { input.value = lastSaved; input.blur(); }
-    });
-    input.addEventListener('change', async () => {
-      const state = document.querySelector(`[data-state="${field.path}"]`);
-      const parsed = parseInput(field, input.value);
-      if (parsed.error) {
-        input.setAttribute('aria-invalid', 'true');
-        state.className = 'istate err';
-        state.textContent = parsed.error;
-        return;
-      }
-      input.removeAttribute('aria-invalid');
-      state.className = 'istate';
-      state.textContent = 'Mentés…';
-      const draft = structuredClone(property);
-      const before = getValue(field.path);
-      setValue(draft, field.path, parsed.value);
-      const saving = save(draft);
-      ChangeGuard.track(saving);
-      const error = await saving;
-      if (!error) ChangeGuard.record({ key: field.path, label: field.label, before, after: parsed.value, text: (v) => displayValue(field, v) });
-      if (error) {
-        input.setAttribute('aria-invalid', 'true');
-        state.className = 'istate err';
-        state.textContent = 'Hiba';
-        state.title = error;
-        showError(error);
-        return;
-      }
-      if (field.group && parsed.value != null) input.value = formatNumber(parsed.value, parsed.value % 1 ? 2 : 0);
-      if (field.type === 'time') input.value = parsed.value;
-      lastSaved = input.value;
-      state.className = 'istate ok';
-      state.textContent = 'Mentve';
-      setTimeout(() => { if (state.textContent === 'Mentve') state.textContent = ''; }, 2000);
-    });
-  });
-}
-
-// Az érték úgy, ahogy a felhasználó látja — a kilépéskori „mi változott” listához (ld. change-guard.js).
-function displayValue(field, value) {
-  if (field.type === 'select') {
-    if (value == null || value === '') return field.emptyLabel ? field.emptyLabel() : 'Nincs megadva';
-    const options = (typeof field.options === 'function' ? field.options() : field.options).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
-    return options.find((o) => o.value === value)?.label ?? String(value);
-  }
-  if (value == null || value === '') return '';
-  if (field.type === 'number') {
-    const text = field.group ? formatNumber(value, value % 1 ? 2 : 0) : String(value).replace('.', ',');
-    return field.suffix ? `${text} ${field.suffix()}` : text;
-  }
-  return String(value);
-}
-
-// Kilépéskor a módosított mezők visszaállíthatók: az eredeti értékek egy mentéssel mennek vissza.
-ChangeGuard.group('record', async (items) => {
-  const draft = structuredClone(property);
-  items.forEach((item) => setValue(draft, item.key, item.before));
-  return save(draft);
+// A mezők nem mentődnek maguktól: a módosított tábla jobb felső sarkában megjelenő Mentés gomb menti a tábla
+// összes módosított mezőjét egyszerre, a Mégsem visszaírja őket (ld. change-guard.js).
+const sheet = ChangeGuard.sheet({
+  getValue: (field) => getValue(field.path),
+  parse: parseInput,
+  format: (field, value) => {
+    if (value == null) return '';
+    if (field.type === 'number') return field.group ? formatNumber(value, value % 1 ? 2 : 0) : String(value).replace('.', ',');
+    return String(value);
+  },
+  save: async (changes) => {
+    const draft = structuredClone(property);
+    changes.forEach(({ field, value }) => setValue(draft, field.path, value));
+    const error = await save(draft);
+    if (error) showError(error);
+    return error;
+  },
 });
 
 // A teljes ingatlan mentése (a szerver PUT-ot vár minden mezővel). Hibánál a hibaüzenetet adja vissza.
@@ -288,7 +239,7 @@ function renderPanels() {
     + '<div class="prop"><dt>Következő kiállítás</dt><dd id="next-billing"></dd></div>';
   document.getElementById('props-tech').innerHTML = FIELDS.tech.map(renderField).join('');
   document.getElementById('props-notes').innerHTML = FIELDS.notes.map(renderField).join('');
-  Object.values(FIELDS).forEach(bindFields);
+  sheet.bind(Object.values(FIELDS).flat());
   renderOwners();
   renderTenant();
 }
@@ -422,9 +373,9 @@ window.openUtility = (year, month) => {
 // ---------- Beköltözés fül ----------
 
 // Egy szabad szöveg az ingatlanhoz (kapukód, wifi, mérőórák…), amit egy gombbal ki lehet küldeni a bérlőnek.
-// A szöveg és a „kiküldhető” pipa a mező elhagyásakor mentődik, a kiküldés mindig a mentett szöveget viszi.
+// A szöveg és a „kiküldhető” pipa a fülsáv jobb oldalán megjelenő Mentés gombbal mentődik; a kiküldés mindig a
+// mentett szöveget viszi, ezért mentetlen módosítással nem indítható.
 let moveIn = null;          // a szerver utolsó válasza
-let moveInSaving = null;    // folyamatban lévő mentés (a kiküldés megvárja)
 const MOVEIN_MAX = 5000;
 const mi = (id) => document.getElementById(id);
 
@@ -437,6 +388,12 @@ function moveInState(text, kind) {
 function moveInRecipient() {
   return moveIn?.recipients.find((r) => r.tenantId === mi('mi-recipient').value) || moveIn?.recipients[0] || null;
 }
+
+function moveInDirty() {
+  if (!moveIn) return false;
+  return (mi('mi-text').value.replace(/\r\n?/g, '\n').trim() || null) !== (moveIn.text || null) || mi('mi-sendable').checked !== moveIn.sendable;
+}
+ChangeGuard.watch(moveInDirty);
 
 function renderMoveInSide() {
   const recipients = moveIn.recipients;
@@ -458,10 +415,12 @@ function renderMoveInSide() {
       r.email ? escapeHtml(r.email) : '<span class="dim">Nincs e-mail címe</span>'}<br>${sent}`;
   }
 
-  const hasText = mi('mi-text').value.trim().length > 0;
+  const dirty = moveInDirty();
+  mi('mi-save').hidden = !dirty;
   let reason = '';
-  if (!hasText) reason = 'Előbb írd be a tudnivalókat.';
-  else if (!mi('mi-sendable').checked) reason = 'A szöveg belső feljegyzés: pipáld be, hogy kiküldhető.';
+  if (dirty) reason = 'Előbb mentsd el a módosítást.';
+  else if (!moveIn.text) reason = 'Előbb írd be és mentsd el a tudnivalókat.';
+  else if (!moveIn.sendable) reason = 'A szöveg belső feljegyzés: pipáld be, hogy kiküldhető.';
   else if (!r) reason = 'Rendelj bérlőt az ingatlanhoz a Bérlők oldalon.';
   else if (!r.email) reason = 'Add meg a bérlő e-mail címét az adatlapján.';
   else if (!moveIn.emailConfigured) reason = 'Az e-mail küldés nincs beállítva.';
@@ -476,76 +435,46 @@ function renderMoveIn() {
   renderMoveInSide();
 }
 
-function moveInDirty() {
-  return (mi('mi-text').value.replace(/\r\n?/g, '\n').trim() || null) !== (moveIn.text || null) || mi('mi-sendable').checked !== moveIn.sendable;
-}
-
-// Ment, ha van változás. Igazat ad vissza, ha a szerveren a képernyőn látható állapot van.
-function saveMoveIn() {
-  if (moveInSaving) return moveInSaving.then(() => saveMoveIn());
-  if (!moveIn || !moveInDirty()) return Promise.resolve(true);
-  moveInState('Mentés…');
-  moveInSaving = (async () => {
-    try {
-      const res = await apiFetch(`/api/properties/${propertyId}/move-in-info`, {
-        method: 'PUT',
-        body: JSON.stringify({ text: mi('mi-text').value, sendable: mi('mi-sendable').checked }),
-      });
-      if (!res.ok) {
-        moveInState((await res.json().catch(() => null))?.message || 'A mentés nem sikerült.', 'error');
-        return false;
-      }
-      const before = moveIn;
-      moveIn = await res.json();
-      ChangeGuard.record({ group: 'movein', key: 'text', label: 'Beköltözési tudnivalók', before: before.text, after: moveIn.text });
-      ChangeGuard.record({ group: 'movein', key: 'sendable', label: 'A bérlőnek kiküldhető', before: before.sendable, after: moveIn.sendable,
-        text: (v) => (v === true || v === 'true' ? 'Igen' : 'Nem') });
-      moveInState('Mentve', 'ok');
-      renderMoveInSide();
-      return true;
-    } catch {
-      moveInState('A mentés nem sikerült.', 'error');
-      return false;
-    } finally {
-      moveInSaving = null;
-    }
-  })();
-  ChangeGuard.track(moveInSaving);
-  return moveInSaving;
-}
-
-ChangeGuard.group('movein', async (items) => {
-  const original = (key, current) => { const item = items.find((i) => i.key === key); return item ? item.before : current; };
-  const res = await apiFetch(`/api/properties/${propertyId}/move-in-info`, {
-    method: 'PUT',
-    body: JSON.stringify({ text: original('text', moveIn.text), sendable: original('sendable', moveIn.sendable) }),
-  });
-  if (!res.ok) return (await res.json().catch(() => null))?.message || 'A beköltözési tudnivalókat nem sikerült visszaállítani.';
-  moveIn = await res.json();
-  renderMoveIn();
-  return null;
-});
-
-mi('mi-text').addEventListener('input', () => {
+function moveInChanged() {
   mi('mi-count').textContent = `${mi('mi-text').value.length} / ${MOVEIN_MAX}`;
   moveInState(moveInDirty() ? 'Nincs mentve' : '');
   renderMoveInSide();
-});
-mi('mi-text').addEventListener('blur', saveMoveIn);
-mi('mi-sendable').addEventListener('change', () => { renderMoveInSide(); saveMoveIn(); });
+}
+mi('mi-text').addEventListener('input', moveInChanged);
+mi('mi-sendable').addEventListener('change', moveInChanged);
 mi('mi-recipient').addEventListener('change', renderMoveInSide);
-// Elnavigáláskor a még el nem mentett szöveg is menjen el (a blur ilyenkor nem mindig fut le).
-window.addEventListener('pagehide', () => {
-  if (!moveIn || !moveInDirty()) return;
-  fetch(`${API_BASE}/api/properties/${propertyId}/move-in-info`, {
-    method: 'PUT', keepalive: true,
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ text: mi('mi-text').value, sendable: mi('mi-sendable').checked }),
-  }).catch(() => {});
+
+mi('mi-cancel-btn').addEventListener('click', () => {
+  renderMoveIn();
+  moveInState('');
+});
+
+mi('mi-save-btn').addEventListener('click', async () => {
+  if (!moveInDirty()) return;
+  const buttons = [mi('mi-save-btn'), mi('mi-cancel-btn')];
+  buttons.forEach((b) => { b.disabled = true; });
+  moveInState('Mentés…');
+  try {
+    const res = await apiFetch(`/api/properties/${propertyId}/move-in-info`, {
+      method: 'PUT',
+      body: JSON.stringify({ text: mi('mi-text').value, sendable: mi('mi-sendable').checked }),
+    });
+    if (!res.ok) {
+      moveInState((await res.json().catch(() => null))?.message || 'A mentés nem sikerült.', 'error');
+      return;
+    }
+    moveIn = await res.json();
+    moveInState('Mentve', 'ok');
+  } catch {
+    moveInState('A mentés nem sikerült.', 'error');
+  } finally {
+    buttons.forEach((b) => { b.disabled = false; });
+    renderMoveInSide();
+  }
 });
 
 mi('mi-send').addEventListener('click', async () => {
-  if (!(await saveMoveIn())) return;
+  if (moveInDirty()) return;
   const r = moveInRecipient();
   if (!r?.email) return;
   const again = r.sentAt ? ` Egyszer már megkapta (${formatDate(r.sentAt)}).` : '';
@@ -632,6 +561,7 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
   if (!(await uiConfirm(`Biztosan törlöd ezt az ingatlant: „${property.name}”? Ez nem vonható vissza.`, { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/properties/${propertyId}`, { method: 'DELETE' });
   if (res.ok || res.status === 204) {
+    ChangeGuard.allowLeave();
     location.href = 'properties.html';
     return;
   }
