@@ -87,7 +87,7 @@
             <button class="record-tab" type="button" role="tab" data-tab="invoices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#receipt"/></svg>Bizonylatok <span class="panel-count" id="count-invoices"></span></button>
             <button class="record-tab" type="button" role="tab" data-tab="utility"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#zap"/></svg>Rezsi <span class="panel-count" id="count-utility"></span></button>
             <button class="record-tab" type="button" role="tab" data-tab="tenants"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#users"/></svg>Bérlők <span class="panel-count" id="count-tenants"></span></button>
-          
+            <button class="record-tab" type="button" role="tab" data-tab="movein"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#mail"/></svg>Beköltözés</button>
             <button class="record-tab" type="button" role="tab" data-tab="documents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#paperclip"/></svg>Dokumentumok <span class="panel-count" id="count-documents"></span></button>
           </div>
           <div class="record-tab-actions">
@@ -99,6 +99,31 @@
           <div class="record-tab-pane" data-pane="invoices" role="tabpanel" hidden><div class="panel-table" id="invoices-body"><div class="panel-empty">Betöltés…</div></div></div>
           <div class="record-tab-pane" data-pane="utility" role="tabpanel" hidden><div class="panel-table" id="utility-body"><div class="panel-empty">Betöltés…</div></div></div>
           <div class="record-tab-pane" data-pane="tenants" role="tabpanel" hidden><div class="panel-table" id="tenants-body"><div class="panel-empty">Betöltés…</div></div></div>
+          <!-- Beköltözési tudnivalók: egy szabad szöveg, amit egy gombbal ki lehet küldeni a bérlőnek. -->
+          <div class="record-tab-pane" data-pane="movein" role="tabpanel" hidden>
+            <div class="movein">
+              <div class="movein-main">
+                <label class="movein-label" for="mi-text">Beköltözési tudnivalók</label>
+                <textarea id="mi-text" maxlength="5000" placeholder="Pl. kapukód, wifi név és jelszó, mérőórák helye, szemétszállítás napja, hibabejelentés, házirend…"></textarea>
+                <div class="movein-foot">
+                  <label class="checkbox-row"><input type="checkbox" id="mi-sendable">A bérlőnek kiküldhető</label>
+                  <span class="movein-state" id="mi-state" role="status"></span>
+                  <span class="movein-count" id="mi-count"></span>
+                </div>
+                <p class="movein-hint">Elhagyáskor magától mentődik. Ha a pipát kiveszed, a szöveg belső feljegyzés marad, és nem küldhető ki.</p>
+              </div>
+              <div class="movein-side">
+                <h3>Kiküldés e-mailben</h3>
+                <div class="field" id="mi-recipient-field">
+                  <label for="mi-recipient">Címzett</label>
+                  <select id="mi-recipient"></select>
+                </div>
+                <p class="movein-recipient" id="mi-recipient-info"></p>
+                <button class="btn btn-primary" type="button" id="mi-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#send"/></svg>Kiküldés a bérlőnek</button>
+                <p class="movein-hint" id="mi-send-hint"></p>
+              </div>
+            </div>
+          </div>
           <div class="record-tab-pane" data-pane="documents" role="tabpanel" hidden><div id="documents-body"></div></div>
         </div>
       </section>

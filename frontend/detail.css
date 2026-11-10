@@ -113,3 +113,28 @@
 .owner-row{display:grid;grid-template-columns:1fr 90px 36px;gap:10px;margin-bottom:10px;align-items:center;}
 .owner-row .field{margin:0;}
 .invoice-actions{display:inline-flex;gap:6px;justify-content:flex-end;}
+
+/* ---------- Beköltözés fül: szabad szöveg + kiküldés ---------- */
+.movein{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;padding:18px 20px 20px;align-items:start;}
+.movein-main{display:flex;flex-direction:column;gap:8px;min-width:0;}
+.movein-label{font-size:12.5px;font-weight:600;color:var(--ink-soft);}
+.movein textarea{width:100%;min-height:260px;line-height:1.55;font-size:14px;}
+.movein-foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.movein-state{font-size:12.5px;font-weight:600;color:var(--muted);}
+.movein-state.is-ok{color:var(--green);}
+.movein-state.is-error{color:var(--coral);}
+.movein-count{margin-left:auto;font-size:12px;font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums;}
+.movein-hint{margin:0;font-size:12px;font-weight:500;color:var(--muted);line-height:1.5;}
+.movein-hint:empty{display:none;}
+.movein-side{display:flex;flex-direction:column;gap:12px;padding-left:24px;border-left:1px solid var(--line);}
+.movein-side h3{margin:0;font-size:13.5px;font-weight:700;color:var(--ink);}
+.movein-side .field{margin:0;}
+.movein-side .field[hidden]{display:none;}
+.movein-recipient{margin:0;font-size:13.5px;line-height:1.7;color:var(--ink-soft);overflow-wrap:anywhere;}
+.movein-recipient strong{color:var(--ink);font-weight:600;}
+.movein-side .btn{align-self:flex-start;}
+@media (max-width:900px){
+  .movein{grid-template-columns:minmax(0,1fr);gap:18px;padding:16px;}
+  .movein-side{padding-left:0;border-left:none;padding-top:16px;border-top:1px solid var(--line);}
+  .movein textarea{min-height:200px;}
+}

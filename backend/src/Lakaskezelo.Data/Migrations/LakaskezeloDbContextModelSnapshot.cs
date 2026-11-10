@@ -875,6 +875,15 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("MoveInInfo")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<bool>("MoveInInfoSendable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -1159,6 +1168,9 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<DateOnly?>("MoveInDate")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("MoveInInfoSentAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateOnly?>("MoveOutDate")
                         .HasColumnType("date");

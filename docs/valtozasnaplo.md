@@ -4,6 +4,15 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.10.4** — Beköltözési tudnivalók e-mailben (V1.1 / 4. pont).
+  - Az ingatlan adatlapján új „Beköltözés” fül: egyetlen szabad szöveg (pl. kapukód, wifi, mérőórák helye,
+    szemétszállítás, hibabejelentés, házirend), legfeljebb 5000 karakter. A mező elhagyásakor magától mentődik.
+  - „A bérlőnek kiküldhető” pipa: ha nincs bepipálva, a szöveg belső feljegyzés marad, és nem küldhető ki.
+  - „Kiküldés a bérlőnek” gomb: megerősítés után e-mailben elküldi a szöveget. Címzett az ingatlan jelenlegi
+    bérlője; ha leendő (még be nem költözött) bérlő is van, listából választható.
+  - A fül mutatja, hogy a bérlő megkapta-e már, és mikor. Újra is kiküldhető, például ha változott a szöveg.
+  - A levél a cég nevében megy, a válasz a cég e-mail címére érkezik (mint a bizonylatoknál).
+  - Migráció: `MoveInInfo` (két új mező az ingatlanon, egy a bérlőn; meglévő adatot nem módosít).
 - **2026.11.10.3** — Összesített egyenleg a Vezérlőpulton (V1.1 / 3. pont).
   - Új csempe: „Összesített egyenleg” (tartozás pirossal, túlfizetés zölddel, vagy rendezett), alatta a várt és a
     kifizetett összeg. Az Ingatlan választóval egy ingatlanra szűkíthető.
