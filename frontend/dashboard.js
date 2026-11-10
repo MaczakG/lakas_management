@@ -49,6 +49,46 @@ requireAuth();
       : 'Még nincs aktív ingatlan.';
   }
 
+  // Egyenleg (teljes időszak): várt − kifizetett. Pozitív = tartozás, negatív = túlfizetés.
+  function renderBalance() {
+    const d = data;
+    const balance = d.balanceExpected - d.balancePaid;
+    const state = balance > 0 ? 'due' : balance < 0 ? 'over' : 'settled';
+    $('kpi-balance-card').className = `viz-card kpi is-${state}`;
+    $('kpi-balance-label').textContent = d.propertyId ? 'Egyenleg' : 'Összesített egyenleg';
+    $('kpi-balance').textContent = huf(Math.abs(balance));
+    $('kpi-balance-state').textContent = { due: 'tartozás', over: 'túlfizetés', settled: 'rendezett' }[state];
+    $('kpi-balance-sub').textContent = `Várt ${huf(d.balanceExpected)}, kifizetve ${huf(d.balancePaid)}`;
+
+    const rows = d.balanceByProperty || [];
+    const expected = { name: 'Várt', color: css('--viz-context'), values: rows.map((r) => r.expected) };
+    const paid = { name: 'Kifizetett', color: css('--viz-accent'), values: rows.map((r) => r.paid) };
+    $('balance-title').textContent = d.propertyId ? 'Várt és kifizetett összeg' : 'Várt és kifizetett összeg ingatlanonként';
+    legend($('balance-legend'), [expected, paid]);
+    const diff = (r) => {
+      const b = r.expected - r.paid;
+      return b > 0 ? `${huf(b)} tartozás` : b < 0 ? `${huf(-b)} túlfizetés` : 'rendezett';
+    };
+    renderColumns($('balance-chart'), {
+      series: [expected, paid],
+      stacked: false,
+      labels: rows.map((r) => r.name),
+      emptyText: 'Még nincs kiállított bizonylat vagy befizetés.',
+      ariaLabel: 'Várt és kifizetett összeg ingatlanonként',
+      tooltip: (i) => ({
+        title: rows[i].name,
+        rows: [
+          { color: expected.color, label: 'Várt', value: huf(rows[i].expected) },
+          { color: paid.color, label: 'Kifizetett', value: huf(rows[i].paid) },
+        ],
+        foot: `Egyenleg: ${diff(rows[i])}`,
+      }),
+    });
+    $('balance-table').innerHTML = `<table><thead><tr><th>Ingatlan</th><th class="num">Várt</th><th class="num">Kifizetett</th><th class="num">Egyenleg</th></tr></thead><tbody>
+      ${rows.map((r) => `<tr><td><a href="property-detail.html?id=${encodeURIComponent(r.propertyId)}">${escapeHtml(r.name)}</a></td><td class="num">${huf(r.expected)}</td><td class="num">${huf(r.paid)}</td><td class="num">${escapeHtml(diff(r))}</td></tr>`).join('')}
+    </tbody></table>`;
+  }
+
   function renderMonthly() {
     const d = data;
     const cur = { name: String(d.year), color: css('--viz-accent'), values: d.monthly.map((m) => m.amount) };
@@ -189,6 +229,7 @@ requireAuth();
   function renderAll() {
     if (!data) return;
     renderKpis();
+    renderBalance();
     renderMonthly();
     renderStatus();
     renderProperties();
@@ -235,6 +276,7 @@ requireAuth();
       if ($('dash').clientWidth === lastWidth) return;
       lastWidth = $('dash').clientWidth;
       hideTip();
+      renderBalance();
       renderMonthly();
       renderUtility();
     }, 120);

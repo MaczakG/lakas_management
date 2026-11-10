@@ -50,6 +50,12 @@
           <div class="meter" id="occupancy-meter" role="meter" aria-label="Kiadott ingatlanok aránya" aria-valuemin="0" aria-valuemax="100"><span></span></div>
           <div class="kpi-sub" id="kpi-occupancy-sub"></div>
         </div>
+        <div class="viz-card kpi" id="kpi-balance-card">
+          <div class="kpi-label" id="kpi-balance-label">Összesített egyenleg</div>
+          <div class="kpi-value" id="kpi-balance">–</div>
+          <div class="kpi-sub" id="kpi-balance-state"></div>
+          <div class="kpi-sub" id="kpi-balance-sub"></div>
+        </div>
       </div>
 
       <div class="viz-grid">
@@ -72,6 +78,18 @@
             </div>
           </div>
           <div id="status-chart"></div>
+        </section>
+
+        <section class="viz-card span-3">
+          <div class="viz-head">
+            <div>
+              <h2 class="viz-title" id="balance-title">Várt és kifizetett összeg ingatlanonként</h2>
+              <p class="viz-sub">Teljes időszak. Várt: a kiállított bizonylatok és a bizonylatra váró rezsi. Kifizetett: a rögzített befizetések.</p>
+            </div>
+            <div class="viz-legend" id="balance-legend"></div>
+          </div>
+          <div class="viz-plot" id="balance-chart"></div>
+          <details class="viz-table"><summary>Táblázat</summary><div id="balance-table"></div></details>
         </section>
 
         <section class="viz-card span-2" id="property-card">

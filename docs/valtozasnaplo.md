@@ -4,6 +4,18 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.10.3** — Összesített egyenleg a Vezérlőpulton (V1.1 / 3. pont).
+  - Új csempe: „Összesített egyenleg” (tartozás pirossal, túlfizetés zölddel, vagy rendezett), alatta a várt és a
+    kifizetett összeg. Az Ingatlan választóval egy ingatlanra szűkíthető.
+  - Új diagram: „Várt és kifizetett összeg ingatlanonként”. Az X tengelyen az ingatlanok, az Y tengelyen az összeg,
+    ingatlanonként két oszlop (várt, kifizetett). A buborék és a „Táblázat” az ingatlan egyenlegét is mutatja.
+  - Számítás, a teljes időszakra (az Év választó erre a részre nem hat):
+    - várt: a kiállított bizonylatok (a sztornó negatív) és a bizonylatra váró rezsi;
+    - kifizetett: a rögzített befizetések;
+    - egyenleg: a kettő különbsége. Megegyezik a bérlők adatlapján látható egyenlegek összegével.
+  - A bizonylathoz kötött befizetés a bizonylat ingatlanához, a többi a bérlő ingatlanához számít. Ingatlan nélküli bérlő
+    befizetése csak az összesítettben szerepel.
+  - Migráció nincs.
 - **2026.11.10.2** — Ingatlanválasztó a Vezérlőpulton (V1.1 / 2. pont).
   - A fejlécben az Év mellett „Ingatlan” választó: „Összes ingatlan” vagy egy ingatlan (az inaktívak a lista végén,
     „(inaktív)” jelöléssel).

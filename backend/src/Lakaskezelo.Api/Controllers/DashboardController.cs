@@ -115,6 +115,26 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
                 upcoming.Add(new UpcomingEvent(outDate, "moveOut", t.PropertyId!.Value, t.PropertyName, t.Id, t.Name));
         }
 
+        // Egyenleg ingatlanonként, a teljes időszakra (a tartozás nem évhez kötött). A bizonylat és a hozzá kötött befizetés
+        // a bizonylat ingatlanához, a bizonylathoz nem kötött befizetés a bérlő ingatlanához tartozik; az ingatlan nélküli
+        // bérlő ilyen befizetése csak az összesítettben szerepel.
+        var expectedBy = (await db.Invoices.Where(i => i.TenantId != null && i.Status != InvoiceStatus.Failed)
+                .GroupBy(i => i.PropertyId).Select(g => new { g.Key, Sum = g.Sum(i => i.AmountTotal) }).ToListAsync(ct))
+            .ToDictionary(g => g.Key, g => g.Sum);
+        foreach (var (_, entry) in await TenantBalances.OpenUtilitiesAsync(db, null, ct))
+            expectedBy[entry.PropertyId] = expectedBy.GetValueOrDefault(entry.PropertyId) + entry.Amount;
+        var payments = await db.TenantPayments
+            .Select(p => new { p.Amount, PropertyId = p.InvoiceId != null ? (Guid?)p.Invoice!.PropertyId : p.Tenant!.PropertyId })
+            .ToListAsync(ct);
+        var paidBy = payments.Where(p => p.PropertyId != null).GroupBy(p => p.PropertyId!.Value).ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
+        var balanceByProperty = allProperties
+            .Where(p => propertyId == null || p.Id == propertyId)
+            .Select(p => new PropertyBalance(p.Id, p.Name, expectedBy.GetValueOrDefault(p.Id), paidBy.GetValueOrDefault(p.Id)))
+            .Where(b => propertyId != null || b.Expected != 0 || b.Paid != 0 || activeIds.Contains(b.PropertyId))
+            .ToList();
+        var balanceExpected = balanceByProperty.Sum(b => b.Expected);
+        var balancePaid = balanceByProperty.Sum(b => b.Paid) + (propertyId == null ? payments.Where(p => p.PropertyId == null).Sum(p => p.Amount) : 0);
+
         var years = await db.Invoices.Where(i => i.CancelledAt == null && i.CancelsInvoiceId == null).Select(i => i.PeriodYear).Distinct().ToListAsync(ct);
         years.Add(now.Year);
         years.Add(y);
@@ -137,7 +157,8 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
             upcoming.OrderBy(e => e.Date).ThenBy(e => e.PropertyName).ToList(),
             allProperties,
             propertyId,
-            propertyId is null ? null : living.OrderByDescending(t => t.MoveInDate).FirstOrDefault()?.Name));
+            propertyId is null ? null : living.OrderByDescending(t => t.MoveInDate).FirstOrDefault()?.Name,
+            balanceExpected, balancePaid, balanceByProperty));
     }
 
     private static string NormalizeLabel(string label)

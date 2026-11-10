@@ -16,6 +16,11 @@ public record DashboardDto(
     int ActiveProperties, int RentedProperties,
     List<UpcomingEvent> Upcoming,
     // Ingatlanválasztó: az összes ingatlan (aktívak elöl), a kiválasztott (null = mind), és egy ingatlannál a mai bérlő.
-    List<DashboardProperty> Properties, Guid? PropertyId = null, string? CurrentTenantName = null);
+    List<DashboardProperty> Properties, Guid? PropertyId = null, string? CurrentTenantName = null,
+    // Egyenleg (teljes időszak, nem az évre szűrve): várt = kiállított bizonylatok + bizonylatra váró rezsi,
+    // kifizetett = befizetések; az egyenleg a kettő különbsége. Ugyanaz a számítás, mint a bérlők egyenlegénél.
+    decimal BalanceExpected = 0, decimal BalancePaid = 0, List<PropertyBalance>? BalanceByProperty = null);
+
+public record PropertyBalance(Guid PropertyId, string Name, decimal Expected, decimal Paid);
 
 public record DashboardProperty(Guid Id, string Name, bool IsActive);

@@ -14,7 +14,10 @@
 
 
 /* Mutatók */
-.kpi-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+.kpi-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+.kpi.is-due .kpi-value,.kpi.is-due #kpi-balance-state{color:var(--coral);}
+.kpi.is-over .kpi-value,.kpi.is-over #kpi-balance-state{color:var(--green);}
+#kpi-balance-state{font-weight:600;}
 .kpi{display:flex;flex-direction:column;gap:6px;}
 .kpi-label{font-size:13px;font-weight:600;color:var(--ink-soft);}
 .kpi-hero-value{font-family:var(--font-display);font-size:48px;line-height:1.05;font-weight:600;letter-spacing:-0.03em;color:var(--ink);}
@@ -84,8 +87,8 @@
 
 
 @media (max-width: 1100px){
-  .kpi-row{grid-template-columns:1fr 1fr;}
-  .kpi-row .kpi-hero{grid-column:span 2;}
+  .kpi-row{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .kpi-row .kpi-hero{grid-column:span 3;}
   .viz-grid{grid-template-columns:minmax(0,1fr);}
   .viz-grid .span-2,.viz-grid .span-3{grid-column:auto;}
 }
