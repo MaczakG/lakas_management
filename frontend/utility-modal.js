@@ -10,6 +10,10 @@
     #um-overlay .modal{max-width:640px;}
     .um-draft-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px;}
     .um-draft-row .field{margin-bottom:0;}
+    .um-draft-row .um-note-field{grid-column:1 / -1;}
+    .um-draft-row{padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:12px;}
+    .um-entry-note{font-size:12px;color:var(--muted);margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere;}
+    #um-existing-tbody .um-edit-note{margin-top:6px;}
     .um-draft-row button svg{width:16px;height:16px;display:block;margin:auto;}
     .um-draft-row button{width:42px;height:42px;border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;color:var(--coral);flex-shrink:0;}
     .um-total{font-size:13px;font-weight:600;color:var(--ink-soft);margin:4px 0 16px;}
@@ -67,6 +71,7 @@
       <div class="field"><label>Megnevezés</label><input type="text" class="um-draft-label" placeholder="pl. Áram"></div>
       <div class="field"><label>Összeg (Ft)</label><input type="number" class="um-draft-amount" min="0"></div>
       <button type="button" title="Sor eltávolítása" aria-label="Sor eltávolítása"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
+      <div class="field um-note-field"><label>Megjegyzés <span class="dim">(nem kötelező, a bizonylatra nem kerül rá)</span></label><input type="text" class="um-draft-note" maxlength="500" placeholder="pl. mérőállás, a szolgáltatói számla száma"></div>
     `;
     row.querySelector('button').addEventListener('click', () => { row.remove(); updateDraftTotal(); });
     row.querySelector('.um-draft-amount').addEventListener('input', updateDraftTotal);
@@ -106,7 +111,7 @@
       ? `<tr class="empty-row"><td colspan="3">Nincs még rögzített tétel.</td></tr>`
       : entries.map((e) => `
         <tr>
-          <td>${escapeHtml(e.label)}</td>
+          <td>${escapeHtml(e.label)}${e.note ? `<div class="um-entry-note">${escapeHtml(e.note)}</div>` : ''}</td>
           <td>${formatCurrency(e.amount)}</td>
           <td class="row-actions">${e.isLocked
             ? (e.invoiceId
@@ -141,18 +146,21 @@
     const row = btn.closest('tr');
     if (!entry || !row) return;
     row.innerHTML = `
-      <td><input type="text" class="um-edit-label" aria-label="Megnevezés"></td>
+      <td><input type="text" class="um-edit-label" aria-label="Megnevezés">
+        <input type="text" class="um-edit-note" maxlength="500" aria-label="Megjegyzés" placeholder="Megjegyzés (nem kötelező)"></td>
       <td><input type="number" class="um-edit-amount" min="0" aria-label="Összeg (Ft)"></td>
       <td class="row-actions"><button class="btn btn-primary btn-sm" type="button" data-save>Mentés</button>
         <button class="btn btn-ghost btn-sm" type="button" data-cancel>Mégse</button></td>`;
     row.querySelector('.um-edit-label').value = entry.label;
     row.querySelector('.um-edit-amount').value = entry.amount;
+    row.querySelector('.um-edit-note').value = entry.note || '';
     row.querySelector('.um-edit-label').focus();
     row.querySelector('[data-cancel]').addEventListener('click', refresh);
     row.querySelector('[data-save]').addEventListener('click', async () => {
       const label = row.querySelector('.um-edit-label').value.trim();
       const amount = Number(row.querySelector('.um-edit-amount').value);
-      const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/${entryId}`, { method: 'PUT', body: JSON.stringify({ label, amount }) });
+      const note = row.querySelector('.um-edit-note').value.trim() || null;
+      const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/${entryId}`, { method: 'PUT', body: JSON.stringify({ label, amount, note }) });
       if (!res.ok) {
         await uiAlert(errorMessage(res, await readJson(res), 'Nem sikerült menteni a tételt.'), { title: 'Mentés sikertelen' });
         return;
@@ -184,6 +192,7 @@
     const rows = [...document.querySelectorAll('.um-draft-row')].map((r) => ({
       label: r.querySelector('.um-draft-label').value.trim(),
       amount: Number(r.querySelector('.um-draft-amount').value),
+      note: r.querySelector('.um-draft-note').value.trim() || null,
     })).filter((r) => r.label && r.amount);
 
     if (rows.length === 0) {

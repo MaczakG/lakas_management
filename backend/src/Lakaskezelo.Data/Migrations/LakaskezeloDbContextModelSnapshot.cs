@@ -1361,6 +1361,10 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<int>("Month")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid>("PropertyId")
                         .HasColumnType("uuid");
 
