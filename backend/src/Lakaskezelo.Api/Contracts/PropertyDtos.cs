@@ -39,3 +39,13 @@ public record UtilityCostEntryDto(Guid Id, int Year, int Month, string Label, de
     Guid? InvoiceId = null, string? InvoiceNumber = null, string? Note = null);
 public record UpsertUtilityCostEntryRequest(int Year, int Month, string Label, decimal Amount, string? Note = null);
 public record UpdateUtilityCostEntryRequest(string Label, decimal Amount, string? Note = null);
+
+// Beköltözési tudnivalók (az ingatlan adatlapjának „Beköltözés” füle).
+public record MoveInInfoDto(string? Text, bool Sendable, bool EmailConfigured, List<MoveInRecipientDto> Recipients);
+
+// Akinek kiküldhető: az ingatlan jelenlegi vagy még be nem költözött bérlője.
+public record MoveInRecipientDto(Guid TenantId, string Name, string? Email, DateOnly? MoveInDate, DateTime? SentAt);
+
+public record UpdateMoveInInfoRequest(string? Text, bool Sendable);
+
+public record SendMoveInInfoRequest(Guid TenantId);

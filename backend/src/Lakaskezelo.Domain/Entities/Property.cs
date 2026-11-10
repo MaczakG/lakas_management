@@ -40,6 +40,11 @@ public class Property : ICompanyOwned
     public string? RentVat { get; set; }
     public string? UtilityVat { get; set; }
 
+    // Beköltözési tudnivalók (az adatlap „Beköltözés” füle): egyetlen szabad szöveg, amit egy gombbal ki lehet
+    // küldeni a bérlőnek. Ha a MoveInInfoSendable hamis, a szöveg csak belső feljegyzés.
+    public string? MoveInInfo { get; set; }
+    public bool MoveInInfoSendable { get; set; } = true;
+
     public List<PropertyOwner> PropertyOwners { get; set; } = [];
     public List<Tenant> Tenants { get; set; } = [];
     public List<UtilityCostEntry> UtilityCostEntries { get; set; } = [];

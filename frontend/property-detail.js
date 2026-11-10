@@ -393,6 +393,149 @@ window.openUtility = (year, month) => {
   window.openUtilityModal(propertyId, property.name, year, month, { onSaved: loadUtility, onClose: loadUtility });
 };
 
+// ---------- Beköltözés fül ----------
+
+// Egy szabad szöveg az ingatlanhoz (kapukód, wifi, mérőórák…), amit egy gombbal ki lehet küldeni a bérlőnek.
+// A szöveg és a „kiküldhető” pipa a mező elhagyásakor mentődik, a kiküldés mindig a mentett szöveget viszi.
+let moveIn = null;          // a szerver utolsó válasza
+let moveInSaving = null;    // folyamatban lévő mentés (a kiküldés megvárja)
+const MOVEIN_MAX = 5000;
+const mi = (id) => document.getElementById(id);
+
+function moveInState(text, kind) {
+  const el = mi('mi-state');
+  el.textContent = text || '';
+  el.className = `movein-state${kind ? ` is-${kind}` : ''}`;
+}
+
+function moveInRecipient() {
+  return moveIn?.recipients.find((r) => r.tenantId === mi('mi-recipient').value) || moveIn?.recipients[0] || null;
+}
+
+function renderMoveInSide() {
+  const recipients = moveIn.recipients;
+  const select = mi('mi-recipient');
+  const keep = select.value;
+  select.innerHTML = recipients.map((r) => `<option value="${escapeHtml(r.tenantId)}">${escapeHtml(r.name)}</option>`).join('');
+  if (recipients.some((r) => r.tenantId === keep)) select.value = keep;
+  mi('mi-recipient-field').hidden = recipients.length < 2;
+
+  const r = moveInRecipient();
+  const info = mi('mi-recipient-info');
+  if (!r) {
+    info.innerHTML = '<span class="dim">Az ingatlannak nincs jelenlegi vagy leendő bérlője.</span>';
+  } else {
+    const sent = r.sentAt
+      ? `<span class="status-tag ok">Kiküldve</span> <span class="dim">${formatDate(r.sentAt)}</span>`
+      : '<span class="status-tag inactive">Még nem ment ki</span>';
+    info.innerHTML = `${recipients.length < 2 ? `<strong>${escapeHtml(r.name)}</strong><br>` : ''}${
+      r.email ? escapeHtml(r.email) : '<span class="dim">Nincs e-mail címe</span>'}<br>${sent}`;
+  }
+
+  const hasText = mi('mi-text').value.trim().length > 0;
+  let reason = '';
+  if (!hasText) reason = 'Előbb írd be a tudnivalókat.';
+  else if (!mi('mi-sendable').checked) reason = 'A szöveg belső feljegyzés: pipáld be, hogy kiküldhető.';
+  else if (!r) reason = 'Rendelj bérlőt az ingatlanhoz a Bérlők oldalon.';
+  else if (!r.email) reason = 'Add meg a bérlő e-mail címét az adatlapján.';
+  else if (!moveIn.emailConfigured) reason = 'Az e-mail küldés nincs beállítva.';
+  mi('mi-send').disabled = !!reason;
+  mi('mi-send-hint').textContent = reason || (r.sentAt ? 'Újra is kiküldheted, például ha változott a szöveg.' : '');
+}
+
+function renderMoveIn() {
+  mi('mi-text').value = moveIn.text || '';
+  mi('mi-sendable').checked = moveIn.sendable;
+  mi('mi-count').textContent = `${mi('mi-text').value.length} / ${MOVEIN_MAX}`;
+  renderMoveInSide();
+}
+
+function moveInDirty() {
+  return (mi('mi-text').value.replace(/\r\n?/g, '\n').trim() || null) !== (moveIn.text || null) || mi('mi-sendable').checked !== moveIn.sendable;
+}
+
+// Ment, ha van változás. Igazat ad vissza, ha a szerveren a képernyőn látható állapot van.
+function saveMoveIn() {
+  if (moveInSaving) return moveInSaving.then(() => saveMoveIn());
+  if (!moveIn || !moveInDirty()) return Promise.resolve(true);
+  moveInState('Mentés…');
+  moveInSaving = (async () => {
+    try {
+      const res = await apiFetch(`/api/properties/${propertyId}/move-in-info`, {
+        method: 'PUT',
+        body: JSON.stringify({ text: mi('mi-text').value, sendable: mi('mi-sendable').checked }),
+      });
+      if (!res.ok) {
+        moveInState((await res.json().catch(() => null))?.message || 'A mentés nem sikerült.', 'error');
+        return false;
+      }
+      moveIn = await res.json();
+      moveInState('Mentve', 'ok');
+      renderMoveInSide();
+      return true;
+    } catch {
+      moveInState('A mentés nem sikerült.', 'error');
+      return false;
+    } finally {
+      moveInSaving = null;
+    }
+  })();
+  return moveInSaving;
+}
+
+mi('mi-text').addEventListener('input', () => {
+  mi('mi-count').textContent = `${mi('mi-text').value.length} / ${MOVEIN_MAX}`;
+  moveInState(moveInDirty() ? 'Nincs mentve' : '');
+  renderMoveInSide();
+});
+mi('mi-text').addEventListener('blur', saveMoveIn);
+mi('mi-sendable').addEventListener('change', () => { renderMoveInSide(); saveMoveIn(); });
+mi('mi-recipient').addEventListener('change', renderMoveInSide);
+// Elnavigáláskor a még el nem mentett szöveg is menjen el (a blur ilyenkor nem mindig fut le).
+window.addEventListener('pagehide', () => {
+  if (!moveIn || !moveInDirty()) return;
+  fetch(`${API_BASE}/api/properties/${propertyId}/move-in-info`, {
+    method: 'PUT', keepalive: true,
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ text: mi('mi-text').value, sendable: mi('mi-sendable').checked }),
+  }).catch(() => {});
+});
+
+mi('mi-send').addEventListener('click', async () => {
+  if (!(await saveMoveIn())) return;
+  const r = moveInRecipient();
+  if (!r?.email) return;
+  const again = r.sentAt ? ` Egyszer már megkapta (${formatDate(r.sentAt)}).` : '';
+  const ok = await uiConfirm(`Kiküldöd a beköltözési tudnivalókat e-mailben?\nCímzett: ${r.name} (${r.email}).${again}`,
+    { title: 'Beköltözési tudnivalók kiküldése', confirmText: 'Kiküldés' });
+  if (!ok) return;
+  const btn = mi('mi-send');
+  btn.disabled = true;
+  moveInState('Küldés…');
+  try {
+    const res = await apiFetch(`/api/properties/${propertyId}/move-in-info/send`, { method: 'POST', body: JSON.stringify({ tenantId: r.tenantId }) });
+    if (!res.ok) {
+      moveInState('');
+      await uiAlert((await res.json().catch(() => null))?.message || 'Az e-mailt nem sikerült elküldeni.', { title: 'Nem sikerült' });
+      return;
+    }
+    moveIn = await res.json();
+    moveInState('Kiküldve', 'ok');
+  } catch {
+    moveInState('');
+    await uiAlert('Az e-mailt nem sikerült elküldeni. Ellenőrizd az internetkapcsolatot.', { title: 'Nem sikerült' });
+  } finally {
+    renderMoveInSide();
+  }
+});
+
+async function loadMoveIn() {
+  const res = await apiFetch(`/api/properties/${propertyId}/move-in-info`);
+  if (!res.ok) return;
+  moveIn = await res.json();
+  renderMoveIn();
+}
+
 // ---------- fülek ----------
 
 function activateTab(name) {
@@ -553,9 +696,11 @@ async function load() {
   let tab = 'invoices';
   try { tab = localStorage.getItem('propertyDetailTab') || tab; } catch { /* nem baj */ }
   // #fülnév a címben (pl. a dokumentum adatlapjáról visszalépve: …#documents) elsőbbséget kap.
-  if (['invoices', 'utility', 'tenants', 'documents'].includes(location.hash.slice(1))) tab = location.hash.slice(1);
-  activateTab(['invoices', 'utility', 'tenants', 'documents'].includes(tab) ? tab : 'invoices');
+  const tabs = ['invoices', 'utility', 'tenants', 'movein', 'documents'];
+  if (tabs.includes(location.hash.slice(1))) tab = location.hash.slice(1);
+  activateTab(tabs.includes(tab) ? tab : 'invoices');
   mountPropertyDocuments();
+  loadMoveIn();
 }
 
 load();

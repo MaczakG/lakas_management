@@ -27,6 +27,8 @@ public class Tenant : ICompanyOwned
     // bérbeadónál; ld. Billing.Szja).
     public bool TenantPaysSzja { get; set; }
     public DateTime CreatedAt { get; set; }
+    // Mikor kapta meg utoljára e-mailben az ingatlan beköltözési tudnivalóit (ld. Property.MoveInInfo).
+    public DateTime? MoveInInfoSentAt { get; set; }
 
     // Milyen devizanemben van megadva az ingatlan bérleti díja ennél a bérlőnél — a számlán
     // mindig HUF-ra átváltva jelenik meg az aktuális MNB árfolyamon (ld. InvoiceGenerationService).

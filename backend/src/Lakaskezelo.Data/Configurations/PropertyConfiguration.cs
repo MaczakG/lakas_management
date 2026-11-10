@@ -24,5 +24,7 @@ public class PropertyConfiguration : IEntityTypeConfiguration<Property>
         builder.Property(p => p.WaterMeter).HasMaxLength(50);
         builder.Property(p => p.Deposit).HasColumnType("numeric(12,2)");
         builder.Property(p => p.Notes).HasMaxLength(4000);
+        builder.Property(p => p.MoveInInfo).HasMaxLength(5000);
+        builder.Property(p => p.MoveInInfoSendable).HasDefaultValue(true);
     }
 }
