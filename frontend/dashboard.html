@@ -21,6 +21,8 @@
         <h1 id="greeting">Vezérlőpult</h1>
       </div>
       <div class="dash-filter">
+        <label for="property-select">Ingatlan</label>
+        <select id="property-select" aria-label="Ingatlan"></select>
         <label for="year-select">Év</label>
         <select id="year-select" aria-label="Év"></select>
       </div>
@@ -43,7 +45,7 @@
           <div class="kpi-sub">felvett rezsi tételek összesen</div>
         </div>
         <div class="viz-card kpi">
-          <div class="kpi-label">Kiadott ingatlanok</div>
+          <div class="kpi-label" id="kpi-occupancy-label">Kiadott ingatlanok</div>
           <div class="kpi-value" id="kpi-occupancy">–</div>
           <div class="meter" id="occupancy-meter" role="meter" aria-label="Kiadott ingatlanok aránya" aria-valuemin="0" aria-valuemax="100"><span></span></div>
           <div class="kpi-sub" id="kpi-occupancy-sub"></div>
@@ -72,7 +74,7 @@
           <div id="status-chart"></div>
         </section>
 
-        <section class="viz-card span-2">
+        <section class="viz-card span-2" id="property-card">
           <div class="viz-head">
             <div>
               <h2 class="viz-title">Ingatlanonként</h2>
@@ -81,7 +83,7 @@
           <div id="property-chart"></div>
         </section>
 
-        <section class="viz-card">
+        <section class="viz-card" id="upcoming-card">
           <div class="viz-head">
             <div>
               <h2 class="viz-title">Következő 30 nap</h2>

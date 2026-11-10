@@ -29,6 +29,16 @@ requireAuth();
     }
     $('kpi-utility-label').textContent = `Rezsi ${inYear(d.year)}`;
     $('kpi-utility').textContent = huf(d.utilityTotal);
+    // Egy kiválasztott ingatlannál a kihasználtság helyett az ingatlan állapota és a mai bérlő látszik.
+    $('occupancy-meter').hidden = !!d.propertyId;
+    if (d.propertyId) {
+      const selected = d.properties.find((p) => p.id === d.propertyId);
+      $('kpi-occupancy-label').textContent = 'Ingatlan állapota';
+      $('kpi-occupancy').textContent = !selected?.isActive ? 'Inaktív' : d.rentedProperties ? 'Kiadva' : 'Üres';
+      $('kpi-occupancy-sub').textContent = d.currentTenantName ? `Bérlő: ${d.currentTenantName}` : 'Nincs jelenlegi bérlő.';
+      return;
+    }
+    $('kpi-occupancy-label').textContent = 'Kiadott ingatlanok';
     $('kpi-occupancy').textContent = `${d.rentedProperties} / ${d.activeProperties}`;
     const pct = d.activeProperties ? Math.round((d.rentedProperties / d.activeProperties) * 100) : 0;
     $('occupancy-meter').querySelector('span').style.width = `${pct}%`;
@@ -103,6 +113,10 @@ requireAuth();
   }
 
   function renderProperties() {
+    // Egy ingatlannál az ingatlanonkénti bontásnak nincs értelme: a kártya eltűnik, a közelgő események teljes szélességet kapnak.
+    $('property-card').hidden = !!data.propertyId;
+    $('upcoming-card').classList.toggle('span-3', !!data.propertyId);
+    if (data.propertyId) return;
     const list = data.byProperty;
     if (!list.length) {
       $('property-chart').innerHTML = `<div class="panel-empty">${inYear(data.year)} még nincs kiállított bizonylat.</div>`;
@@ -182,15 +196,22 @@ requireAuth();
     renderUtility();
   }
 
+  let propertyId = ''; // '' = összes ingatlan
+
   async function load(year) {
     $('dash').classList.add('loading'); // újratöltés közben a régi kép marad, halványítva
     try {
-      const res = await apiFetch(`/api/dashboard${year ? `?year=${year}` : ''}`);
+      const query = new URLSearchParams();
+      if (year) query.set('year', year);
+      if (propertyId) query.set('propertyId', propertyId);
+      const res = await apiFetch(`/api/dashboard${query.size ? `?${query}` : ''}`);
       const body = await readJson(res);
       if (!res.ok) throw new Error(errorMessage(res, body, 'Nem sikerült betölteni a vezérlőpultot.'));
       data = body;
       const select = $('year-select');
       select.innerHTML = data.years.map((y) => `<option value="${y}"${y === data.year ? ' selected' : ''}>${y}</option>`).join('');
+      $('property-select').innerHTML = '<option value="">Összes ingatlan</option>' + data.properties.map((p) =>
+        `<option value="${escapeHtml(p.id)}"${p.id === data.propertyId ? ' selected' : ''}>${escapeHtml(p.name)}${p.isActive ? '' : ' (inaktív)'}</option>`).join('');
       $('page-error').classList.remove('show');
       renderAll();
     } catch (e) {
@@ -205,6 +226,7 @@ requireAuth();
   if (name) $('greeting').textContent = `Szia, ${name}!`;
 
   $('year-select').addEventListener('change', (e) => load(Number(e.target.value)));
+  $('property-select').addEventListener('change', (e) => { propertyId = e.target.value; load(data?.year); });
   let resizeTimer;
   let lastWidth = $('dash').clientWidth;
   window.addEventListener('resize', () => {

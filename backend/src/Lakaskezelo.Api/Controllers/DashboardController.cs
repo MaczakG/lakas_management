@@ -21,14 +21,20 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
     private const int UpcomingDays = 30;
 
     [HttpGet]
-    public async Task<ActionResult<DashboardDto>> Get([FromQuery] int? year, CancellationToken ct)
+    public async Task<ActionResult<DashboardDto>> Get([FromQuery] int? year, [FromQuery] Guid? propertyId, CancellationToken ct)
     {
+        // Ingatlanválasztó: propertyId nélkül az összes ingatlan, különben minden szám csak arra az egyre vonatkozik.
+        var allProperties = await db.Properties.OrderByDescending(p => p.IsActive).ThenBy(p => p.Name)
+            .Select(p => new DashboardProperty(p.Id, p.Name, p.IsActive)).ToListAsync(ct);
+        if (propertyId is not null && allProperties.All(p => p.Id != propertyId)) return NotFound(new { message = "Az ingatlan nem található." });
+
         var now = BudapestClock.Now;
         var today = DateOnly.FromDateTime(now);
         var y = year is >= 2000 and <= 2100 ? year.Value : now.Year;
 
         // A sztornózott számla és a sztornója együtt nulla — egyik sem számít bele az összesítőkbe.
-        var invoices = await db.Invoices.Where(i => (i.PeriodYear == y || i.PeriodYear == y - 1) && i.CancelledAt == null && i.CancelsInvoiceId == null)
+        var invoices = await db.Invoices.Where(i => (i.PeriodYear == y || i.PeriodYear == y - 1) && i.CancelledAt == null && i.CancelsInvoiceId == null
+                && (propertyId == null || i.PropertyId == propertyId))
             .Select(i => new { i.PeriodYear, i.PeriodMonth, i.Status, i.AmountTotal, i.PropertyId, PropertyName = i.Property!.Name })
             .ToListAsync(ct);
         var current = invoices.Where(i => i.PeriodYear == y).ToList();
@@ -54,7 +60,7 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
 
         // Rezsi: a tételek megnevezése szabad szöveg, ezért kis-nagybetűtől függetlenül csoportosítjuk; a legnagyobb
         // öt kategória külön sávot kap, a többi „Egyéb”-be kerül (több szín már nem különböztethető meg biztosan).
-        var utilityRows = await db.UtilityCostEntries.Where(u => u.Year == y)
+        var utilityRows = await db.UtilityCostEntries.Where(u => u.Year == y && (propertyId == null || u.PropertyId == propertyId))
             .Select(u => new { u.Month, u.Label, u.Amount })
             .ToListAsync(ct);
         var normalized = utilityRows.Select(u => new { u.Month, Label = NormalizeLabel(u.Label), u.Amount }).ToList();
@@ -76,18 +82,19 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
             .ToList();
 
         // Kihasználtság: aktív ingatlan, amin ma lakó bérlő van.
-        var properties = await db.Properties.Where(p => p.IsActive)
+        var properties = await db.Properties.Where(p => p.IsActive && (propertyId == null || p.Id == propertyId))
             .Select(p => new { p.Id, p.Name, p.BillingDayOfMonth, p.BillingHour, p.BillingMinute })
             .ToListAsync(ct);
-        var tenants = await db.Tenants.Where(t => t.PropertyId != null)
+        var tenants = await db.Tenants.Where(t => t.PropertyId != null && (propertyId == null || t.PropertyId == propertyId))
             .Select(t => new { t.Id, t.Name, t.PropertyId, t.MoveInDate, t.MoveOutDate, PropertyName = t.Property!.Name, PropertyActive = t.Property.IsActive })
             .ToListAsync(ct);
         var activeIds = properties.Select(p => p.Id).ToHashSet();
-        var rented = tenants
+        var living = tenants
             .Where(t => activeIds.Contains(t.PropertyId!.Value)
                 && (t.MoveInDate is null || t.MoveInDate <= today)
                 && (t.MoveOutDate is null || t.MoveOutDate >= today))
-            .Select(t => t.PropertyId!.Value).Distinct().Count();
+            .ToList();
+        var rented = living.Select(t => t.PropertyId!.Value).Distinct().Count();
 
         // Közelgő események (a következő 30 nap): számla-kiküldések, be- és kiköltözések.
         var horizon = today.AddDays(UpcomingDays);
@@ -127,7 +134,10 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
             utilityMonthly,
             properties.Count,
             rented,
-            upcoming.OrderBy(e => e.Date).ThenBy(e => e.PropertyName).ToList()));
+            upcoming.OrderBy(e => e.Date).ThenBy(e => e.PropertyName).ToList(),
+            allProperties,
+            propertyId,
+            propertyId is null ? null : living.OrderByDescending(t => t.MoveInDate).FirstOrDefault()?.Name));
     }
 
     private static string NormalizeLabel(string label)
