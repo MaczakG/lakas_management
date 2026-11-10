@@ -4,18 +4,22 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
-- **2026.11.10.5** — Figyelmeztetés módosított adatlap elhagyásakor (V1.1 / 5. pont).
-  - Az adatlap mezői továbbra is azonnal mentődnek. Ha viszont módosítás után továbblépnél, a program felsorolja,
-    mi változott az adatlap megnyitása óta (régi → új érték), és megkérdezi, biztosan módosítani akartad-e.
-  - Három választás: „Igen, maradjon így”, „Visszaállítás” (az eredeti értékek visszakerülnek, utána lép tovább),
-    „Vissza az adatlapra”.
-  - Érvényes az ingatlan, a bérlő, a tulajdonos és a dokumentum adatlapján, az ingatlannál a „Beköltözés” fül
-    szövegére is.
-  - Rákérdez: menüpontra vagy hivatkozásra kattintáskor, a Kilépés gombnál és a böngésző Vissza gombjánál. Ha a
-    mentés még fut, megvárja.
-  - Nem kérdez, ha nem volt módosítás, vagy ha az értéket visszaírtad az eredetire.
-  - Korlát: a böngészőfül bezárásakor és az oldal frissítésekor nem tud rákérdezni, ott a módosítás megmarad.
+- **2026.11.10.6** — Adatlap: mentés gombbal, figyelmeztetés mentetlen adatoknál (V1.1 / 5. pont, átdolgozva).
+  - Az adatlap mezői már nem mentődnek maguktól. Amint egy tábla valamelyik mezője módosul, a tábla jobb felső
+    sarkában megjelenik a „Mégsem” és a „Mentés” gomb, a módosított mező mellett pedig a „Nincs mentve” jelzés.
+  - „Mentés”: a tábla összes módosított mezőjét egyszerre menti (Enter a mezőben ugyanezt teszi). Hibás értéknél
+    nem ment, a hibát a mező mellett jelzi.
+  - „Mégsem”: visszaírja az utoljára mentett értékeket (Esc a mezőben csak azt a mezőt állítja vissza).
+  - Ha mentetlen adat van, és menüpontra, hivatkozásra vagy a Kilépés gombra kattintasz, a program rákérdez:
+    „Vannak mentetlen adatok. Biztosan ki akarsz lépni?” (Maradok / Kilépés mentés nélkül).
+  - A böngészőfül bezárásakor, frissítéskor és a böngésző Vissza gombjánál a böngésző saját figyelmeztetése
+    jelenik meg (ennek a szövegét a böngésző adja).
+  - Érvényes az ingatlan, a bérlő, a tulajdonos és a dokumentum adatlapján. Az ingatlan „Beköltözés” fülén a
+    Mentés és a Mégsem gomb a fülsáv jobb oldalán jelenik meg; mentetlen szöveg nem küldhető ki.
   - Migráció nincs.
+- **2026.11.10.5** — Figyelmeztetés módosított adatlap elhagyásakor (V1.1 / 5. pont, első változat).
+  - Az azonnali mentés mellett kilépéskor felsorolta a módosításokat, és vissza lehetett állítani őket. A
+    2026.11.10.6 felváltotta: élesbe már az új működés kerül.
 - **2026.11.10.4** — Beköltözési tudnivalók e-mailben (V1.1 / 4. pont).
   - Az ingatlan adatlapján új „Beköltözés” fül: egyetlen szabad szöveg (pl. kapukód, wifi, mérőórák helye,
     szemétszállítás, hibabejelentés, házirend), legfeljebb 5000 karakter. A mező elhagyásakor magától mentődik.

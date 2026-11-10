@@ -34,7 +34,7 @@
             <span id="p-status"></span>
           </div>
           <p class="detail-sub" id="p-sub"></p>
-          <p class="detail-hint">Kattints egy adatra, és írd át. A változás azonnal mentődik.</p>
+          <p class="detail-hint">Kattints egy adatra, és írd át, majd nyomd meg a tábla jobb felső sarkában megjelenő Mentés gombot.</p>
         </div>
         <div class="detail-actions">
           <button class="btn btn-primary btn-sm" type="button" id="create-invoice-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#file-plus"/></svg>Bizonylat készítése</button>
@@ -93,6 +93,7 @@
           </div>
           <div class="record-tab-actions">
             <button class="btn btn-secondary" type="button" id="add-utility" data-tab-action="utility" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#plus"/></svg>Rezsi a következő bizonylathoz</button>
+            <div data-tab-action="movein" hidden><div class="panel-save" id="mi-save" hidden><button class="btn btn-secondary" type="button" id="mi-cancel-btn">Mégsem</button><button class="btn btn-primary" type="button" id="mi-save-btn">Mentés</button></div></div>
             <button class="btn btn-secondary" type="button" id="upload-doc" data-tab-action="documents" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="assets/icons/icons.svg#upload"/></svg>Feltöltés</button>
           </div>
         </div>
@@ -111,7 +112,7 @@
                   <span class="movein-state" id="mi-state" role="status"></span>
                   <span class="movein-count" id="mi-count"></span>
                 </div>
-                <p class="movein-hint">Elhagyáskor magától mentődik. Ha a pipát kiveszed, a szöveg belső feljegyzés marad, és nem küldhető ki.</p>
+                <p class="movein-hint">Ha a pipát kiveszed, a szöveg belső feljegyzés marad, és nem küldhető ki.</p>
               </div>
               <div class="movein-side">
                 <h3>Kiküldés e-mailben</h3>

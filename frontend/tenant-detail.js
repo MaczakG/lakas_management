@@ -271,7 +271,7 @@ function renderInvoices() {
 document.getElementById('delete-btn').addEventListener('click', async () => {
   if (!(await uiConfirm(`Biztosan törlöd a bérlőt: ${tenant.name}?`, { title: 'Törlés', confirmText: 'Törlés', danger: true }))) return;
   const res = await apiFetch(`/api/tenants/${tenantId}`, { method: 'DELETE' });
-  if (res.ok) { location.href = 'tenants.html'; return; }
+  if (res.ok) { ChangeGuard.allowLeave(); location.href = 'tenants.html'; return; }
   showError(errorMessage(res, await readJson(res), 'Nem sikerült törölni.'));
 });
 
