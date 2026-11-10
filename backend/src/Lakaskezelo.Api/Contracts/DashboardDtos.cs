@@ -14,4 +14,8 @@ public record DashboardDto(
     List<MonthAmount> Monthly, List<PropertyAmount> ByProperty,
     decimal UtilityTotal, List<string> UtilityCategories, List<UtilityMonth> UtilityMonthly,
     int ActiveProperties, int RentedProperties,
-    List<UpcomingEvent> Upcoming);
+    List<UpcomingEvent> Upcoming,
+    // Ingatlanválasztó: az összes ingatlan (aktívak elöl), a kiválasztott (null = mind), és egy ingatlannál a mai bérlő.
+    List<DashboardProperty> Properties, Guid? PropertyId = null, string? CurrentTenantName = null);
+
+public record DashboardProperty(Guid Id, string Name, bool IsActive);

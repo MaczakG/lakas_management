@@ -4,6 +4,15 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.10.2** — Ingatlanválasztó a Vezérlőpulton (V1.1 / 2. pont).
+  - A fejlécben az Év mellett „Ingatlan” választó: „Összes ingatlan” vagy egy ingatlan (az inaktívak a lista végén,
+    „(inaktív)” jelöléssel).
+  - Egy ingatlant választva minden csak arra vonatkozik: a kiállított összeg, az előző évvel való összevetés, a rezsi,
+    a havi diagramok, a bizonylatok állapota és a következő 30 nap eseményei.
+  - A „Kiadott ingatlanok” csempe helyén ilyenkor az „Ingatlan állapota” látszik (Kiadva / Üres / Inaktív) a mai
+    bérlő nevével. Az „Ingatlanonként” bontás eltűnik, a „Következő 30 nap” teljes szélességű.
+  - Évváltáskor a kiválasztott ingatlan megmarad.
+  - Migráció nincs.
 - **2026.11.10** — Megjegyzés a rezsitételhez (V1.1 / 1. pont).
   - A rezsi-felvételi ablakban minden tételhez megadható egy nem kötelező megjegyzés (pl. mérőállás, a szolgáltatói
     számla száma), legfeljebb 500 karakter.

@@ -6,5 +6,5 @@ namespace Lakaskezelo.Api;
 // EC2-re tar-ral másolt forrásnak nincs .git előzménye a build kontextusban (ld. deploy/README.md).
 public static class AppVersion
 {
-    public const string Current = "2026.11.10";
+    public const string Current = "2026.11.10.2";
 }

@@ -4,7 +4,13 @@
 
 .dash-filter{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .dash-filter label{font-size:13px;font-weight:600;color:var(--ink-soft);}
+.dash-filter{flex-wrap:wrap;justify-content:flex-end;}
 .dash-filter select{width:120px;height:40px;}
+.dash-filter #property-select{width:260px;max-width:100%;}
+@media (max-width:720px){
+  .dash-filter{width:100%;justify-content:flex-start;}
+  .dash-filter #property-select{width:100%;}
+}
 
 
 /* Mutatók */
