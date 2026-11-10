@@ -211,10 +211,10 @@ public class PlatformController(
         const string text = "Ez egy teszt e-mail a Platform admin felületről.";
         if (string.Equals(provider, "smtp", StringComparison.OrdinalIgnoreCase))
         {
-            var ok = await smtpSender.SendAsync(request.To, "Teszt e-mail (SMTP)", html, text, null, ct);
+            var ok = await smtpSender.SendWithAttachmentsAsync(request.To, "Teszt e-mail (SMTP)", html, text, [], ct);
             return Ok(new TestSmtpResponse(ok, ok ? null : smtpSender.LastError));
         }
-        var sent = await mailgunSender.SendAsync(request.To, "Teszt e-mail (Mailgun)", html, text, null, ct);
+        var sent = await mailgunSender.SendWithAttachmentsAsync(request.To, "Teszt e-mail (Mailgun)", html, text, [], ct);
         return Ok(new TestSmtpResponse(sent, sent ? null : mailgunSender.LastError));
     }
 

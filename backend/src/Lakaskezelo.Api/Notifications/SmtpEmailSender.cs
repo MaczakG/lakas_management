@@ -25,14 +25,14 @@ public class SmtpEmailSender(AppSettingsService settingsService, ILogger<SmtpEma
         !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(username)
         && !string.IsNullOrWhiteSpace(password) && !string.IsNullOrWhiteSpace(from);
 
-    public async Task<bool> SendAsync(string to, string subject, string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct) =>
-        await SendWithAsync(await settingsService.GetPlatformAsync(ct), null, null, to, subject, htmlBody, textBody, attachment, ct);
+    public async Task<bool> SendWithAttachmentsAsync(string to, string subject, string htmlBody, string textBody, IReadOnlyList<EmailAttachment> attachments, CancellationToken ct) =>
+        await SendWithAsync(await settingsService.GetPlatformAsync(ct), null, null, to, subject, htmlBody, textBody, attachments, ct);
 
     // Megadott (nem feltétlenül az aktuális cég) beállításaival küld — a rendszerlevelekhez
     // (SystemEmailSender), amelyek a platform üzemeltetőjének postafiókjából mennek. fromNameOverride:
     // ha meg van adva, ez lesz a feladó neve (pl. a termék neve a cégnév helyett).
     public async Task<bool> SendWithAsync(AppSettings settings, string? fromNameOverride, string? replyTo, string to, string subject,
-        string htmlBody, string textBody, EmailAttachment? attachment, CancellationToken ct)
+        string htmlBody, string textBody, IReadOnlyList<EmailAttachment> attachments, CancellationToken ct)
     {
         if (!IsConfigured(settings.SmtpHost, settings.SmtpUsername, settings.SmtpPassword, settings.SmtpFromAddress))
         {
@@ -51,7 +51,7 @@ public class SmtpEmailSender(AppSettingsService settingsService, ILogger<SmtpEma
             message.Subject = subject;
 
             var builder = new BodyBuilder { HtmlBody = htmlBody, TextBody = textBody };
-            if (attachment is not null)
+            foreach (var attachment in attachments)
             {
                 builder.Attachments.Add(attachment.FileName, attachment.Content, ContentType.Parse(attachment.MimeType));
             }

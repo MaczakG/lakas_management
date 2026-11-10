@@ -31,12 +31,12 @@ public class SystemEmailSender(
         bool sent;
         if (settings.EmailProvider == EmailProvider.Smtp)
         {
-            sent = await smtp.SendWithAsync(settings, ProductName, null, to, subject, htmlBody, textBody, null, ct);
+            sent = await smtp.SendWithAsync(settings, ProductName, null, to, subject, htmlBody, textBody, [], ct);
             LastError = smtp.LastError;
         }
         else
         {
-            sent = await mailgun.SendWithAsync(settings, ProductName, null, to, subject, htmlBody, textBody, null, ct);
+            sent = await mailgun.SendWithAsync(settings, ProductName, null, to, subject, htmlBody, textBody, [], ct);
             LastError = mailgun.LastError;
         }
         return sent;

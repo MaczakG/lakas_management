@@ -251,6 +251,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<Guid?>("UploadedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("UtilityCostEntryId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyId");
@@ -264,6 +267,8 @@ namespace Lakaskezelo.Data.Migrations
                     b.HasIndex("TenantId");
 
                     b.HasIndex("UploadedByUserId");
+
+                    b.HasIndex("UtilityCostEntryId");
 
                     b.ToTable("Documents");
                 });
@@ -437,6 +442,12 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<decimal>("AmountTotal")
                         .HasColumnType("numeric(12,2)");
+
+                    b.Property<int>("AttachmentsAvailable")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AttachmentsSent")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("timestamp with time zone");
@@ -1166,6 +1177,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<string>("Email")
                         .HasColumnType("text");
 
+                    b.Property<int>("InvoiceAttachments")
+                        .HasColumnType("integer");
+
                     b.Property<DateOnly?>("MoveInDate")
                         .HasColumnType("date");
 
@@ -1467,6 +1481,11 @@ namespace Lakaskezelo.Data.Migrations
                         .HasForeignKey("UploadedByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Lakaskezelo.Domain.Entities.UtilityCostEntry", "UtilityCostEntry")
+                        .WithMany("Attachments")
+                        .HasForeignKey("UtilityCostEntryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("DocumentType");
 
                     b.Navigation("Owner");
@@ -1476,6 +1495,8 @@ namespace Lakaskezelo.Data.Migrations
                     b.Navigation("Tenant");
 
                     b.Navigation("UploadedBy");
+
+                    b.Navigation("UtilityCostEntry");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.DocumentContent", b =>
@@ -1811,6 +1832,11 @@ namespace Lakaskezelo.Data.Migrations
                     b.Navigation("Tenants");
 
                     b.Navigation("UtilityCostEntries");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.UtilityCostEntry", b =>
+                {
+                    b.Navigation("Attachments");
                 });
 #pragma warning restore 612, 618
         }

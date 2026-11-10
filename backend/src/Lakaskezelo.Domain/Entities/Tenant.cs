@@ -26,6 +26,8 @@ public class Tenant : ICompanyOwned
     // A bérlő (kifizetőként) vonja le és fizeti be a bérbeadó SZJA-ját: a bérleti díjból levonódik (magánszemély
     // bérbeadónál; ld. Billing.Szja).
     public bool TenantPaysSzja { get; set; }
+    // Megkapja-e a bizonylat e-mailjével a rezsitételek csatolmányait.
+    public InvoiceAttachmentPreference InvoiceAttachments { get; set; } = InvoiceAttachmentPreference.Ask;
     public DateTime CreatedAt { get; set; }
     // Mikor kapta meg utoljára e-mailben az ingatlan beköltözési tudnivalóit (ld. Property.MoveInInfo).
     public DateTime? MoveInInfoSentAt { get; set; }

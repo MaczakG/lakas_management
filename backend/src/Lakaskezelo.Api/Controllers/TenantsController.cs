@@ -176,6 +176,7 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
             RentCurrency = request.RentCurrency,
             RentPaymentTiming = request.RentPaymentTiming ?? Domain.Enums.RentPaymentTiming.Advance,
             TenantPaysSzja = request.TenantPaysSzja ?? false,
+            InvoiceAttachments = request.InvoiceAttachments ?? Domain.Enums.InvoiceAttachmentPreference.Ask,
             CreatedAt = DateTime.UtcNow,
         };
         db.Tenants.Add(tenant);
@@ -207,6 +208,7 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
         tenant.RentCurrency = request.RentCurrency;
         if (request.RentPaymentTiming is { } timing) tenant.RentPaymentTiming = timing;
         if (request.TenantPaysSzja is { } paysSzja) tenant.TenantPaysSzja = paysSzja;
+        if (request.InvoiceAttachments is { } attachments) tenant.InvoiceAttachments = attachments;
         await db.SaveChangesAsync(ct);
 
         await db.Entry(tenant).Reference(t => t.Property).LoadAsync(ct);
@@ -230,5 +232,5 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
         tenant.Id, tenant.Name, tenant.Email, tenant.Phone, tenant.Address, tenant.TaxId,
         tenant.PropertyId, tenant.Property?.Name,
         tenant.MoveInDate, tenant.MoveOutDate, tenant.Notes, tenant.RentCurrency,
-        tenant.RentPaymentTiming, tenant.TenantPaysSzja, balance);
+        tenant.RentPaymentTiming, tenant.TenantPaysSzja, balance, tenant.InvoiceAttachments);
 }

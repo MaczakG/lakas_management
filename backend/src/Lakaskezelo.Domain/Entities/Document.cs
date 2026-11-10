@@ -16,6 +16,10 @@ public class Document : ICompanyOwned
     public Tenant? Tenant { get; set; }
     public Guid? OwnerId { get; set; }
     public Owner? Owner { get; set; }
+    // Ha a dokumentum egy rezsitétel csatolmánya (pl. a szolgáltatói számla): a tétel bizonylatának e-mailjével
+    // kiküldhető a bérlőnek (ld. Tenant.InvoiceAttachments). Ilyenkor az ingatlanhoz is kapcsolódik.
+    public Guid? UtilityCostEntryId { get; set; }
+    public UtilityCostEntry? UtilityCostEntry { get; set; }
 
     // Cégenként szerkeszthető dokumentumtípus; null, ha nincs megadva (vagy a típust törölték).
     public Guid? DocumentTypeId { get; set; }

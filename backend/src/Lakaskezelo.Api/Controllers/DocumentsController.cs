@@ -19,6 +19,8 @@ public class DocumentsController(LakaskezeloDbContext db, DocumentStorage storag
     // A multipart törzs a fájlon felül a mezőket és a határolókat is tartalmazza.
     private const long MaxRequestBytes = DocumentStorage.MaxBytes + 512 * 1024;
     // Ugyanannak a felhasználónak ugyanarra a verzióra eső megtekintései ennyi időn belül egy naplósornak számítanak.
+    private const int MaxAttachmentsPerEntry = 10;
+    private const string UtilityBillTypeName = "Rezsi számla";
     private static readonly TimeSpan ViewDedupWindow = TimeSpan.FromMinutes(30);
 
     [HttpGet]
@@ -56,10 +58,22 @@ public class DocumentsController(LakaskezeloDbContext db, DocumentStorage storag
     [RequestSizeLimit(MaxRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxRequestBytes)]
     public async Task<ActionResult<DocumentDto>> Upload([FromForm] IFormFile? file, [FromForm] string? name, [FromForm] Guid? documentTypeId,
-        [FromForm] string? note, [FromForm] Guid? propertyId, [FromForm] Guid? tenantId, [FromForm] Guid? ownerId, CancellationToken ct)
+        [FromForm] string? note, [FromForm] Guid? propertyId, [FromForm] Guid? tenantId, [FromForm] Guid? ownerId,
+        [FromForm] Guid? utilityCostEntryId, CancellationToken ct)
     {
         var (upload, uploadError) = await ReadUploadAsync(file, ct);
         if (upload is null) return BadRequest(new { message = uploadError });
+
+        // Rezsitétel csatolmánya: a tétel ingatlanához kapcsolódik, és (ha más nincs megadva) „Rezsi számla” típusú.
+        if (utilityCostEntryId is { } entryId)
+        {
+            var entry = await db.UtilityCostEntries.Where(u => u.Id == entryId)
+                .Select(u => new { u.PropertyId, Count = u.Attachments.Count }).FirstOrDefaultAsync(ct);
+            if (entry is null) return BadRequest(new { message = "A rezsitétel nem található." });
+            if (entry.Count >= MaxAttachmentsPerEntry) return BadRequest(new { message = $"Egy tételhez legfeljebb {MaxAttachmentsPerEntry} csatolmány tartozhat." });
+            propertyId = entry.PropertyId;
+            documentTypeId ??= await db.DocumentTypes.Where(t => t.Name == UtilityBillTypeName).Select(t => (Guid?)t.Id).FirstOrDefaultAsync(ct);
+        }
 
         var displayName = string.IsNullOrWhiteSpace(name) ? Path.GetFileNameWithoutExtension(upload.FileName) : name.Trim();
         if (string.IsNullOrWhiteSpace(name) && displayName.Length > 200) displayName = displayName[..200];
@@ -78,6 +92,7 @@ public class DocumentsController(LakaskezeloDbContext db, DocumentStorage storag
             PropertyId = propertyId,
             TenantId = tenantId,
             OwnerId = ownerId,
+            UtilityCostEntryId = utilityCostEntryId,
             FileName = upload.FileName,
             ContentType = upload.ContentType,
             SizeBytes = upload.Data.LongLength,

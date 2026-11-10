@@ -106,8 +106,61 @@
     close.focus();
   }
 
-  // Visszaadja a kész bizonylatot (InvoiceDto), vagy null-t, ha a generálás nem jutott el a mentésig.
-  window.generateInvoiceWithProgress = function ({ propertyId, year, month, propertyName }) {
+  // A rezsitételek csatolmányai (pl. szolgáltatói számlák) a bizonylat levelével kiküldhetők. Ha a bérlőnél be van
+  // állítva, hogy kéri-e őket, az dönt. Ha nincs, itt egyszer rákérdezünk, felsorolva a csatolmányokat.
+  // Eredmény: true / false (a válasz), null (nem kellett kérdezni), 'cancel' (a felhasználó visszalépett).
+  async function askAttachments({ propertyId, year, month }) {
+    let plan = null;
+    try {
+      const res = await apiFetch(`/api/invoices/attachment-plan?propertyId=${encodeURIComponent(propertyId)}&year=${year}&month=${month}`);
+      if (res.ok) plan = await res.json();
+    } catch { /* a csatolmányok nélkül is elkészülhet a bizonylat */ }
+    if (!plan || !plan.attachments.length || plan.preference !== 'Ask' || !plan.willEmail) return null;
+
+    return new Promise((resolve) => {
+      const size = (bytes) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+      const box = document.createElement('div');
+      box.className = 'modal-overlay ui-dialog-overlay';
+      box.innerHTML = `
+        <div class="modal ui-dialog attach-ask" role="dialog" aria-modal="true" aria-labelledby="attach-ask-title">
+          <div class="modal-head"><div><h2 id="attach-ask-title">Mellékletekkel küldöd?</h2>
+            <p>A bizonylat rezsitételeihez ${plan.attachments.length} csatolmány tartozik. Menjenek a bérlőnek a bizonylat levelével?</p></div></div>
+          <div class="modal-body">
+            <ul class="attach-ask-list">${plan.attachments.map((a) => `
+              <li><span class="attach-ask-name">${escapeHtml(a.fileName)}</span><span class="dim">${escapeHtml(a.entryLabel)}, ${size(a.sizeBytes)}</span></li>`).join('')}</ul>
+            <p class="attach-ask-hint">${plan.tenantName ? `${escapeHtml(plan.tenantName)} adatlapján` : 'A bérlő adatlapján'} beállíthatod, hogy mindig kapja-e a mellékleteket, így legközelebb nem kell kérdezni.</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" data-answer="cancel">Mégse</button>
+            <button class="btn btn-secondary" type="button" data-answer="no">Mellékletek nélkül</button>
+            <button class="btn btn-primary" type="button" data-answer="yes">Mellékletekkel</button>
+          </div>
+        </div>`;
+      document.body.appendChild(box);
+      requestAnimationFrame(() => box.classList.add('open'));
+      const done = (answer) => {
+        box.classList.remove('open');
+        document.removeEventListener('keydown', onKey, true);
+        setTimeout(() => box.remove(), 200);
+        resolve(answer === 'yes' ? true : answer === 'no' ? false : 'cancel');
+      };
+      const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done('cancel'); } };
+      document.addEventListener('keydown', onKey, true);
+      box.addEventListener('mousedown', (e) => { if (e.target === box) done('cancel'); });
+      box.querySelectorAll('[data-answer]').forEach((b) => b.addEventListener('click', () => done(b.dataset.answer)));
+      setTimeout(() => box.querySelector('[data-answer="yes"]').focus(), 30);
+    });
+  }
+
+  // Visszaadja a kész bizonylatot (InvoiceDto), vagy null-t, ha a generálás nem jutott el a mentésig (vagy a
+  // felhasználó a mellékletek kérdésénél visszalépett).
+  window.generateInvoiceWithProgress = async function (args) {
+    const sendAttachments = await askAttachments(args);
+    if (sendAttachments === 'cancel') return null;
+    return runGeneration({ ...args, sendAttachments });
+  };
+
+  function runGeneration({ propertyId, year, month, propertyName, sendAttachments }) {
     plan = DEFAULT_PLAN;
     current = -1;
     pct = 0;
@@ -129,7 +182,7 @@
 
       (async () => {
         try {
-          const res = await apiFetch('/api/invoices/generate/stream', { method: 'POST', body: JSON.stringify({ propertyId, year, month }) });
+          const res = await apiFetch('/api/invoices/generate/stream', { method: 'POST', body: JSON.stringify({ propertyId, year, month, sendAttachments }) });
           if (!res.ok || !res.body) {
             const data = await res.json().catch(() => ({}));
             finish('error', 'Nem sikerült elindítani a generálást.', errorMessage(res, data, ''));

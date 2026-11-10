@@ -4,6 +4,24 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.10.7** — Csatolmány a rezsitételhez, kiküldés a bizonylattal (V1.1 / 6. pont).
+  - A rezsi felvételénél minden tételhez csatolható fájl (pl. a szolgáltatói számla vagy a mérőóra fotója): új
+    tételnél a „Csatolmány” gombbal, meglévő tételnél a sor „Csatolmány” gombjával. Egy tételhez legfeljebb 10
+    fájl, fájlonként 15 MB; PDF, kép és irodai fájl.
+  - A csatolmány az ingatlan Dokumentumok fülén is megjelenik („Rezsi számla” típussal), ott megnyitható és
+    letölthető. A tétel törlésekor a csatolmányai is törlődnek.
+  - A bérlő adatlapján új beállítás, „Rezsi mellékletek”: Nincs beállítva (rákérdez) / Kapja a bizonylattal /
+    Nem kapja.
+  - Bizonylat készítésekor a bizonylatra kerülő tételek csatolmányai a levélhez csatolhatók:
+    - ha a bérlőnél be van állítva, az dönt, a program nem kérdez;
+    - ha nincs beállítva, kézi készítésnél egy ablak felsorolja a csatolmányokat (Mellékletekkel /
+      Mellékletek nélkül / Mégse);
+    - az időzített (automatikus) küldés beállítás nélkül mellékletek nélkül megy.
+  - A bizonylat adatlapján látszik, hány melléklet tartozott hozzá, és kimentek-e.
+  - A levél csatolmányai együtt legfeljebb 18 MB-ot tehetnek ki; ami ebbe nem fér bele, kimarad, és ez a
+    bizonylat adatlapján látszik.
+  - Telefonon a rezsi ablak sorai két szintre törnek, nem kell oldalra görgetni.
+  - Migráció: `UtilityAttachments` (új mezők; meglévő adatot nem módosít).
 - **2026.11.10.6** — Adatlap: mentés gombbal, figyelmeztetés mentetlen adatoknál (V1.1 / 5. pont, átdolgozva).
   - Az adatlap mezői már nem mentődnek maguktól. Amint egy tábla valamelyik mezője módosul, a tábla jobb felső
     sarkában megjelenik a „Mégsem” és a „Mentés” gomb, a módosított mező mellett pedig a „Nincs mentve” jelzés.
