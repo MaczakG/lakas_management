@@ -4,6 +4,19 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.10.10** — Rezsi értesítő a kitöltendő tételekről (V1.1 / 9. pont).
+  - A rezsi-emlékeztető levél (a Beállításokban megadott rezsi kontaktnak, a rezsi-határnapon) mostantól
+    ingatlanonként felsorolja a teendőket:
+    - a következő bizonylat hónapjának kitöltendő (nem fix, még összeg nélküli) tételeit név szerint;
+    - a korábbi hónapokból megmaradt kitöltetlen tételeket, a hónapjukkal;
+    - vagy azt, hogy a hónapra még nincs rögzített rezsi.
+  - Akkor is szól, ha a hónap rezsije rendben van, de korábbról maradt kitöltetlen tétel. Ingatlanonként és
+    időszakonként továbbra is egyszer megy ki.
+  - A levél tárgya „Rezsi: kitöltendő tételek”, és gomb visz belőle a rezsi felvételre.
+  - A bizonylat az emlékeztetőtől függetlenül kimegy a beállított időben. Az összeg nélküli tétel nem kerül rá;
+    ha később kitöltik (például amikor megjön a szolgáltató számlája), a következő bizonylatra kerül. (Ez a
+    2026.11.10.8 óta így működik.)
+  - Migráció nincs.
 - **2026.11.10.9** — Finomítások a tesztelés után (Mentés gomb, rezsi ablak, rezsi tétel ablak).
   - Adatlap: a módosított tábla fejléce a „Mégsem” és a „Mentés” gombbal görgetéskor a képernyő tetején marad,
     amíg a tábla látszik. Ugyanígy a fülsáv, amíg a Beköltözés fül szövege mentetlen.
