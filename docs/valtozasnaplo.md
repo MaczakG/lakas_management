@@ -4,6 +4,16 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.15** — A számviteli bizonylat (PDF) új, áttekinthetőbb elrendezést kapott.
+  - Az adattartalom változatlan: a bizonylat neve, száma, időszaka, a kiállító (név, cím, bankszámlaszám), a bérbe
+    vevő (név, cím, adószám), a gazdasági esemény megnevezése, a tételek, az árfolyam-megjegyzés, a bérleti díj
+    jogosultjai (név, lakcím, adóazonosító jel, tulajdoni hányad), a kelt és az aláírás helye.
+  - Új elrendezés: fejléc a bizonylat adataival jobbra, a két fél egymás mellett, a tételek táblázata jobbra zárt
+    összegekkel, a végösszeg kiemelve (egyetlen tételnél is látszik). A kelt a fejlécben is szerepel, a láblécben
+    a bizonylat száma és az oldalszám áll. Sztornónál a „SZTORNÓ” piros felirattal a név fölött áll.
+  - A már elkészült és eltárolt PDF-ek nem változnak; az új elrendezés az ezután készülő (és a tárolt PDF nélküli,
+    megnyitáskor előállított) bizonylatokra érvényes. Számlázóból (Billingo, Számlázz.hu) jövő számlát nem érint.
+  - Migráció nincs.
 - **2026.11.11.14** — Ingatlan adatlap: három csempe az idei számokkal.
   - A fejléc alatt új csempesor áll: a rezsi megoszlása körcikk-diagramon (a legnagyobb öt tétel külön szelet, a
     többi „Egyéb”; mellette a tételek összege és aránya, a szeletre állva buborék), a Bevétel (az idei időszakokra
