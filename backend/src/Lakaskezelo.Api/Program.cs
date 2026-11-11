@@ -355,6 +355,7 @@ var environmentName = app.Configuration["App:EnvironmentName"] ?? "production";
 app.MapGet("/api/version", () => Results.Ok(new
 {
     version = Lakaskezelo.Api.AppVersion.Current,
+    release = Lakaskezelo.Api.AppVersion.Release,
     startedAt = appStartedAt,
     environment = environmentName,
     productName = app.Configuration["App:ProductName"] is { Length: > 0 } productName ? productName : "Lakáskezelő",

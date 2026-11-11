@@ -276,7 +276,56 @@ function renderTenant() {
   ].join('');
 }
 
+// Idei csempék a fejléc alatt: a rezsi megoszlása körcikk-diagramon, a bevétel (az idei időszakokra kiállított
+// bizonylatok) és a kiadások (az idén az aktuális hónapig felvett rezsi; a jövőbeli hónapok előre kitöltött rezsije
+// nem számít). A megnevezés szabad szöveg, ezért kis-nagybetűtől függetlenül csoportosítunk; a legnagyobb öt
+// tétel kap külön szeletet, a többi „Egyéb”. A jóváírás (negatív összegű tétel) nem szelet: külön sorban áll.
+const TILE_CATEGORY_LIMIT = 5;
+function renderYearTiles() {
+  const el = document.getElementById('year-tiles');
+  const now = new Date();
+  const year = now.getFullYear(), month = now.getMonth() + 1;
+  const issued = invoices.filter((i) => i.status !== 'Failed' && !i.cancelledAt && !i.cancelsInvoiceId && i.periodYear === year);
+  const income = issued.reduce((sum, i) => sum + Number(i.amountTotal), 0);
+  const costs = utilityEntries.filter((u) => u.year === year && u.month <= month && Number(u.amount) !== 0);
+  const expense = costs.reduce((sum, u) => sum + Number(u.amount), 0);
+
+  const groups = new Map();
+  for (const u of costs) {
+    const name = (u.label || '').trim() || 'Rezsi';
+    const key = name.toLowerCase();
+    const g = groups.get(key) || { name, value: 0 };
+    g.value += Number(u.amount);
+    groups.set(key, g);
+  }
+  const positive = [...groups.values()].filter((g) => g.value > 0).sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, 'hu'));
+  const credit = [...groups.values()].filter((g) => g.value < 0).reduce((sum, g) => sum + g.value, 0);
+  const top = positive.length > TILE_CATEGORY_LIMIT + 1 ? positive.slice(0, TILE_CATEGORY_LIMIT) : positive;
+  const rest = positive.slice(top.length);
+  const slices = top.map((g, i) => ({ name: g.name, value: g.value, color: VizCharts.categoryColor(el, i, false) }));
+  if (rest.length) slices.push({ name: `Egyéb (${rest.length} tétel)`, value: rest.reduce((sum, g) => sum + g.value, 0), color: VizCharts.categoryColor(el, 0, true) });
+  const total = slices.reduce((sum, s) => sum + s.value, 0);
+  const pct = (v) => `${Math.round((v / total) * 100)}%`;
+
+  const legend = slices.map((s) => `<div class="row"><span class="sw" style="background:${s.color}"></span><span class="name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>`
+    + `<span class="val">${formatCurrency(s.value)}</span><span class="pct">${pct(s.value)}</span></div>`).join('')
+    + (credit < 0 ? `<div class="row credit"><span class="sw"></span><span class="name">Jóváírás</span><span class="val">${formatCurrency(credit)}</span><span class="pct"></span></div>` : '');
+  const tile = (label, value, sub) => `<div class="stat-tile"><span class="stat-tile-label">${escapeHtml(label)}</span>`
+    + `<span class="stat-tile-value">${value}</span><span class="stat-tile-sub">${sub}</span></div>`;
+  el.innerHTML = `<div class="stat-tile wide"><span class="stat-tile-label">Rezsi megoszlása (${year})</span>`
+    + `<div class="stat-tile-chart"><div class="viz-plot" id="year-donut"></div>`
+    + `<div class="donut-legend">${legend || '<span class="dim">Idén még nincs rögzített rezsi.</span>'}</div></div></div>`
+    + tile(`Bevétel (${year})`, formatCurrency(income), issued.length ? `${issued.length} db kiállított bizonylat` : 'még nincs kiállított bizonylat')
+    + tile(`Kiadások (${year})`, formatCurrency(expense), costs.length ? `rezsi ${MONTH_NAMES[month - 1].toLowerCase()}ig, ${costs.length} tétel` : 'még nincs rögzített rezsi');
+  VizCharts.renderDonut(document.getElementById('year-donut'), {
+    slices,
+    ariaLabel: `A rezsi megoszlása tételenként, ${year}`,
+    tooltip: (i) => ({ title: slices[i].name, rows: [{ color: slices[i].color, label: `${year}`, value: formatCurrency(slices[i].value) }], foot: `A rezsi ${pct(slices[i].value)}-a` }),
+  });
+}
+
 function renderSummary() {
+  renderYearTiles();
   const year = new Date().getFullYear();
   const issued = invoices.filter((i) => i.status !== 'Failed' && (!i.cancelledAt && !i.cancelsInvoiceId));
   const last = issued[0];

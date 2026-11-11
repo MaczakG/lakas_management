@@ -48,5 +48,5 @@
     document.getElementById('who-name').title = auth.admin.email;
     document.getElementById('avatar').textContent = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   }
-  APP_INFO.then((v) => { if (v.version) document.getElementById('version-tag').textContent = `v${v.version}`; });
+  APP_INFO.then(showVersionTag);
 })();

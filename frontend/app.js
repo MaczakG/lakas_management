@@ -119,6 +119,14 @@ function errorMessage(res, data, fallback) {
 // sáv jelzi, hogy ez nem az éles rendszer — a böngészőfül címe is "[TESZT]"-tel kezdődik.
 // A nyilvános /api/version (verzió, környezet, termék neve, nyitva van-e a regisztráció) — egyszer
 // kérjük le, minden oldal ezt a promise-t használja.
+// A menü alján a kiadás neve látszik (pl. „V1.1”); a pontos, dátum-alapú változat fölé állva olvasható.
+function showVersionTag(v) {
+  const tag = document.getElementById('version-tag');
+  if (!tag || !v.version) return;
+  tag.textContent = v.release ? `V${v.release}` : `v${v.version}`;
+  tag.title = `Változat: ${v.version}`;
+}
+
 const APP_INFO = fetch(`${API_BASE}/api/version`).then((r) => r.json()).catch(() => ({}));
 
 APP_INFO.then((v) => {
