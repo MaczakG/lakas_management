@@ -28,12 +28,12 @@ const FIELDS = {
     { path: 'moveOutDate', label: 'Kiköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
     // Minden követett deviza választható; újat az Árfolyamok oldalon lehet felvenni.
     { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: rentCurrencyOptions(rates, tenant?.rentCurrency) },
-    // A lakbér előre fizetendő. Az „Utólag” csak annál a bérlőnél látszik, akinél korábban az volt beállítva
-    // (hogy a meglévő adat ne jelenjen meg tévesen); átállítás után ott is eltűnik.
-    { path: 'rentPaymentTiming', label: 'Lakbér fizetése', type: 'select', required: true, options: [
+    // A lakbér előre fizetendő, ezért a mező alapból nem látszik (nincs mit módosítani rajta). Csak annál a bérlőnél
+    // jelenik meg, akinél korábban „Utólag” volt beállítva — ott át lehet állítani, és mentés után ott is eltűnik.
+    ...(tenant?.rentPaymentTiming === 'Arrears' ? [{ path: 'rentPaymentTiming', label: 'Lakbér fizetése', type: 'select', required: true, options: [
       { value: 'Advance', label: 'Előre (tárgyhó)' },
-      ...(tenant?.rentPaymentTiming === 'Arrears' ? [{ value: 'Arrears', label: 'Utólag (előző hó)' }] : []),
-    ] },
+      { value: 'Arrears', label: 'Utólag (előző hó)' },
+    ] }] : []),
     // A rezsitételek csatolmányai (pl. szolgáltatói számlák) a bizonylat levelével: ha nincs beállítva, kézi
     // bizonylatkészítésnél a program rákérdez, az időzített küldés pedig mellékletek nélkül megy.
     { path: 'invoiceAttachments', label: 'Rezsi mellékletek', type: 'select', required: true, options: [
@@ -125,7 +125,6 @@ function renderBalanceBand() {
   // A bizonylathoz nem kötött befizetések is csökkentik: a lejárt hátralék legfeljebb a teljes tartozás.
   // (Az egyenlegben csak a kiállított bizonylatok vannak; a még ki nem számlázott rezsi nem része.)
   const overdueSum = Math.min(overdue.reduce((s, i) => s + invoiceRemaining(i), 0), Math.max(balance, 0));
-  const lastPayment = ledger?.entries.find((e) => e.kind === 'payment');
   const state = balance > 0 ? 'due' : balance < 0 ? 'over' : 'settled';
   const stateText = { due: 'tartozás', over: 'túlfizetés', settled: 'rendezett' }[state];
   const stat = (label, value, cls = '') => `<div class="bb-stat${cls ? ` ${cls}` : ''}"><span>${escapeHtml(label)}</span><b>${value}</b></div>`;
@@ -138,10 +137,9 @@ function renderBalanceBand() {
     </div>
     <div class="bb-stats">
       ${stat('Kiállítva', formatCurrency(ledger ? ledger.chargedTotal : 0))}
-      ${ledger && Number(ledger.unbilledTotal) > 0 ? stat('Rezsi, bizonylatra vár', `${formatCurrency(ledger.unbilledTotal)} <small>nincs az egyenlegben</small>`) : ''}
+      ${ledger && Number(ledger.lateTotal) !== 0 ? stat('Utólagos rezsi', `${formatCurrency(ledger.lateTotal)} <small>az egyenlegben</small>`) : ''}
       ${stat('Befizetve', formatCurrency(ledger ? ledger.paidTotal : 0))}
       ${stat('Lejárt hátralék', overdueSum > 0 ? `${formatCurrency(overdueSum)} <small>${overdue.length} lejárt bizonylatból</small>` : '–', overdueSum > 0 ? 'is-alert' : '')}
-      ${stat('Utolsó befizetés', lastPayment ? `${formatDate(lastPayment.date)} <small>${formatCurrency(-lastPayment.amount)}</small>` : '–')}
     </div>
     <div class="bb-actions">
       <button class="btn btn-secondary btn-sm" type="button" data-bb="ledger">Folyószámla</button>
@@ -235,6 +233,7 @@ function renderLedger() {
   }
   body.innerHTML = `<div class="ledger-totals">
       <div><span>Kiállítva</span><b>${formatCurrency(ledger.chargedTotal)}</b></div>
+      ${Number(ledger.lateTotal) !== 0 ? `<div><span>Utólagos rezsi</span><b>${formatCurrency(ledger.lateTotal)}</b></div>` : ''}
       <div><span>Befizetve</span><b>${formatCurrency(ledger.paidTotal)}</b></div>
       <div><span>Egyenleg</span><b>${balanceHtml(ledger.balance)}</b></div>
     </div>

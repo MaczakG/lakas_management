@@ -1,6 +1,7 @@
 using Lakaskezelo.Api.Contracts;
 using Lakaskezelo.Api.ExchangeRates;
 using Lakaskezelo.Data;
+using Lakaskezelo.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,7 @@ public class ExchangeRatesController(LakaskezeloDbContext db, ExchangeRateUpdate
     public async Task<ActionResult<List<ExchangeRateDto>>> List(CancellationToken ct)
     {
         var rates = await db.ExchangeRates.OrderBy(r => r.CurrencyCode).ToListAsync(ct);
-        return Ok(rates.Select(r => new ExchangeRateDto(r.Id, r.CurrencyCode, r.RateToHuf, r.RateDate, r.FetchedAt, Currencies.Name(r.CurrencyCode))));
+        return Ok(rates.Select(r => new ExchangeRateDto(r.Id, r.CurrencyCode, r.RateToHuf, r.RateDate, r.FetchedAt, Currencies.Name(r.CurrencyCode), Currencies.IsDefault(r.CurrencyCode))));
     }
 
     // Manuális "Frissítés most" — ugyanaz a lekérés, mint amit az ExchangeRateFetchService
@@ -69,5 +70,37 @@ public class ExchangeRatesController(LakaskezeloDbContext db, ExchangeRateUpdate
             return StatusCode(502, new { message = $"Nem sikerült elérni az MNB árfolyam-szolgáltatást: {ex.Message}" });
         }
         return await List(ct);
+    }
+
+    // Követett deviza törlése. Az alap devizák nem törölhetők, és az sem, amelyik egy bérlő bérleti díjának
+    // devizája (az árfolyam-tábla közös: a másik cég bérlője is számít, de róla részletet nem árulunk el).
+    [Authorize(Roles = UsersController.AdminRole)]
+    [HttpDelete("{currencyCode}")]
+    public async Task<IActionResult> Delete(string currencyCode, CancellationToken ct)
+    {
+        var code = (currencyCode ?? "").Trim().ToUpperInvariant();
+        var row = await db.ExchangeRates.FirstOrDefaultAsync(r => r.CurrencyCode == code, ct);
+        if (row is null) return NotFound();
+        if (Currencies.IsDefault(code))
+        {
+            return Conflict(new { message = $"A(z) {code} alap deviza, nem törölhető." });
+        }
+
+        if (Enum.TryParse<RentCurrency>(code, out var currency))
+        {
+            var own = await db.Tenants.CountAsync(t => t.RentCurrency == currency, ct);
+            if (own > 0)
+            {
+                return Conflict(new { message = $"A(z) {code} nem törölhető: {own} bérlőnél ez a bérleti díj devizája. Előbb állítsd át őket másik devizára." });
+            }
+            if (await db.Tenants.IgnoreQueryFilters().AnyAsync(t => t.RentCurrency == currency, ct))
+            {
+                return Conflict(new { message = $"A(z) {code} nem törölhető, mert használatban van." });
+            }
+        }
+
+        db.ExchangeRates.Remove(row);
+        await db.SaveChangesAsync(ct);
+        return NoContent();
     }
 }
