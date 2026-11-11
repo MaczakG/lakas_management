@@ -144,7 +144,7 @@ window.ChangeGuard = (function () {
         return false;
       }
       changes.forEach(({ field, value, item }) => {
-        if (item.input.tagName === 'INPUT') item.input.value = format(field, value);
+        if (item.input.tagName === 'INPUT' || field.multiple) item.input.value = format(field, value);
         item.saved = item.input.value;
         setState(item, 'ok', 'Mentve');
         setTimeout(() => { if (item.state.textContent === 'Mentve') setState(item, '', ''); }, 2000);

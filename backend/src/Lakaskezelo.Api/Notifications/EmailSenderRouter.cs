@@ -27,12 +27,19 @@ public class EmailSenderRouter(
 
     public async Task<bool> SendWithAttachmentsAsync(string to, string subject, string htmlBody, string textBody, IReadOnlyList<EmailAttachment> attachments, CancellationToken ct)
     {
-        if (await IsSuppressedAsync(db, configuration, to, ct))
+        // Több címzett (vesszővel elválasztva) egy levelet kap; a teszt-környezetben csak a megengedett címek.
+        var recipients = new List<string>();
+        foreach (var address in EmailAddresses.Split(to))
+        {
+            if (!await IsSuppressedAsync(db, configuration, address, ct)) recipients.Add(address);
+        }
+        if (recipients.Count == 0)
         {
             logger.LogInformation("E-mail suppressed (Email:OnlyToUsers): {Subject}", subject);
             LastError = null;
             return true;
         }
+        to = string.Join(", ", recipients);
 
         var platform = await settingsService.GetPlatformAsync(ct);
         var company = await settingsService.GetAsync(ct);

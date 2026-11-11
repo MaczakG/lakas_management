@@ -439,6 +439,26 @@ function utilityPeriodTag(entries) {
   return '<span class="status-tag ok">Rögzítve</span>';
 }
 
+// Több e-mail cím egy mezőben (a bérlő értesítőinek címzettjei): vesszővel, pontosvesszővel, szóközzel vagy új
+// sorral elválasztva. { value } a ", "-vel összefűzött címeket adja (üresnél null), { error } a hibaüzenetet.
+const EMAIL_LIST_MAX = 5;
+function splitEmails(text) {
+  const seen = new Set();
+  return String(text ?? '').split(/[,;\s]+/).filter((a) => {
+    if (!a || seen.has(a.toLowerCase())) return false;
+    seen.add(a.toLowerCase());
+    return true;
+  });
+}
+function parseEmailList(text) {
+  const addresses = splitEmails(text);
+  if (!addresses.length) return { value: null };
+  const invalid = addresses.find((a) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a));
+  if (invalid) return { error: `Érvénytelen e-mail cím: ${invalid}` };
+  if (addresses.length > EMAIL_LIST_MAX) return { error: `Legfeljebb ${EMAIL_LIST_MAX} e-mail cím adható meg.` };
+  return { value: addresses.join(', ') };
+}
+
 // A következő bizonylat rezsijének állapota (PropertyDto.utilityState): Ok / Pending / Missing.
 function utilityStateTag(state, okLabel = 'Rendben') {
   if (state === 'Pending') return '<span class="status-tag warn" title="Van kitöltendő (nem fix) rezsi tétel">Kitöltendő</span>';

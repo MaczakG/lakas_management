@@ -46,7 +46,7 @@ public class SmtpEmailSender(AppSettingsService settingsService, ILogger<SmtpEma
             var fromName = fromNameOverride ?? (string.IsNullOrWhiteSpace(settings.SmtpFromName) ? "Lakáskezelő" : settings.SmtpFromName);
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(fromName, settings.SmtpFromAddress));
-            message.To.Add(MailboxAddress.Parse(to));
+            foreach (var address in EmailAddresses.Split(to)) message.To.Add(MailboxAddress.Parse(address));
             if (!string.IsNullOrWhiteSpace(replyTo) && MailboxAddress.TryParse(replyTo, out var replyAddress)) message.ReplyTo.Add(replyAddress);
             message.Subject = subject;
 

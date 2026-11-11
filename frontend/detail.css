@@ -93,6 +93,12 @@
   transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;}
 .ifield select.iinput{cursor:pointer;padding-right:28px;background-position:right 8px center;background-color:transparent;}
 .ifield textarea.iinput{height:auto;min-height:84px;padding:6px 8px;line-height:1.5;resize:vertical;}
+.ifield textarea.iinput-auto{min-height:32px;padding:5px 8px;resize:none;overflow:hidden;overflow-wrap:anywhere;}
+/* Több e-mail cím: soronként egy, az állapotfelirat a mező alá kerül, hogy a címek kiférjenek. */
+.prop.multi{align-items:start;}
+.prop.multi dt{padding-top:8px;}
+.ifield.ifield-stack{flex-direction:column;align-items:stretch;gap:0;}
+.ifield.ifield-stack .istate:not(:empty){padding:0 0 4px;white-space:normal;}
 .ifield .iinput::placeholder{color:var(--muted);font-weight:500;}
 .ifield .iinput:hover{border-color:var(--line);background-color:#fff;}
 .ifield .iinput:focus{border-color:var(--accent);outline:none;background-color:#fff;box-shadow:0 0 0 3px var(--accent-ring);}

@@ -53,7 +53,7 @@
       <form id="tenant-form">
         <div class="field"><label for="f-name">Név *</label><input type="text" id="f-name" required></div>
         <div class="field-row">
-          <div class="field"><label for="f-email">E-mail</label><input type="email" id="f-email"></div>
+          <div class="field"><label for="f-email">E-mail</label><input type="text" inputmode="email" id="f-email" autocomplete="off"><span class="hint">Több címzett: vesszővel elválasztva.</span></div>
           <div class="field"><label for="f-phone">Telefon</label><input type="text" id="f-phone"></div>
         </div>
         <div class="field-row">
@@ -183,9 +183,17 @@ document.getElementById('tenant-form').addEventListener('submit', async (e) => {
   const errorEl = document.getElementById('modal-error');
   errorEl.classList.remove('show');
 
+  const emails = parseEmailList(document.getElementById('f-email').value);
+  if (emails.error) {
+    errorEl.textContent = emails.error;
+    errorEl.classList.add('show');
+    document.getElementById('f-email').focus();
+    return;
+  }
+
   const payload = {
     name: document.getElementById('f-name').value.trim(),
-    email: document.getElementById('f-email').value.trim() || null,
+    email: emails.value,
     phone: document.getElementById('f-phone').value.trim() || null,
     address: document.getElementById('f-address').value.trim() || null,
     taxId: document.getElementById('f-taxid').value.trim() || null,

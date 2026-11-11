@@ -16,7 +16,7 @@ const editor = createInlineEditor({ getRecord: () => tenant, save });
 const FIELDS = {
   basic: [
     { path: 'name', label: 'Név', required: true },
-    { path: 'email', label: 'E-mail', type: 'email', placeholder: 'ide megy a bizonylat' },
+    { path: 'email', label: 'E-mail', type: 'email', multiple: true, placeholder: 'ide megy a bizonylat; több cím vesszővel' },
     { path: 'phone', label: 'Telefon' },
     { path: 'taxId', label: 'Adószám' },
     { path: 'address', label: 'Cím a bizonylaton', placeholder: 'ha eltér az ingatlan címétől' },

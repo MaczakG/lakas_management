@@ -7,7 +7,7 @@ const DETAIL_INVOICE_STATUS = { Sent: 'Kiküldve', Generated: 'Nem küldött', F
 // Helyben szerkeszthető mezők egy rekordon. getRecord(): az aktuális rekord; save(draft): elmenti a módosított
 // másolatot, és hibánál az üzenetet adja vissza (különben null).
 // Mező: { path, label, type?: 'text'|'email'|'textarea'|'select'|'date'|'number', options?: [{value,label}],
-//         required?, placeholder?, wide? }
+//         required?, placeholder?, wide?, multiple? (e-mail: több cím vesszővel elválasztva) }
 function createInlineEditor({ getRecord, save }) {
   const idOf = (field) => `f-${field.path.replace(/\./g, '-')}`;
   const get = (path) => path.split('.').reduce((o, k) => o?.[k], getRecord());
@@ -20,6 +20,7 @@ function createInlineEditor({ getRecord, save }) {
     if (value == null) return '';
     if (field.type === 'date') { const [y, m, d] = String(value).split('-'); return `${y}. ${m}. ${d}.`; }
     if (field.type === 'number') return String(value).replace('.', ',');
+    if (field.type === 'email' && field.multiple) return splitEmails(value).join(',\n');   // soronként egy cím
     return String(value);
   };
 
@@ -30,21 +31,26 @@ function createInlineEditor({ getRecord, save }) {
     if (field.type === 'select') {
       control = `<select class="iinput" id="${id}">${field.required ? '' : '<option value="">Nincs megadva</option>'}${field.options
         .map((o) => `<option value="${escapeHtml(o.value)}"${String(o.value) === String(value ?? '') ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}</select>`;
+    } else if (field.type === 'email' && field.multiple) {
+      // Több cím nem fér ki egy sorban: a mező a tartalmához nő (ld. autosize).
+      control = `<textarea class="iinput iinput-auto" id="${id}" rows="1" inputmode="email" spellcheck="false" autocomplete="off" placeholder="${escapeHtml(field.placeholder || '–')}">${escapeHtml(shown(field, value))}</textarea>`;
     } else if (field.type === 'textarea') {
       control = `<textarea class="iinput" id="${id}" placeholder="${escapeHtml(field.placeholder || '')}">${escapeHtml(value ?? '')}</textarea>`;
     } else {
       const mode = field.type === 'email' ? ' inputmode="email"' : field.type === 'number' ? ' inputmode="decimal"' : field.type === 'date' ? ' inputmode="numeric"' : '';
       control = `<input class="iinput" id="${id}" type="text"${mode} value="${escapeHtml(shown(field, value))}" placeholder="${escapeHtml(field.placeholder || (field.required ? '' : '–'))}" autocomplete="off">`;
     }
-    return `<div class="prop${field.wide ? ' wide' : ''}">
+    const multi = field.type === 'email' && field.multiple;
+    return `<div class="prop${field.wide ? ' wide' : ''}${multi ? ' multi' : ''}">
       <dt><label for="${id}">${escapeHtml(field.label)}</label></dt>
-      <dd><div class="ifield"><div class="ictl">${control}</div><span class="istate" data-state="${field.path}"></span></div></dd>
+      <dd><div class="ifield${multi ? ' ifield-stack' : ''}"><div class="ictl">${control}</div><span class="istate" data-state="${field.path}"></span></div></dd>
     </div>`;
   }
 
   function parse(field, raw) {
     const text = raw.trim();
     if (!text) return field.required ? { error: 'Kötelező mező.' } : { value: null };
+    if (field.type === 'email' && field.multiple) return parseEmailList(text);
     if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) return { error: 'Érvénytelen e-mail cím.' };
     if (field.type === 'date') {
       const m = /^(\d{4})[.\-/ ]\s*(\d{1,2})[.\-/ ]\s*(\d{1,2})\.?$/.exec(text);
@@ -73,7 +79,21 @@ function createInlineEditor({ getRecord, save }) {
     },
   });
 
-  return { renderField, bind: sheet.bind };
+  // A tartalmához növő mező (több e-mail cím): beíráskor, a tábla Mentés/Mégsem gombja után és átméretezéskor.
+  const autosize = (el) => { el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px`; };
+  const autosizeAll = () => document.querySelectorAll('textarea.iinput-auto').forEach(autosize);
+  window.addEventListener('resize', autosizeAll);
+  function bind(fields) {
+    sheet.bind(fields);
+    document.querySelectorAll('textarea.iinput-auto').forEach((el) => {
+      autosize(el);
+      el.addEventListener('input', () => autosize(el));
+      el.closest('.panel')?.addEventListener('click', () => setTimeout(() => autosize(el), 0));
+      el.addEventListener('keydown', () => setTimeout(() => autosize(el), 0));
+    });
+  }
+
+  return { renderField, bind };
 }
 
 // A panelek a mindenkori legrövidebb oszlopba kerülnek (mint az ingatlan-adatlapon).
