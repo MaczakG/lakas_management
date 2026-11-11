@@ -10,6 +10,7 @@ let properties = [];
 let invoices = [];
 let ledger = null;
 let company = null;
+let rates = [];   // a követett devizák (a bérleti díj devizájának választékához)
 
 const editor = createInlineEditor({ getRecord: () => tenant, save });
 
@@ -25,12 +26,13 @@ const FIELDS = {
     { path: 'propertyId', label: 'Ingatlan', type: 'select', options: properties.map((p) => ({ value: p.id, label: p.name })) },
     { path: 'moveInDate', label: 'Beköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
     { path: 'moveOutDate', label: 'Kiköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
-    // Előtte értesítő megy a Beállításokban megadott címekre.
-    { path: 'leaseEndDate', label: 'Szerződés lejárata', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
-    { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: [{ value: 'HUF', label: 'Forint (Ft)' }, { value: 'EUR', label: 'Euró (EUR), MNB-árfolyamon átszámítva' }] },
+    // Minden követett deviza választható; újat az Árfolyamok oldalon lehet felvenni.
+    { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: rentCurrencyOptions(rates, tenant?.rentCurrency) },
+    // A lakbér előre fizetendő. Az „Utólag” csak annál a bérlőnél látszik, akinél korábban az volt beállítva
+    // (hogy a meglévő adat ne jelenjen meg tévesen); átállítás után ott is eltűnik.
     { path: 'rentPaymentTiming', label: 'Lakbér fizetése', type: 'select', required: true, options: [
       { value: 'Advance', label: 'Előre (tárgyhó)' },
-      { value: 'Arrears', label: 'Utólag (előző hó)' },
+      ...(tenant?.rentPaymentTiming === 'Arrears' ? [{ value: 'Arrears', label: 'Utólag (előző hó)' }] : []),
     ] },
     // A rezsitételek csatolmányai (pl. szolgáltatói számlák) a bizonylat levelével: ha nincs beállítva, kézi
     // bizonylatkészítésnél a program rákérdez, az időzített küldés pedig mellékletek nélkül megy.
@@ -121,9 +123,8 @@ function renderBalanceBand() {
   const today = new Date().toISOString().slice(0, 10);
   const overdue = invoices.filter((i) => invoiceIsActive(i) && i.status !== 'Failed' && i.dueDate < today && invoiceRemaining(i) > 0);
   // A bizonylathoz nem kötött befizetések is csökkentik: a lejárt hátralék legfeljebb a teljes tartozás.
-  // A még bizonylatra nem került rezsi nem lehet lejárt, ezért az a felső határból kimarad.
-  const billedBalance = balance - (Number(ledger?.unbilledTotal) || 0);
-  const overdueSum = Math.min(overdue.reduce((s, i) => s + invoiceRemaining(i), 0), Math.max(billedBalance, 0));
+  // (Az egyenlegben csak a kiállított bizonylatok vannak; a még ki nem számlázott rezsi nem része.)
+  const overdueSum = Math.min(overdue.reduce((s, i) => s + invoiceRemaining(i), 0), Math.max(balance, 0));
   const lastPayment = ledger?.entries.find((e) => e.kind === 'payment');
   const state = balance > 0 ? 'due' : balance < 0 ? 'over' : 'settled';
   const stateText = { due: 'tartozás', over: 'túlfizetés', settled: 'rendezett' }[state];
@@ -137,7 +138,7 @@ function renderBalanceBand() {
     </div>
     <div class="bb-stats">
       ${stat('Kiállítva', formatCurrency(ledger ? ledger.chargedTotal : 0))}
-      ${ledger && Number(ledger.unbilledTotal) > 0 ? stat('Rezsi, bizonylatra vár', formatCurrency(ledger.unbilledTotal)) : ''}
+      ${ledger && Number(ledger.unbilledTotal) > 0 ? stat('Rezsi, bizonylatra vár', `${formatCurrency(ledger.unbilledTotal)} <small>nincs az egyenlegben</small>`) : ''}
       ${stat('Befizetve', formatCurrency(ledger ? ledger.paidTotal : 0))}
       ${stat('Lejárt hátralék', overdueSum > 0 ? `${formatCurrency(overdueSum)} <small>${overdue.length} lejárt bizonylatból</small>` : '–', overdueSum > 0 ? 'is-alert' : '')}
       ${stat('Utolsó befizetés', lastPayment ? `${formatDate(lastPayment.date)} <small>${formatCurrency(-lastPayment.amount)}</small>` : '–')}
@@ -154,17 +155,7 @@ function renderBalanceBand() {
   });
 }
 
-// Mennyi ideje tart a bérlet: „1 éve és 10 hónapja”, „3 hónapja”.
-function tenancyLength(fromIso, toDate = new Date()) {
-  const [y, m, d] = String(fromIso).split('-').map(Number);
-  const months = (toDate.getFullYear() - y) * 12 + (toDate.getMonth() + 1 - m) - (toDate.getDate() < d ? 1 : 0);
-  if (months < 0) return 'még nem költözött be';
-  const years = Math.floor(months / 12), rest = months % 12;
-  if (years) return `${years} éve${rest ? ` és ${rest} hónapja` : ''}`;
-  return rest ? `${rest} hónapja` : 'ebben a hónapban';
-}
-
-// Összegzés négy csempében: bérlet kezdete, szerződés lejárata, kiállítva összesen és az aktuális évben.
+// Összegzés három csempében: szerződés lejárata, kiállítva összesen és az aktuális évben.
 function renderSummary() {
   renderBalanceBand();
   const year = new Date().getFullYear();
@@ -174,8 +165,10 @@ function renderSummary() {
   const thisYear = ofYear.reduce((s, i) => s + Number(i.amountTotal), 0);
   const failed = invoices.length - issued.length;
   const movedOut = !isCurrent() && !!tenant.propertyId;
-  const tile = (label, value, subHtml) => `<div class="stat-tile"><span class="stat-tile-label">${escapeHtml(label)}</span>`
-    + `<span class="stat-tile-value">${value}</span><span class="stat-tile-sub">${subHtml || ''}</span></div>`;
+  const tile = (label, value, subHtml, extra = '') => `<div class="stat-tile"><span class="stat-tile-label">${escapeHtml(label)}</span>`
+    + `<span class="stat-tile-value">${value}</span><span class="stat-tile-sub">${subHtml || ''}</span>${extra}</div>`;
+  // A szerződés lejárata a csempén szerkeszthető (a Bérlet táblában nincs külön mezője).
+  const leaseEdit = `<button class="icon-btn stat-tile-edit" type="button" id="lease-edit" title="Szerződés lejáratának módosítása" aria-label="Szerződés lejáratának módosítása">${DETAIL_ICON('pen-line')}</button>`;
   const none = '<span class="dim">–</span>';
   let leaseSub = 'nincs megadva';
   if (tenant.leaseEndDate) {
@@ -185,13 +178,35 @@ function renderSummary() {
     leaseSub = movedOut ? '' : leaseEndTag(tenant.leaseEndDate, company?.leaseExpiryNoticeDays) || `${days} nap múlva`;
   }
   document.getElementById('summary').innerHTML = [
-    tile('Bérlet kezdete', tenant.moveInDate ? formatDate(tenant.moveInDate) : none,
-      !tenant.moveInDate ? 'nincs megadva' : tenant.moveOutDate && movedOut ? `kiköltözött: ${formatDate(tenant.moveOutDate)}` : escapeHtml(tenancyLength(tenant.moveInDate))),
-    tile('Szerződés lejárata', tenant.leaseEndDate ? formatDate(tenant.leaseEndDate) : none, leaseSub),
+    tile('Szerződés lejárata', tenant.leaseEndDate ? formatDate(tenant.leaseEndDate) : none, leaseSub, leaseEdit),
     tile('Kiállítva összesen', formatCurrency(total),
       `${issued.length} db bizonylat${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
     tile('Kiállítva az aktuális évben', formatCurrency(thisYear), `${year}, ${ofYear.length} db bizonylat`),
   ].join('');
+  document.getElementById('lease-edit').addEventListener('click', editLeaseEnd);
+}
+
+// A szerződés lejáratának megadása / módosítása / törlése a csempe ceruza gombjával.
+async function editLeaseEnd() {
+  let text = tenant.leaseEndDate ? formatDate(tenant.leaseEndDate) : '';
+  for (;;) {
+    const answer = await uiPrompt('A lejárat előtt értesítő megy a Beállításokban megadott címekre. Üresen hagyva a lejárat törlődik.',
+      { title: 'Szerződés lejárata', input: { label: 'Lejárat napja', value: text, placeholder: 'ÉÉÉÉ. HH. NN.' } });
+    if (answer === null) return;
+    text = answer.trim();
+    let iso = null;
+    if (text) {
+      const m = /^(\d{4})[.\-/ ]\s*(\d{1,2})[.\-/ ]\s*(\d{1,2})\.?$/.exec(text);
+      iso = m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : null;
+      if (!iso || Number.isNaN(Date.parse(iso))) {
+        await uiAlert('A dátumot ÉÉÉÉ. HH. NN. alakban add meg, például 2027. 02. 28.', { title: 'Érvénytelen dátum' });
+        continue;
+      }
+    }
+    const error = await save({ ...structuredClone(tenant), leaseEndDate: iso });
+    if (!error) return;
+    await uiAlert(error, { title: 'Mentés sikertelen' });
+  }
 }
 
 function renderPanels() {
@@ -220,7 +235,6 @@ function renderLedger() {
   }
   body.innerHTML = `<div class="ledger-totals">
       <div><span>Kiállítva</span><b>${formatCurrency(ledger.chargedTotal)}</b></div>
-      ${Number(ledger.unbilledTotal) > 0 ? `<div><span>Rezsi, még nincs bizonylaton</span><b>${formatCurrency(ledger.unbilledTotal)}</b></div>` : ''}
       <div><span>Befizetve</span><b>${formatCurrency(ledger.paidTotal)}</b></div>
       <div><span>Egyenleg</span><b>${balanceHtml(ledger.balance)}</b></div>
     </div>
@@ -229,9 +243,7 @@ function renderLedger() {
     <tbody>${ledger.entries.map((e) => `
       <tr${e.isCancelled ? ' class="is-archived"' : ''}>
         <td>${formatDate(e.date)}</td>
-        <td>${e.kind === 'utility'
-          ? `${escapeHtml(e.label)} <span class="status-tag warn" title="A következő bizonylatra kerül">még nincs bizonylaton</span>`
-          : e.kind === 'invoice'
+        <td>${e.kind === 'invoice'
           ? `<a class="mono link" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}&from=${encodeURIComponent(`tenant:${tenantId}`)}">${escapeHtml(e.invoiceNumber)}</a> <span class="dim">${escapeHtml(e.label)}</span>${e.isCancelled ? ' <span class="status-tag cancelled">Sztornózott</span>' : ''}`
           : `${escapeHtml(e.label)}${e.invoiceId ? ` <a class="mono link" href="invoice-detail.html?id=${encodeURIComponent(e.invoiceId)}&from=${encodeURIComponent(`tenant:${tenantId}`)}">${escapeHtml(e.invoiceNumber || '')}</a>` : ''}${e.note ? ` <span class="dim">${escapeHtml(e.note)}</span>` : ''}`}</td>
         <td class="num">${e.kind !== 'payment' ? formatCurrency(e.amount) : ''}</td>
@@ -310,9 +322,9 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
 });
 
 (async () => {
-  const [tRes, pRes, iRes, lRes, cRes] = await Promise.all([
+  const [tRes, pRes, iRes, lRes, cRes, rRes] = await Promise.all([
     apiFetch(`/api/tenants/${tenantId}`), apiFetch('/api/properties'), apiFetch(`/api/tenants/${tenantId}/invoices`),
-    apiFetch(`/api/tenants/${tenantId}/ledger`), apiFetch('/api/company'),
+    apiFetch(`/api/tenants/${tenantId}/ledger`), apiFetch('/api/company'), apiFetch('/api/exchange-rates'),
   ]);
   if (tRes.status === 404) { showError('A bérlő nem található.'); document.getElementById('p-name').textContent = 'Nem található'; return; }
   tenant = await readJson(tRes);
@@ -320,6 +332,7 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
   invoices = iRes.ok ? await readJson(iRes) : [];
   ledger = lRes.ok ? await readJson(lRes) : null;
   company = cRes.ok ? await readJson(cRes) : null;
+  rates = rRes.ok ? await readJson(rRes) : [];
   renderHeader();
   renderPanels();
   renderProperty();

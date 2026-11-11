@@ -174,7 +174,19 @@ function formatCurrency(amount) {
   return `${formatNumber(amount)} Ft`;
 }
 
-// Devizanem-érzékeny formázás — HUF-nál a megszokott "N Ft" (tizedesjegy nélkül), EUR/USD-nál
+// A bérleti díj devizájának választéka: a forint és az Árfolyamok oldalon követett devizák (GET /api/exchange-rates).
+// current: a bérlőnél most beállított deviza — akkor is szerepel, ha (már) nincs a követettek között.
+function rentCurrencyOptions(rates, current) {
+  const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+  const options = [{ value: 'HUF', label: 'Forint (Ft)' }, ...(rates || []).map((r) => ({
+    value: r.currencyCode,
+    label: r.name && r.name !== r.currencyCode ? `${cap(r.name)} (${r.currencyCode})` : r.currencyCode,
+  }))];
+  if (current && !options.some((o) => o.value === current)) options.push({ value: current, label: `${current} (nincs árfolyama)` });
+  return options;
+}
+
+// Devizanem-érzékeny formázás — HUF-nál a megszokott "N Ft" (tizedesjegy nélkül), EUR/USD/GBP-nél
 // "N,NN EUR/USD" (2 tizedesjeggyel, mivel ott gyakori a törtösszeg).
 function formatMoney(amount, currency) {
   if (!currency || currency === 'HUF') return formatCurrency(amount);

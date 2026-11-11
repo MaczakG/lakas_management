@@ -54,9 +54,6 @@
     .um-check input{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;}
     .um-draft-row .um-forward-field{grid-column:1 / -1;}
     #um-existing-tbody .um-check{margin-top:6px;}
-    .um-prepare{display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);font-size:13px;color:var(--ink-soft);}
-    .um-prepare.show{display:flex;}
-    .um-prepare .btn{height:34px;padding:0 12px;font-size:12.5px;flex-shrink:0;}
     .um-section-title{font-family:var(--font-display);font-weight:700;font-size:14.5px;margin:0 0 10px;color:var(--ink);}
     .um-tax-hint{margin:-4px 0 10px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);font-weight:500;}
   `;
@@ -73,8 +70,6 @@
           <div class="um-note" id="um-late-note"></div>
           <div class="form-error" id="um-locked-note"></div>
 
-          <div class="um-prepare" id="um-prepare"><span id="um-prepare-text">Az ingatlan rezsi tételeiből elkészíthető a hónap rezsije.</span>
-            <button class="btn btn-secondary" type="button" id="um-prepare-btn">Rezsi tételek behúzása</button></div>
 
           <h3 class="um-section-title">Rögzített tételek</h3>
           <div class="card-table" style="margin-bottom:4px;">
@@ -217,14 +212,12 @@
 
   // keepDrafts: csatolmány feltöltése / törlése után a még el nem mentett új sorok megmaradnak.
   async function refresh({ keepDrafts = false } = {}) {
-    const [entriesRes, invoicesRes, itemsRes] = await Promise.all([
+    const [entriesRes, invoicesRes] = await Promise.all([
       apiFetch(`/api/properties/${state.propertyId}/utility-costs`),
       apiFetch(`/api/properties/${state.propertyId}/invoices`),
-      apiFetch(`/api/properties/${state.propertyId}/utility-items`),
     ]);
     const allEntries = await entriesRes.json();
     const invoices = await invoicesRes.json();
-    const items = itemsRes.ok ? await itemsRes.json() : [];
     // Tételenkénti zárolás: a bizonylatra került tétel sztornóig nem módosítható. A már bizonylatolt hónapra utólag
     // felvett tétel nem zárolt, és a következő bizonylatra kerül, a hónapjával jelölve — legfeljebb 36 hónapra visszamenőleg.
     const periodInvoice = invoices.find((i) => (!i.cancelledAt && !i.cancelsInvoiceId) && (i.status === 'Sent' || i.status === 'Generated')
@@ -266,7 +259,6 @@
         : `Összesen: ${formatCurrency(billed)}`;
 
     // Ha az ingatlannak vannak rezsi tételei, a hónap rezsije gombbal is elkészíthető belőlük.
-    document.getElementById('um-prepare').classList.toggle('show', items.length > 0 && !tooOld);
 
     const lateNote = document.getElementById('um-late-note');
     lateNote.textContent = periodInvoice && !tooOld
@@ -363,23 +355,6 @@
 
   // A hónap rezsijének elkészítése az ingatlan rezsi tételeiből: a hiányzókat pótolja (a fix tételek összeggel, a
   // nem fixek kitöltendőként jönnek létre).
-  document.getElementById('um-prepare-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('um-prepare-btn');
-    btn.disabled = true;
-    try {
-      const res = await apiFetch(`/api/properties/${state.propertyId}/utility-costs/prepare`, { method: 'POST', body: JSON.stringify({ year: state.year, month: state.month }) });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) { await uiAlert(data?.message || 'Nem sikerült behúzni a rezsi tételeket.', { title: 'Nem sikerült' }); return; }
-      await refresh({ keepDrafts: true });
-      document.getElementById('um-prepare-text').textContent = data.created > 0
-        ? `${data.created} tétel került a hónapba a rezsi tételekből.`
-        : 'Minden rezsi tétel szerepel már a hónapban.';
-      if (typeof state.onSaved === 'function') state.onSaved();
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
   document.getElementById('um-save-btn').addEventListener('click', async () => {
     const errorEl = document.getElementById('um-form-error');
     const successEl = document.getElementById('um-form-success');
@@ -465,7 +440,6 @@
     document.getElementById('um-subtitle').textContent = `${year}. ${MONTH_NAMES[month - 1]}`;
     document.getElementById('um-form-error').classList.remove('show');
     document.getElementById('um-form-success').classList.remove('show');
-    document.getElementById('um-prepare-text').textContent = 'Az ingatlan rezsi tételeiből elkészíthető a hónap rezsije.';
     document.getElementById('um-overlay').classList.add('open');
     // A rezsi tételek alapból ott vannak: a hónap megnyitáskor elkészül belőlük (a szerver dönti el, hogy
     // biztonságos-e — pl. már kiállított bizonylatú vagy bérlő előtti hónapnál nem készít semmit).
@@ -473,7 +447,7 @@
       const res = await apiFetch(`/api/properties/${propertyId}/utility-costs/prepare`, { method: 'POST', body: JSON.stringify({ year, month, auto: true }) });
       const data = res.ok ? await res.json() : null;
       if (data?.created > 0 && typeof state.onSaved === 'function') state.onSaved();
-    } catch { /* az ablak enélkül is használható: a „Rezsi tételek behúzása” gomb megmarad */ }
+    } catch { /* az ablak enélkül is használható: a tételek kézzel is felvehetők */ }
     await refresh();
   };
 })();

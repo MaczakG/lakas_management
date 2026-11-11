@@ -121,8 +121,6 @@ public class DashboardController(LakaskezeloDbContext db, ICompanyContext compan
         var expectedBy = (await db.Invoices.Where(i => i.TenantId != null && i.Status != InvoiceStatus.Failed)
                 .GroupBy(i => i.PropertyId).Select(g => new { g.Key, Sum = g.Sum(i => i.AmountTotal) }).ToListAsync(ct))
             .ToDictionary(g => g.Key, g => g.Sum);
-        foreach (var (_, entry) in await TenantBalances.OpenUtilitiesAsync(db, null, ct))
-            expectedBy[entry.PropertyId] = expectedBy.GetValueOrDefault(entry.PropertyId) + entry.Amount;
         var payments = await db.TenantPayments
             .Select(p => new { p.Amount, PropertyId = p.InvoiceId != null ? (Guid?)p.Invoice!.PropertyId : p.Tenant!.PropertyId })
             .ToListAsync(ct);

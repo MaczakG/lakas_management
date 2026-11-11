@@ -4,6 +4,32 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.9** — Az egyenlegben csak a kiszámlázott összeg számít; a Bérlet tábla és a rezsi ablak egyszerűsödött.
+  - Egyenleg: a felvett (vagy a rezsi tételekből előre behúzott), de még bizonylatra nem került rezsi nem számít
+    bele a bérlő egyenlegébe — abba csak a kiállított bizonylatok és a befizetések. Érinti a bérlő adatlapját
+    (egyenleg-sáv, Egyenleg fül), a Bérlők lista Egyenleg oszlopát és a vezérlőpult „Összesített egyenleg” és
+    „Várt és kifizetett” részét.
+  - A még ki nem számlázott rezsi összege a bérlő egyenleg-sávjában tájékoztatásul továbbra is látszik („Rezsi,
+    bizonylatra vár”, „nincs az egyenlegben” megjegyzéssel); az Egyenleg fül listájában már nem szerepel.
+  - Bérlő adatlap, Bérlet tábla: a „Szerződés lejárata” mező megszűnt; a lejárat a csempén látszik, és ott a
+    ceruza gombbal adható meg, módosítható vagy törölhető.
+  - „Lakbér fizetése”: csak az „Előre (tárgyhó)” választható. Az „Utólag” csak annál a bérlőnél látszik, akinél
+    korábban az volt beállítva.
+  - Árfolyamok: az angol font (GBP) is bekerült az EUR és az USD mellé. A program ugyanúgy az MNB
+    árfolyam-szolgáltatásából (API) kérdezi le, óránként és a „Frissítés most” gombbal. A bérlőnél a bérleti díj
+    devizája GBP is lehet (a bérlő adatlapján mostantól az USD is választható, ahogy az űrlapon eddig is).
+  - Árfolyamok: új devizák vehetők fel. A „Deviza hozzáadása” gomb ablakában az MNB által közölt, még nem követett
+    devizák listája áll (kód, megnevezés, aktuális árfolyam; kódra és névre kereshető); a „Hozzáadás” gombbal a
+    deviza felkerül a listára, és onnantól óránként frissül. Devizát a cég adminisztrátora vehet fel. A táblázat
+    a megnevezést is mutatja.
+  - A bérlőnél a „Bérleti díj devizája” (adatlap és űrlap) a forint mellett minden követett devizát felkínál,
+    névvel és kóddal.
+  - Bérlő adatlap: a „Bérlet kezdete” csempe megszűnt; három csempe maradt (Szerződés lejárata, Kiállítva
+    összesen, Kiállítva az aktuális évben). A beköltözés dátuma a Bérlet táblában továbbra is látszik.
+  - Rezsi ablak: a „Rezsi tételek behúzása” sáv megszűnt (a tételek megnyitáskor maguktól bekerülnek). Ahol a
+    megnyitás nem húzza be őket (már kiszámlázott hónap, bérlő nélküli hónap, későbbi hónap, vagy utólag felvett
+    rezsi tétel), ott a tétel a „+ Sor hozzáadása” gombbal kézzel vehető fel.
+  - Migráció nincs.
 - **2026.11.11.8** — Bérlő adatlap: az Összegzés négy csempe lett.
   - Az „Összegzés” tábla helyett az egyenleg-sáv alatt négy csempe áll egy közös keretben: Bérlet kezdete (alatta,
     mióta bérlő), Szerződés lejárata (alatta, hány nap múlva jár le, vagy a lejárat-jelzés), Kiállítva összesen és
