@@ -13,13 +13,16 @@ public record CompanySettingsDto(
     bool IsBusiness = false, string? InvoiceProvider = null,
     string? BillingoApiKey = null, int? BillingoBlockId = null, string? SzamlazzAgentKey = null, string? SzamlazzInvoicePrefix = null,
     string DefaultRentVat = "TAM", string DefaultUtilityVat = "TAM",
-    bool BillingoApiKeySet = false, bool SzamlazzAgentKeySet = false);
+    bool BillingoApiKeySet = false, bool SzamlazzAgentKeySet = false,
+    // A bérleti szerződés lejáratának értesítője: címzettek (több cím vesszővel) és hány nappal előtte szóljon.
+    string? LeaseExpiryEmails = null, int LeaseExpiryNoticeDays = 30);
 
 // A számlázó kapcsolatpróbája: a beírt (vagy az eltárolt) kulccsal. Billingónál a számlatömbök is jönnek.
 public record TestInvoicingRequest(string Provider, string? BillingoApiKey, string? SzamlazzAgentKey);
 
 // A cég alapadatai minden felhasználónak (pl. az áfa-mezők megjelenítéséhez az ingatlan adatlapján).
-public record CompanyInfoDto(string Name, bool IsBusiness, string? InvoiceProvider, string DefaultRentVat, string DefaultUtilityVat);
+public record CompanyInfoDto(string Name, bool IsBusiness, string? InvoiceProvider, string DefaultRentVat, string DefaultUtilityVat,
+    int LeaseExpiryNoticeDays = 30);
 
 // A platform kézbesítési beállításai (Platform admin → E-mail és tárhely). A titkos mezők (MailgunApiKey,
 // SmtpPassword) csak befelé jönnek: a GET üresen adja vissza őket, a *Set jelzi, van-e eltárolt érték;

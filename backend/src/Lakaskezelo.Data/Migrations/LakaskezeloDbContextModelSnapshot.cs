@@ -81,6 +81,12 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<string>("IssuerTaxId")
                         .HasColumnType("text");
 
+                    b.Property<string>("LeaseExpiryEmails")
+                        .HasColumnType("text");
+
+                    b.Property<int>("LeaseExpiryNoticeDays")
+                        .HasColumnType("integer");
+
                     b.Property<string>("MailgunApiBaseUrl")
                         .HasColumnType("text");
 
@@ -152,6 +158,7 @@ namespace Lakaskezelo.Data.Migrations
                             DefaultRentVat = "TAM",
                             DefaultUtilityVat = "TAM",
                             EmailProvider = 0,
+                            LeaseExpiryNoticeDays = 30,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             UtilityDeadlineDay = 5
                         });
@@ -1179,6 +1186,12 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<int>("InvoiceAttachments")
                         .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("LeaseEndDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("LeaseExpiryNoticeFor")
+                        .HasColumnType("date");
 
                     b.Property<DateOnly?>("MoveInDate")
                         .HasColumnType("date");

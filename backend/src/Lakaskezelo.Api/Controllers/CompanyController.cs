@@ -21,6 +21,6 @@ public class CompanyController(LakaskezeloDbContext db, AppSettingsService setti
         var company = await db.Companies.SingleAsync(c => c.Id == id, ct);
         var s = await settingsService.GetAsync(ct);
         var provider = company.IsBusiness && Invoicing.InvoicingProviders.IsConfigured(s) ? s.InvoiceProvider : null;
-        return Ok(new CompanyInfoDto(company.Name, company.IsBusiness, provider, s.DefaultRentVat, s.DefaultUtilityVat));
+        return Ok(new CompanyInfoDto(company.Name, company.IsBusiness, provider, s.DefaultRentVat, s.DefaultUtilityVat, s.LeaseExpiryNoticeDays));
     }
 }

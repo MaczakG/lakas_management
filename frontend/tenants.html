@@ -77,6 +77,9 @@
           <div class="field"><label for="f-move-in">Beköltözés dátuma</label><input type="date" id="f-move-in"></div>
           <div class="field"><label for="f-move-out">Kiköltözés dátuma</label><input type="date" id="f-move-out"></div>
         </div>
+        <div class="field"><label for="f-lease-end">Szerződés lejárata</label><input type="date" id="f-lease-end">
+          <span class="hint">A lejárat előtt értesítő megy a Beállításokban megadott címekre.</span>
+        </div>
         <div class="field"><label for="f-notes">Megjegyzés</label><textarea id="f-notes" rows="3"></textarea></div>
       </form>
     </div>
@@ -93,11 +96,13 @@ requireAuth();
 let tenants = [];
 let properties = [];
 let editingId = null;
+let leaseNoticeDays = 30;   // a Beállításokban megadott értesítési idő (a lejárat-jelzéshez)
 
 async function loadData() {
-  const [tenantsRes, propertiesRes] = await Promise.all([apiFetch('/api/tenants'), apiFetch('/api/properties')]);
+  const [tenantsRes, propertiesRes, companyRes] = await Promise.all([apiFetch('/api/tenants'), apiFetch('/api/properties'), apiFetch('/api/company')]);
   tenants = await tenantsRes.json();
   properties = await propertiesRes.json();
+  if (companyRes.ok) leaseNoticeDays = (await companyRes.json()).leaseExpiryNoticeDays || 30;
   const current = tenants.filter((t) => !t.moveOutDate);
   setPageState([
     { n: current.length, label: 'jelenlegi bérlő', tone: 'ok' },
@@ -129,7 +134,7 @@ function renderTenants() {
       <td>${escapeHtml(t.propertyName || '–')}</td>
       <td class="num">${Number(t.balance) > 0 ? `<span class="bal-due" title="Tartozás">${formatCurrency(t.balance)}</span>` : Number(t.balance) < 0 ? `<span class="bal-over" title="Túlfizetés">${formatCurrency(t.balance)}</span>` : '<span class="dim">–</span>'}</td>
       <td>${t.rentCurrency === 'HUF' ? 'Ft' : t.rentCurrency}</td>
-      <td>${formatDate(t.moveInDate)}</td>
+      <td>${formatDate(t.moveInDate)}${t.leaseEndDate && !t.moveOutDate ? `<div class="cell-sub">Szerződés: ${formatDate(t.leaseEndDate)} ${leaseEndTag(t.leaseEndDate, leaseNoticeDays)}</div>` : ''}</td>
       <td>${formatDate(t.moveOutDate)}</td>
       <td class="row-actions">
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); editTenant('${t.id}')">Szerkesztés</button>
@@ -168,6 +173,7 @@ window.editTenant = (id) => {
   document.getElementById('f-currency').value = t.rentCurrency || 'HUF';
   document.getElementById('f-move-in').value = t.moveInDate || '';
   document.getElementById('f-move-out').value = t.moveOutDate || '';
+  document.getElementById('f-lease-end').value = t.leaseEndDate || '';
   document.getElementById('f-notes').value = t.notes || '';
   openModal('Bérlő szerkesztése');
 };
@@ -201,6 +207,7 @@ document.getElementById('tenant-form').addEventListener('submit', async (e) => {
     rentCurrency: document.getElementById('f-currency').value,
     moveInDate: document.getElementById('f-move-in').value || null,
     moveOutDate: document.getElementById('f-move-out').value || null,
+    leaseEndDate: document.getElementById('f-lease-end').value || null,
     notes: document.getElementById('f-notes').value.trim() || null,
   };
 

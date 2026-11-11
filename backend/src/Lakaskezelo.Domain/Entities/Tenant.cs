@@ -16,6 +16,10 @@ public class Tenant : ICompanyOwned
     public string? TaxId { get; set; }
     public DateOnly? MoveInDate { get; set; }
     public DateOnly? MoveOutDate { get; set; }
+    // A bérleti szerződés lejárata; előtte értesítő megy a Beállításokban megadott címekre (ld. LeaseExpiry).
+    public DateOnly? LeaseEndDate { get; set; }
+    // Melyik lejárati dátumról ment már ki értesítő: ha a lejárat módosul (pl. hosszabbítás), az újról megint szól.
+    public DateOnly? LeaseExpiryNoticeFor { get; set; }
     public string? Notes { get; set; }
     // A bérlő partner-azonosítója a cég Billingo-fiókjában (az első kiállított számlakor jön létre).
     public int? BillingoPartnerId { get; set; }

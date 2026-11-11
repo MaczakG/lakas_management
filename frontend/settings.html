@@ -67,6 +67,19 @@
         </div>
       </section>
 
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h3>Bérleti szerződés lejárata</h3>
+            <p>A bérlő adatlapján megadott szerződés-lejárat előtt ennyi nappal értesítő megy a megadott címekre. Egy lejáratról egyszer szól; ha a dátumot átírod (hosszabbítás), az újról megint. Címek nélkül nem megy értesítő.</p>
+          </div>
+        </div>
+        <div class="field"><label for="lease-emails">Értesítési e-mail címek</label><input type="text" inputmode="email" id="lease-emails" autocomplete="off"><span class="hint">Több cím: vesszővel elválasztva (legfeljebb 5).</span></div>
+        <div class="field-row">
+          <div class="field"><label for="lease-days">Hány nappal előtte szóljon</label><input type="number" id="lease-days" min="1" max="365"></div>
+        </div>
+      </section>
+
       <section class="section" id="invoicing-section">
         <div class="section-head">
           <div>
@@ -165,6 +178,8 @@ async function loadSettings() {
   const s = await res.json();
   $('utility-email').value = s.utilityContactEmail || '';
   $('utility-deadline').value = s.utilityDeadlineDay || 5;
+  $('lease-emails').value = s.leaseExpiryEmails || '';
+  $('lease-days').value = s.leaseExpiryNoticeDays || 30;
   $('issuer-name').value = s.issuerName || '';
   $('issuer-address').value = s.issuerAddress || '';
   $('issuer-taxid').value = s.issuerTaxId || '';
@@ -227,9 +242,17 @@ $('provider-test').addEventListener('click', async () => {
 $('settings-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const val = (id) => $(id).value.trim() || null;
+  const leaseEmails = parseEmailList($('lease-emails').value);
+  if (leaseEmails.error) {
+    await uiAlert(`Szerződés-lejárat értesítő: ${leaseEmails.error}`, { title: 'Mentés sikertelen' });
+    $('lease-emails').focus();
+    return;
+  }
   const payload = {
     utilityContactEmail: val('utility-email'),
     utilityDeadlineDay: Number($('utility-deadline').value) || 5,
+    leaseExpiryEmails: leaseEmails.value,
+    leaseExpiryNoticeDays: Number($('lease-days').value) || 30,
     issuerName: val('issuer-name'),
     issuerAddress: val('issuer-address'),
     issuerTaxId: val('issuer-taxid'),

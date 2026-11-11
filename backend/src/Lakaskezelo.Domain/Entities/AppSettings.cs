@@ -43,6 +43,12 @@ public class AppSettings : ICompanyOwned
     public string? UtilityContactEmail { get; set; }
     public int UtilityDeadlineDay { get; set; } = 5;
 
+    // ---------- Bérleti szerződés lejáratának értesítője ----------
+    // A címzettek (több cím ", "-vel elválasztva); üresen nem megy értesítő.
+    public string? LeaseExpiryEmails { get; set; }
+    // Hány nappal a lejárat előtt szóljon.
+    public int LeaseExpiryNoticeDays { get; set; } = 30;
+
     // ---------- Számla-kibocsátó adatai ----------
     public string? IssuerName { get; set; }
     public string? IssuerAddress { get; set; }

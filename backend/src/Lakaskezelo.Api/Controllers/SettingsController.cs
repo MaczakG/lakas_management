@@ -41,6 +41,9 @@ public class SettingsController(LakaskezeloDbContext db, AppSettingsService sett
         if (utilityEmail is not null && !AuthController.LooksLikeEmail(utilityEmail.ToLowerInvariant()))
             return BadRequest(new { message = "Érvénytelen rezsi kontakt e-mail." });
 
+        var leaseEmails = Notifications.EmailAddresses.Normalize(dto.LeaseExpiryEmails, out var leaseEmailError);
+        if (leaseEmailError is not null) return BadRequest(new { message = $"Szerződés-lejárat értesítő: {leaseEmailError}" });
+
         // A globális szűrő miatt ez a bejelentkezett felhasználó cégének sora; ha még nincs, létrehozzuk
         // (a CompanyId-t mentéskor a DbContext tölti ki a cég-kontextusból).
         var settings = await db.AppSettings.SingleOrDefaultAsync(ct);
@@ -52,6 +55,8 @@ public class SettingsController(LakaskezeloDbContext db, AppSettingsService sett
 
         settings.UtilityContactEmail = utilityEmail;
         settings.UtilityDeadlineDay = Math.Clamp(dto.UtilityDeadlineDay, 1, 28);
+        settings.LeaseExpiryEmails = leaseEmails;
+        settings.LeaseExpiryNoticeDays = Math.Clamp(dto.LeaseExpiryNoticeDays, 1, LeaseExpiry.LeaseExpiryContent.MaxNoticeDays);
         settings.IssuerName = Clean(dto.IssuerName);
         settings.IssuerAddress = Clean(dto.IssuerAddress);
         settings.IssuerTaxId = Clean(dto.IssuerTaxId);
@@ -107,5 +112,6 @@ public class SettingsController(LakaskezeloDbContext db, AppSettingsService sett
         s.InvoiceEmailSubject, s.InvoiceEmailBody,
         company.IsBusiness, s.InvoiceProvider, null, s.BillingoBlockId, null, s.SzamlazzInvoicePrefix,
         s.DefaultRentVat, s.DefaultUtilityVat,
-        !string.IsNullOrWhiteSpace(s.BillingoApiKey), !string.IsNullOrWhiteSpace(s.SzamlazzAgentKey));
+        !string.IsNullOrWhiteSpace(s.BillingoApiKey), !string.IsNullOrWhiteSpace(s.SzamlazzAgentKey),
+        s.LeaseExpiryEmails, s.LeaseExpiryNoticeDays);
 }

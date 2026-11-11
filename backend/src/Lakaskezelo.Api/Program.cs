@@ -228,6 +228,7 @@ builder.Services.AddScoped<Lakaskezelo.Api.Invoicing.InvoiceProviderResolver>();
 builder.Services.AddScoped<InvoiceGenerationService>();
 builder.Services.AddHostedService<BillingSchedulerService>();
 builder.Services.AddHostedService<UtilityReminderService>();
+builder.Services.AddHostedService<Lakaskezelo.Api.LeaseExpiry.LeaseExpiryReminderService>();
 builder.Services.AddHostedService<Lakaskezelo.Api.Accounts.RegistrationCleanupService>();
 
 // ---------- MNB árfolyamok ----------
