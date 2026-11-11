@@ -453,7 +453,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .ip-sub{font-size:13px;color:var(--muted);margin:4px 0 0;}
 
 /* Bérlő adatlap: egyenleg-sáv a fejléc alatt */
-.balance-band{display:flex;align-items:center;gap:32px;flex-wrap:wrap;margin:0 0 20px;padding:16px 20px;background:var(--surface);
+.balance-band{display:flex;align-items:center;gap:32px;flex-wrap:wrap;margin:0 0 14px;padding:16px 20px;background:var(--surface);
   border:1px solid var(--line);border-left:4px solid var(--line-strong);border-radius:var(--radius-lg);}
 .balance-band.is-due{border-left-color:var(--coral-solid);}
 .balance-band.is-over{border-left-color:var(--green-solid);}

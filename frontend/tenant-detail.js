@@ -154,23 +154,43 @@ function renderBalanceBand() {
   });
 }
 
+// Mennyi ideje tart a bérlet: „1 éve és 10 hónapja”, „3 hónapja”.
+function tenancyLength(fromIso, toDate = new Date()) {
+  const [y, m, d] = String(fromIso).split('-').map(Number);
+  const months = (toDate.getFullYear() - y) * 12 + (toDate.getMonth() + 1 - m) - (toDate.getDate() < d ? 1 : 0);
+  if (months < 0) return 'még nem költözött be';
+  const years = Math.floor(months / 12), rest = months % 12;
+  if (years) return `${years} éve${rest ? ` és ${rest} hónapja` : ''}`;
+  return rest ? `${rest} hónapja` : 'ebben a hónapban';
+}
+
+// Összegzés négy csempében: bérlet kezdete, szerződés lejárata, kiállítva összesen és az aktuális évben.
 function renderSummary() {
   renderBalanceBand();
   const year = new Date().getFullYear();
   const issued = invoices.filter((i) => i.status !== 'Failed' && (!i.cancelledAt && !i.cancelsInvoiceId));
   const total = issued.reduce((s, i) => s + Number(i.amountTotal), 0);
-  const thisYear = issued.filter((i) => i.periodYear === year).reduce((s, i) => s + Number(i.amountTotal), 0);
-  const last = issued[0];
+  const ofYear = issued.filter((i) => i.periodYear === year);
+  const thisYear = ofYear.reduce((s, i) => s + Number(i.amountTotal), 0);
   const failed = invoices.length - issued.length;
+  const movedOut = !isCurrent() && !!tenant.propertyId;
+  const tile = (label, value, subHtml) => `<div class="stat-tile"><span class="stat-tile-label">${escapeHtml(label)}</span>`
+    + `<span class="stat-tile-value">${value}</span><span class="stat-tile-sub">${subHtml || ''}</span></div>`;
+  const none = '<span class="dim">–</span>';
+  let leaseSub = 'nincs megadva';
+  if (tenant.leaseEndDate) {
+    const [y, m, d] = tenant.leaseEndDate.split('-').map(Number);
+    const now = new Date();
+    const days = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+    leaseSub = movedOut ? '' : leaseEndTag(tenant.leaseEndDate, company?.leaseExpiryNoticeDays) || `${days} nap múlva`;
+  }
   document.getElementById('summary').innerHTML = [
-    detailRow('Bérlet kezdete', tenant.moveInDate ? formatDate(tenant.moveInDate) : '<span class="dim">–</span>'),
-    detailRow('Szerződés lejárata', tenant.leaseEndDate
-      ? `${formatDate(tenant.leaseEndDate)} ${leaseEndTag(tenant.leaseEndDate, company?.leaseExpiryNoticeDays, !isCurrent() && !!tenant.propertyId)}`
-      : '<span class="dim">–</span>'),
-    detailRow('Kiállítva összesen', formatCurrency(total)),
-    detailRow(`Kiállítva ${year}-ben`, formatCurrency(thisYear)),
-    detailRow('Bizonylatok', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
-    detailRow('Utolsó bizonylat', last ? `${escapeHtml(last.number)}, ${formatCurrency(last.amountTotal)}` : '<span class="dim">–</span>'),
+    tile('Bérlet kezdete', tenant.moveInDate ? formatDate(tenant.moveInDate) : none,
+      !tenant.moveInDate ? 'nincs megadva' : tenant.moveOutDate && movedOut ? `kiköltözött: ${formatDate(tenant.moveOutDate)}` : escapeHtml(tenancyLength(tenant.moveInDate))),
+    tile('Szerződés lejárata', tenant.leaseEndDate ? formatDate(tenant.leaseEndDate) : none, leaseSub),
+    tile('Kiállítva összesen', formatCurrency(total),
+      `${issued.length} db bizonylat${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
+    tile('Kiállítva az aktuális évben', formatCurrency(thisYear), `${year}, ${ofYear.length} db bizonylat`),
   ].join('');
 }
 
