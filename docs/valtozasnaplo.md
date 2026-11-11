@@ -4,6 +4,10 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.5** — A kiemelő szín narancs helyett kék.
+  - Az aktív menüpont jelölője, a fókusz, a kijelölés, a megnyitható sorok rámutatása, a fülek aláhúzása és a
+    diagramok kiemelt sávjai kékek (#2563EB). A fekete fő gomb és a többi szín nem változott.
+  - A kiemelő szín egy helyen, a `styles.css` `--accent*` tokenjeiben cserélhető; a diagramok is ezt követik.
 - **2026.11.11.4** — Új arculat a megadott minta alapján (az egész felületen).
   - Váz: világosszürke háttér; az oldalsáv a háttéren ül, a tartalom egy nagy fehér, lekerekített lapon.
   - Oldalsáv: a márkajel és a felhasználó fehér kártyában; csupa nagybetűs, ritkított csoportcímek; az aktív

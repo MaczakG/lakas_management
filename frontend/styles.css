@@ -2,12 +2,13 @@
    Lakáskezelő — közös dizájnrendszer
    Arculat: világosszürke háttér, rajta fehér, lekerekített felületek hajszálvonal-kerettel. Az oldalsáv a
    háttéren ül (fehér kártya a márkajel és az aktív menüpont), a tartalom egy nagy fehér lapon. A fő gomb
-   fekete, a kiemelő szín narancs (aktív menüpont jelölője, kijelölés, fókusz), a többi vezérlő fehér,
+   fekete, a kiemelő szín kék (aktív menüpont jelölője, kijelölés, fókusz), a többi vezérlő fehér,
    vékony szürke kerettel. Betű: Geist + Geist Mono. Táblázat: halványszürke fejléc, oszlopelválasztó
    vonalak; állapotok: kis, pasztell hátterű címkék. A számok egymás alá igazodnak (tabular-nums).
 
-   Kontraszt (WCAG AA): a szöveg (#18181B) fehéren 17:1, a halvány szöveg (#71717A) 4,8:1; a narancs
-   (#F4511E) kitöltésre és jelölésre való, szövegként a sötétebb --accent-deep (#C2410C, 5,2:1) használandó.
+   Kontraszt (WCAG AA): a szöveg (#18181B) fehéren 17:1, a halvány szöveg (#71717A) 4,8:1; a kiemelő kék
+   (#2563EB) fehéren 5,2:1, szövegként a sötétebb --accent-deep (#1D4ED8, 6,7:1) használandó. A kiemelő
+   szín egy helyen, az --accent* tokenekben cserélhető; a diagramok is ezt követik.
 
    Minden oldal ezt tölti be; az oldalak saját <style> blokkja csak elrendezést ad hozzá, és ezeket a
    tokeneket/osztályokat használja. Az adatlapok (property-detail.html) komponensei a detail.css-ben.
@@ -28,15 +29,16 @@
   --muted:#71717A;
   --on-accent:#FFFFFF;
 
-  /* ---------- fő gomb (fekete) és kiemelő szín (narancs) ---------- */
+  /* ---------- fő gomb (fekete) és kiemelő szín (kék) ---------- */
   --primary:#18181B;
   --primary-hover:#000000;
-  --accent:#F4511E;        /* jelölő, kijelölés, kapcsoló, fókusz — kitöltésre */
-  --accent-deep:#C2410C;   /* narancs szövegként (fehéren 5,2:1) */
-  --accent-bright:#FB7A4B;
-  --accent-bg:#FFF3ED;
-  --accent-border:#FFD3C2;
-  --accent-ring:rgba(244,81,30,0.22);
+  --accent:#2563EB;        /* jelölő, kijelölés, kapcsoló, fókusz, diagram-sávok */
+  --accent-deep:#1D4ED8;   /* a kiemelő szín szövegként (fehéren 6,7:1) */
+  --accent-bright:#5B8DEF;
+  --accent-bg:#EFF4FF;
+  --accent-border:#C7D7FE;
+  --accent-ring:rgba(37,99,235,0.22);
+  --accent-wash:rgba(37,99,235,0.06);   /* diagram: a kijelölt oszlop háttere */
   --grad-brand:var(--ink); /* a márkajel tömör fekete */
   --violet:#5B4FCF;        /* „rendben” állapotcímke */
   --violet-bg:#EEECFE;
@@ -172,7 +174,7 @@ thead th:last-child,tbody td:last-child{padding-right:16px;}
 tbody tr:last-child td{border-bottom:none;}
 tbody tr:hover{background:var(--surface-2);}
 tbody tr.clickable{cursor:pointer;}
-/* Megnyitható sor: rámutatáskor narancs árnyalat és jelölő a bal szélen. */
+/* Megnyitható sor: rámutatáskor a kiemelő szín árnyalata és jelölő a bal szélen. */
 tbody tr.clickable:hover{background:var(--accent-bg);}
 tbody tr.clickable:hover td:first-child{box-shadow:inset 3px 0 0 var(--accent);}
 td.num,th.num{text-align:right;white-space:nowrap;}
@@ -293,7 +295,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .nav-item .ico{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .nav-item .ico svg{width:16px;height:16px;}
 .nav-item:hover{background:rgba(24,24,27,0.05);color:var(--ink);}
-/* Az aktív menüpont fehér kártya; a narancs jelölő az oldalsáv bal szélén ül. */
+/* Az aktív menüpont fehér kártya; a kiemelő színű jelölő az oldalsáv bal szélén ül. */
 .nav-item.active{background:var(--surface);border-color:var(--line);box-shadow:var(--shadow-xs);color:var(--ink);font-weight:600;}
 .nav-item.active .ico{color:var(--ink);}
 .nav-item.active::before{content:"";position:absolute;left:-13px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--accent);}
