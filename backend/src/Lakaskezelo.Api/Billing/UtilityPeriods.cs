@@ -62,6 +62,28 @@ public static class UtilityPeriods
         return created;
     }
 
+    // Ingatlanonként a jelenlegi bérlő rezsi-csúszása hónapban: 1, ha a bizonylat az előző hónap rezsijét viszi
+    // (Tenant.UtilityBillingTiming), különben 0 (az ilyen ingatlan nem szerepel a szótárban).
+    public static async Task<Dictionary<Guid, int>> LagByPropertyAsync(LakaskezeloDbContext db, CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(BudapestClock.Now);
+        var tenants = await db.Tenants
+            .Where(t => t.PropertyId != null && (t.MoveOutDate == null || t.MoveOutDate >= today))
+            .Select(t => new { PropertyId = t.PropertyId!.Value, t.MoveOutDate, t.MoveInDate, t.UtilityBillingTiming })
+            .ToListAsync(ct);
+        return tenants.GroupBy(t => t.PropertyId)
+            .Select(g => (g.Key, Current: g.OrderByDescending(t => t.MoveOutDate == null).ThenByDescending(t => t.MoveInDate).First()))
+            .Where(x => x.Current.UtilityBillingTiming == Domain.Enums.UtilityBillingTiming.PreviousMonth)
+            .ToDictionary(x => x.Key, _ => 1);
+    }
+
+    // Egy bizonylat-időszak rezsi-hónapja a csúszással (0 vagy 1 hónappal korábbi).
+    public static (int Year, int Month) UtilityPeriodOf(DateOnly invoicePeriod, int lag)
+    {
+        var p = invoicePeriod.AddMonths(-lag);
+        return (p.Year, p.Month);
+    }
+
     // A rezsi tételből készülő havi tétel összege: fix tételnél a megadott összeg, nem fixnél 0 („kitöltendő”).
     public static decimal ExpectedAmount(bool isFixed, decimal? amount) => isFixed ? amount ?? 0 : 0;
 
@@ -71,7 +93,8 @@ public static class UtilityPeriods
     // rezsi táblázat mindig ki legyen töltve (évváltáskor a következő év is). Fut a rezsi lekérdezésekor és naponta
     // (UtilityReminderService). Egy hónap akkor készül el, ha (ld. ShouldPrepareAhead):
     //  - még nem volt előkészítve, és nincs benne tétel (a kézzel törölt tétel nem jön vissza);
-    //  - nincs rá érvényes bizonylat (különben a fix tétel utólagos tételként még egyszer számlázódna);
+    //  - nincs érvényes bizonylat arra a hónapra, amelynek a bizonylata ezt a rezsit viszi (alapból ugyanaz a hónap,
+    //    egy hónap csúszásnál a következő) — különben a fix tétel utólagos tételként még egyszer számlázódna;
     //  - a hónapban van bérlője az ingatlannak;
     //  - nem korábbi az ingatlan első bizonylatának hónapjánál — ha még nincs bizonylata, a következő bizonylat
     //    hónapjánál. Így a program bevezetése előtti, soha ki nem számlázott hónapok nem töltődnek fel maguktól
@@ -96,6 +119,7 @@ public static class UtilityPeriods
         var next = BillingCalendar.NextBilling(nowLocal, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute).Period;
         var floor = invoiced.Count > 0 ? invoiced.Min() : next.Year * 12 + next.Month;
         var (windowYear, windowMonth) = InvoiceGenerationService.BillingWindowStart(nowLocal.Year, nowLocal.Month);
+        var lag = (await LagByPropertyAsync(db, ct)).GetValueOrDefault(property.Id);
 
         var now = DateTime.UtcNow;
         var created = 0;
@@ -105,7 +129,7 @@ public static class UtilityPeriods
             var first = new DateOnly(year, month, 1);
             var last = first.AddMonths(1).AddDays(-1);
             var tenantInMonth = tenants.Any(t => (t.MoveInDate == null || t.MoveInDate <= last) && (t.MoveOutDate == null || t.MoveOutDate >= first));
-            if (!ShouldPrepareAhead(prepared.Contains(key), withEntries.Contains(key), invoiced.Contains(key), tenantInMonth, key, floor, windowYear * 12 + windowMonth)) continue;
+            if (!ShouldPrepareAhead(prepared.Contains(key), withEntries.Contains(key), invoiced.Contains(key + lag), tenantInMonth, key, floor, windowYear * 12 + windowMonth)) continue;
             created += AddEntries(db, property.Id, year, month, items, now);
             db.UtilityPeriods.Add(new UtilityPeriod { Id = Guid.NewGuid(), PropertyId = property.Id, Year = year, Month = month, PreparedAt = now });
         }
@@ -148,16 +172,17 @@ public static class UtilityPeriods
         entry.InvoiceId is null && !entry.ExcludedFromBilling && string.IsNullOrWhiteSpace(entry.Note) && !hasAttachments
         && entry.Label == oldLabel && entry.Amount == oldAmount && entry.ForwardBilled == oldForwardBilled;
 
-    private static int NextBillingKey(Property property, DateTime nowLocal)
+    // A következő bizonylat rezsi-hónapja (év × 12 + hónap): innentől követik az előre kitöltött tételek a rezsi tételt.
+    private static async Task<int> NextUtilityKeyAsync(LakaskezeloDbContext db, Property property, DateTime nowLocal, CancellationToken ct)
     {
         var next = BillingCalendar.NextBilling(nowLocal, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute).Period;
-        return next.Year * 12 + next.Month;
+        return next.Year * 12 + next.Month - (await LagByPropertyAsync(db, ct)).GetValueOrDefault(property.Id);
     }
 
     private static async Task<List<UtilityCostEntry>> UntouchedAsync(LakaskezeloDbContext db, Property property, Guid itemId,
         string oldLabel, decimal oldAmount, bool oldForwardBilled, DateTime nowLocal, CancellationToken ct)
     {
-        var fromKey = NextBillingKey(property, nowLocal);
+        var fromKey = await NextUtilityKeyAsync(db, property, nowLocal, ct);
         var entries = await db.UtilityCostEntries.Include(u => u.Attachments)
             .Where(u => u.PropertyId == property.Id && u.UtilityItemId == itemId && u.InvoiceId == null && u.Year * 12 + u.Month >= fromKey)
             .ToListAsync(ct);
@@ -190,7 +215,7 @@ public static class UtilityPeriods
     // érvényes bizonylat). A még elő nem készített hónapokba az előre kitöltés teszi be. A mentést a hívó végzi.
     public static async Task<int> AddItemEntriesAsync(LakaskezeloDbContext db, Property property, UtilityItem item, DateTime nowLocal, CancellationToken ct)
     {
-        var fromKey = NextBillingKey(property, nowLocal);
+        var fromKey = await NextUtilityKeyAsync(db, property, nowLocal, ct);
         var prepared = await db.UtilityPeriods.Where(p => p.PropertyId == property.Id && p.Year * 12 + p.Month >= fromKey)
             .Select(p => new { p.Year, p.Month }).ToListAsync(ct);
         if (prepared.Count == 0) return 0;

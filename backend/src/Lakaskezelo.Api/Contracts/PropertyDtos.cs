@@ -10,13 +10,17 @@ public record PropertyListItemDto(
     // A következő kiküldés időszaka — a UtilityComplete erre az időszakra vonatkozik (ennek a rezsije kerül a számlára).
     int NextPeriodYear, int NextPeriodMonth,
     // Részletesebben: Ok / Pending (kitöltendő tétel van) / Missing (ld. Billing.UtilityPeriods).
-    string UtilityState = "Ok");
+    string UtilityState = "Ok",
+    // A következő bizonylat rezsi-hónapja: alapból a bizonylat időszaka, egy hónap csúszással fizető bérlőnél az előző
+    // hónap. A UtilityState erre a hónapra vonatkozik.
+    int UtilityPeriodYear = 0, int UtilityPeriodMonth = 0);
 
 public record PropertyDetailDto(
     Guid Id, string Name, decimal RentAmount, string? InvoicePrefix,
     int BillingDayOfMonth, int BillingHour, int BillingMinute, bool IsActive,
     List<PropertyOwnerDto> Owners, List<TenantDto> Tenants,
-    PropertySheetDto Sheet, DateTime NextBillingAt, int NextPeriodYear, int NextPeriodMonth, string UtilityState = "Ok");
+    PropertySheetDto Sheet, DateTime NextBillingAt, int NextPeriodYear, int NextPeriodMonth, string UtilityState = "Ok",
+    int UtilityPeriodYear = 0, int UtilityPeriodMonth = 0);
 
 // Az ingatlan adatlapja (property-detail.html) — mind opcionális.
 public record PropertySheetDto(

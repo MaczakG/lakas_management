@@ -29,9 +29,12 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         // következő számla dec. 5-én megy ki, akkor a decemberi rezsinek kell meglennie — akár már november végén.
         var next = properties.ToDictionary(p => p.Id,
             p => BillingCalendar.NextBilling(now, p.BillingDayOfMonth, p.BillingHour, p.BillingMinute));
+        // Egy hónap csúszással fizető bérlőnél a következő bizonylat az előző hónap rezsijét viszi: a jelzés arra szól.
+        var lags = await UtilityPeriods.LagByPropertyAsync(db, ct);
+        var utility = properties.ToDictionary(p => p.Id, p => UtilityPeriods.UtilityPeriodOf(next[p.Id].Period, lags.GetValueOrDefault(p.Id)));
         var states = await UtilityPeriods.StatesAsync(db,
-            [.. properties.Select(p => (p.Id, next[p.Id].Period.Year, next[p.Id].Period.Month))], ct);
-        string StateOf(Property p) => states[(p.Id, next[p.Id].Period.Year, next[p.Id].Period.Month)];
+            [.. properties.Select(p => (p.Id, utility[p.Id].Year, utility[p.Id].Month))], ct);
+        string StateOf(Property p) => states[(p.Id, utility[p.Id].Year, utility[p.Id].Month)];
 
         return Ok(properties.Select(p => new PropertyListItemDto(
             p.Id, p.Name, p.RentAmount,
@@ -41,7 +44,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             string.Join(", ", p.Tenants.Where(t => t.MoveOutDate == null).Select(t => t.Name)),
             StateOf(p) == UtilityPeriods.Ok,
             p.BillingDayOfMonth, p.BillingHour, p.BillingMinute,
-            next[p.Id].At, next[p.Id].Period.Year, next[p.Id].Period.Month, StateOf(p))));
+            next[p.Id].At, next[p.Id].Period.Year, next[p.Id].Period.Month, StateOf(p), utility[p.Id].Year, utility[p.Id].Month)));
     }
 
     [HttpGet("{id:guid}")]
@@ -53,9 +56,10 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             .FirstOrDefaultAsync(p => p.Id == id, ct);
         if (property is null) return NotFound();
         var next = BillingCalendar.NextBilling(BudapestClock.Now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute);
-        var key = (property.Id, next.Period.Year, next.Period.Month);
+        var utility = UtilityPeriods.UtilityPeriodOf(next.Period, (await UtilityPeriods.LagByPropertyAsync(db, ct)).GetValueOrDefault(property.Id));
+        var key = (property.Id, utility.Year, utility.Month);
         var states = await UtilityPeriods.StatesAsync(db, [key], ct);
-        return Ok(ToDetailDto(property, states[key]));
+        return Ok(ToDetailDto(property, states[key], utility));
     }
 
     [HttpPost]
@@ -205,9 +209,11 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             var next = BillingCalendar.NextBilling(now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute).Period;
             var first = new DateOnly(request.Year, request.Month, 1);
             var last = first.AddMonths(1).AddDays(-1);
+            var carrier = first.AddMonths((await UtilityPeriods.LagByPropertyAsync(db, ct)).GetValueOrDefault(id));
             var safe = UtilityPeriods.ShouldAutoPrepare(
                 hasEntries: await db.UtilityCostEntries.AnyAsync(u => u.PropertyId == id && u.Year == request.Year && u.Month == request.Month, ct),
-                hasActiveInvoice: await db.Invoices.AnyAsync(i => i.PropertyId == id && i.PeriodYear == request.Year && i.PeriodMonth == request.Month
+                // az a bizonylat számít, amelyik ennek a hónapnak a rezsijét viszi (egy hónap csúszásnál a következő hónapé)
+                hasActiveInvoice: await db.Invoices.AnyAsync(i => i.PropertyId == id && i.PeriodYear == carrier.Year && i.PeriodMonth == carrier.Month
                     && i.Status != Domain.Enums.InvoiceStatus.Failed && i.CancelledAt == null && i.CancelsInvoiceId == null, ct),
                 tenantInMonth: await db.Tenants.AnyAsync(t => t.PropertyId == id
                     && (t.MoveInDate == null || t.MoveInDate <= last) && (t.MoveOutDate == null || t.MoveOutDate >= first), ct),
@@ -450,18 +456,18 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             : null;
     }
 
-    private static PropertyDetailDto ToDetailDto(Property property, string utilityState)
+    private static PropertyDetailDto ToDetailDto(Property property, string utilityState, (int Year, int Month)? utility = null)
     {
         var next = BillingCalendar.NextBilling(BudapestClock.Now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute);
         return new(
         property.Id, property.Name, property.RentAmount, property.InvoicePrefix,
         property.BillingDayOfMonth, property.BillingHour, property.BillingMinute, property.IsActive,
         [.. property.PropertyOwners.Select(po => new PropertyOwnerDto(po.OwnerId, po.Owner!.Name, po.Share))],
-        [.. property.Tenants.Select(t => new TenantDto(t.Id, t.Name, t.Email, t.Phone, t.Address, t.TaxId, t.PropertyId, property.Name, t.MoveInDate, t.MoveOutDate, t.Notes, t.RentCurrency, t.RentPaymentTiming, t.TenantPaysSzja, 0, t.InvoiceAttachments, t.LeaseEndDate))],
+        [.. property.Tenants.Select(t => new TenantDto(t.Id, t.Name, t.Email, t.Phone, t.Address, t.TaxId, t.PropertyId, property.Name, t.MoveInDate, t.MoveOutDate, t.Notes, t.RentCurrency, t.RentPaymentTiming, t.TenantPaysSzja, 0, t.InvoiceAttachments, t.LeaseEndDate, t.UtilityBillingTiming))],
         new PropertySheetDto(property.PropertyType, property.PostalCode, property.City, property.Street, property.FloorDoor, property.Hrsz,
             property.FloorArea, property.Rooms, property.BuildYear, property.ElectricityMeter, property.GasMeter, property.WaterMeter,
             property.Deposit, property.Notes, property.RentVat, property.UtilityVat),
-        next.At, next.Period.Year, next.Period.Month, utilityState);
+        next.At, next.Period.Year, next.Period.Month, utilityState, utility?.Year ?? next.Period.Year, utility?.Month ?? next.Period.Month);
     }
 
     private const string NoteTooLong = "A megjegyzés legfeljebb 500 karakter lehet.";

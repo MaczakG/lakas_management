@@ -27,6 +27,8 @@ public class Tenant : ICompanyOwned
     // A lakbér előre (a bizonylat hónapjára) vagy utólag (az előző hónapra) fizetendő — a bizonylat bérleti díj
     // sorának időszaka ezt követi.
     public RentPaymentTiming RentPaymentTiming { get; set; } = RentPaymentTiming.Advance;
+    // A rezsi a bizonylaton: a tárgyhavi (alap) vagy az előző havi (egy hónap csúszással fizető bérlő).
+    public UtilityBillingTiming UtilityBillingTiming { get; set; } = UtilityBillingTiming.SameMonth;
     // A bérlő (kifizetőként) vonja le és fizeti be a bérbeadó SZJA-ját: a bérleti díjból levonódik (magánszemély
     // bérbeadónál; ld. Billing.Szja).
     public bool TenantPaysSzja { get; set; }

@@ -354,8 +354,8 @@ async function loadUtilityCosts(propertyId) {
   // Alapból a következő kiküldés időszaka (annak a rezsije kerül a bizonylatra), nem az aktuális hónap.
   const now = new Date();
   const listed = properties.find((p) => p.id === propertyId);
-  document.getElementById('u-year').value = listed?.nextPeriodYear ?? now.getFullYear();
-  utilityMonthSelect.value = listed?.nextPeriodMonth ?? now.getMonth() + 1;
+  document.getElementById('u-year').value = (listed?.utilityPeriodYear || listed?.nextPeriodYear) ?? now.getFullYear();
+  utilityMonthSelect.value = (listed?.utilityPeriodMonth || listed?.nextPeriodMonth) ?? now.getMonth() + 1;
 
   const entries = await (await apiFetch(`/api/properties/${propertyId}/utility-costs`)).json();
 

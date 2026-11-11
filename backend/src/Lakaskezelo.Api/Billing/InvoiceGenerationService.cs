@@ -73,9 +73,17 @@ public class InvoiceGenerationService(
         // A hónap rezsije a rezsi tételekből, ha még nem készült el (kézi és időzített kiállításnál is): a fix tételek
         // összeggel, a nem fixek kitöltendőként jönnek létre.
         await UtilityPeriods.PrepareAsync(db, property.Id, year, month, force: false, ct);
+        // Egy hónap csúszással fizető bérlőnél a bizonylat az előző hónap rezsijét viszi: az is elkészül, ha a bérlő
+        // abban a hónapban már itt lakott (az első bizonylatára nem kerül a beköltözése előtti rezsi).
+        var (utilityYear, utilityMonth) = UtilityPeriod(tenant, year, month);
+        if ((utilityYear, utilityMonth) != (year, month)
+            && (tenant?.MoveInDate is null || tenant.MoveInDate <= new DateOnly(utilityYear, utilityMonth, 1).AddMonths(1).AddDays(-1)))
+        {
+            await UtilityPeriods.PrepareAsync(db, property.Id, utilityYear, utilityMonth, force: false, ct);
+        }
         await db.SaveChangesAsync(ct);
 
-        var utilityLines = await BillableEntriesAsync(property.Id, year, month, existing?.Id, ct);
+        var utilityLines = await BillableEntriesAsync(property.Id, year, month, utilityYear, utilityMonth, existing?.Id, ct);
         foreach (var u in utilityLines) u.InvoiceId = null;
         // Bizonylatra csak az a tétel kerül, amelynek van összege (a kitöltendő nem fix tétel kimarad, és ha később
         // kitöltik, a következő bizonylatra kerül), és nem „tovább számlázandó” (azt a bérleti díj már tartalmazza).
@@ -153,7 +161,7 @@ public class InvoiceGenerationService(
             // megnevezéssel (pl. Áram, Gáz, Közös költség); előbb az időszak tételei a rögzítés sorrendjében, utána a
             // korábbi hónapokra utólag felvettek, a hónapjukkal jelölve.
             var billed = billable
-                .OrderBy(u => u.Year == year && u.Month == month ? 0 : 1)
+                .OrderBy(u => u.Year == utilityYear && u.Month == utilityMonth ? 0 : 1)
                 .ThenBy(u => u.Year).ThenBy(u => u.Month)
                 .ThenBy(u => u.CreatedAt).ThenBy(u => u.Label)
                 .ToList();
@@ -311,17 +319,18 @@ public class InvoiceGenerationService(
             .OrderByDescending(t => t.MoveInDate).FirstOrDefaultAsync(ct);
     }
 
-    // A bizonylatra az ingatlan minden még nem zárolt (bizonylathoz nem kötött) rezsitétele kerül, amely az időszakra
-    // vagy legfeljebb 35 hónappal korábbra (összesen 36 hónap) szól: a később felvett tételek így a következő
-    // bizonylaton számlázódnak. Az újragenerált bizonylat saját korábbi tételei is ide tartoznak. A bevezetés előtti,
-    // kizárt (ExcludedFromBilling) tétel csak a saját hónapja bizonylatára kerülhet.
-    private async Task<List<UtilityCostEntry>> BillableEntriesAsync(Guid propertyId, int year, int month, Guid? existingId, CancellationToken ct)
+    // A bizonylatra az ingatlan minden még nem zárolt (bizonylathoz nem kötött) rezsitétele kerül, amely a bizonylat
+    // rezsi-hónapjára (alapból a bizonylat hónapja, egy hónap csúszásnál az előző; ld. UtilityPeriod) vagy korábbra
+    // szól, a 36 hónapos ablakon belül: a később felvett tételek így a következő bizonylaton számlázódnak. Az
+    // újragenerált bizonylat saját korábbi tételei is ide tartoznak. A bevezetés előtti, kizárt (ExcludedFromBilling)
+    // tétel csak a saját hónapja bizonylatára kerülhet.
+    private async Task<List<UtilityCostEntry>> BillableEntriesAsync(Guid propertyId, int year, int month, int utilityYear, int utilityMonth, Guid? existingId, CancellationToken ct)
     {
         var (fromYear, fromMonth) = BillingWindowStart(year, month);
         var fromKey = fromYear * 12 + fromMonth;
-        var toKey = year * 12 + month;
+        var toKey = utilityYear * 12 + utilityMonth;
         return await db.UtilityCostEntries
-            .Where(u => u.PropertyId == propertyId && (!u.ExcludedFromBilling || (u.Year == year && u.Month == month))
+            .Where(u => u.PropertyId == propertyId && (!u.ExcludedFromBilling || (u.Year == utilityYear && u.Month == utilityMonth))
                 && (u.InvoiceId == null || u.InvoiceId == existingId)
                 && u.Year * 12 + u.Month >= fromKey && u.Year * 12 + u.Month <= toKey)
             .ToListAsync(ct);
@@ -354,8 +363,9 @@ public class InvoiceGenerationService(
                 && i.CancelledAt == null && i.CancelsInvoiceId == null)
             .Select(i => (Guid?)i.Id).FirstOrDefaultAsync(ct);
         var tenant = await FindTenantAsync(property.Id, year, month, ct);
-        var entries = (await BillableEntriesAsync(property.Id, year, month, existingId, ct)).Where(u => u.Amount != 0 && !u.ForwardBilled)
-            .OrderBy(u => u.Year == year && u.Month == month ? 0 : 1)
+        var (utilityYear, utilityMonth) = UtilityPeriod(tenant, year, month);
+        var entries = (await BillableEntriesAsync(property.Id, year, month, utilityYear, utilityMonth, existingId, ct)).Where(u => u.Amount != 0 && !u.ForwardBilled)
+            .OrderBy(u => u.Year == utilityYear && u.Month == utilityMonth ? 0 : 1)
             .ThenBy(u => u.Year).ThenBy(u => u.Month).ThenBy(u => u.CreatedAt).ThenBy(u => u.Label)
             .ToList();
         var labels = entries.ToDictionary(e => e.Id, e => e.Label);
@@ -503,6 +513,12 @@ public class InvoiceGenerationService(
 
     public static (int Year, int Month) RentPeriod(Tenant? tenant, int year, int month) =>
         tenant?.RentPaymentTiming == RentPaymentTiming.Arrears
+            ? (month == 1 ? (year - 1, 12) : (year, month - 1))
+            : (year, month);
+
+    // A bizonylat rezsi-hónapja: alapból a bizonylat hónapja; egy hónap csúszással fizető bérlőnél az előző hónap.
+    public static (int Year, int Month) UtilityPeriod(Tenant? tenant, int year, int month) =>
+        tenant?.UtilityBillingTiming == UtilityBillingTiming.PreviousMonth
             ? (month == 1 ? (year - 1, 12) : (year, month - 1))
             : (year, month);
 
