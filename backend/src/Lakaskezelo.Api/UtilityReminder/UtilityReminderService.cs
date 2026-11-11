@@ -79,8 +79,15 @@ public class UtilityReminderService(IServiceScopeFactory scopeFactory, IConfigur
         var now = BudapestClock.Now;
         var today = DateOnly.FromDateTime(now);
 
+        var properties = await db.Properties.Where(p => p.IsActive).ToListAsync(ct);
+        // Az aktuális és a következő év rezsije előre elkészül a rezsi tételekből (évváltáskor az új következő év is).
+        foreach (var p in properties)
+        {
+            await UtilityPeriods.PrepareAheadAndSaveAsync(db, p, now, ct);
+        }
+
         // Ingatlanonként a következő számla időszaka és kiküldése; csak azok, amelyeknél elérkezett a határidő.
-        var due = (await db.Properties.Where(p => p.IsActive).ToListAsync(ct))
+        var due = properties
             .Select(p =>
             {
                 var (period, at) = BillingCalendar.NextBilling(now, p.BillingDayOfMonth, p.BillingHour, p.BillingMinute);

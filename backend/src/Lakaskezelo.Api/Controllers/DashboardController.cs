@@ -60,7 +60,10 @@ public class DashboardController(LakaskezeloDbContext db, ICompanyContext compan
 
         // Rezsi: a tételek megnevezése szabad szöveg, ezért kis-nagybetűtől függetlenül csoportosítjuk; a legnagyobb
         // öt kategória külön sávot kap, a többi „Egyéb”-be kerül (több szín már nem különböztethető meg biztosan).
-        var utilityRows = await db.UtilityCostEntries.Where(u => u.Year == y && (propertyId == null || u.PropertyId == propertyId))
+        // A jövőbeli hónapok előre kitöltött rezsije még nem tényadat: a kimutatás és az adóbecslés csak az aktuális
+        // hónapig számol.
+        var lastMonth = y < now.Year ? 12 : y == now.Year ? now.Month : 0;
+        var utilityRows = await db.UtilityCostEntries.Where(u => u.Year == y && u.Month <= lastMonth && (propertyId == null || u.PropertyId == propertyId))
             .Select(u => new { u.Month, u.Label, u.Amount, u.ForwardBilled })
             .ToListAsync(ct);
         var normalized = utilityRows.Select(u => new { u.Month, Label = NormalizeLabel(u.Label), u.Amount }).ToList();
