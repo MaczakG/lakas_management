@@ -34,16 +34,18 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
     // ---------- Egyenleg ----------
 
     // A bérlő folyószámlája időrendben: kiállított bizonylatok (a sikertelen nem számít; a sztornó negatív terhelés)
-    // és befizetések, futó egyenleggel. Az egyenlegbe csak az számít, ami bizonylatra került: a felvett (vagy a rezsi
-    // tételekből előre behúzott), de még ki nem számlázott rezsi nem tartozás — az összege csak tájékoztatásul megy
-    // a válaszban (UnbilledTotal).
+    // és befizetések, futó egyenleggel. Az egyenlegbe az számít, ami bizonylatra került, és az utólagos rezsitétel
+    // (már kiszámlázott hónaphoz utólag felvett tétel: tartozás, a következő bizonylatra kerül — onnantól a bizonylat
+    // terhel, nincs dupla terhelés). A még ki nem számlázott hónap felvett (vagy a rezsi tételekből előre behúzott)
+    // rezsije nem tartozás — az összege csak tájékoztatásul megy a válaszban (UnbilledTotal).
     [HttpGet("{id:guid}/ledger")]
     public async Task<ActionResult<TenantLedgerDto>> Ledger(Guid id, CancellationToken ct)
     {
         if (!await db.Tenants.AnyAsync(t => t.Id == id, ct)) return NotFound();
         var invoices = await ChargedInvoices().Where(i => i.TenantId == id).ToListAsync(ct);
         var payments = await db.TenantPayments.Include(p => p.Invoice).Where(p => p.TenantId == id).ToListAsync(ct);
-        var openUtilities = (await Billing.TenantBalances.OpenUtilitiesAsync(db, id, ct)).Select(o => o.Entry).ToList();
+        var openUtilities = await Billing.TenantBalances.OpenUtilitiesAsync(db, id, ct);
+        var lateUtilities = openUtilities.Where(o => o.Late).Select(o => o.Entry).ToList();
 
         var rows = invoices.Select(i => new
             {
@@ -58,6 +60,13 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
                 Entry = new TenantLedgerEntryDto("payment", p.Id, p.Date, p.Invoice is null ? "Befizetés" : "Befizetés a bizonylatra",
                     -p.Amount, 0, p.InvoiceId, p.Invoice?.Number, false, false, p.Note),
             }))
+            .Concat(lateUtilities.Select(u => new
+            {
+                Sort = (Date: LocalDate(u.CreatedAt), At: u.CreatedAt),
+                Entry = new TenantLedgerEntryDto("utility", u.Id, LocalDate(u.CreatedAt),
+                    $"Utólagos rezsi: {(string.IsNullOrWhiteSpace(u.Label) ? "Rezsi" : u.Label.Trim())} ({u.Year}. {HuMonths[u.Month - 1]})",
+                    u.Amount, 0, null, null, false, false, "a következő bizonylatra kerül"),
+            }))
             .OrderBy(r => r.Sort.Date).ThenBy(r => r.Sort.At)
             .ToList();
 
@@ -70,10 +79,16 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
         }
         entries.Reverse(); // a legfrissebb elöl
         var charged = invoices.Sum(i => i.AmountTotal);
-        var unbilled = openUtilities.Sum(u => u.Amount);
+        var late = lateUtilities.Sum(u => u.Amount);
+        var unbilled = openUtilities.Where(o => !o.Late).Sum(o => o.Entry.Amount);
         var paid = payments.Sum(p => p.Amount);
-        return Ok(new TenantLedgerDto(charged - paid, charged, paid, entries, unbilled));
+        return Ok(new TenantLedgerDto(charged + late - paid, charged, paid, entries, unbilled, late));
     }
+
+    private static readonly string[] HuMonths = ["január", "február", "március", "április", "május", "június", "július", "augusztus", "szeptember", "október", "november", "december"];
+
+    private static DateOnly LocalDate(DateTime utc) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), Billing.BudapestClock.Zone));
 
     [HttpPost("{id:guid}/payments")]
     public async Task<ActionResult<TenantPaymentDto>> AddPayment(Guid id, CreateTenantPaymentRequest request, CancellationToken ct)
@@ -130,6 +145,9 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
             .GroupBy(p => p.TenantId).Select(g => new { g.Key, Sum = g.Sum(p => p.Amount) }).ToListAsync(ct);
         var result = charged.ToDictionary(c => c.Key, c => c.Sum);
         foreach (var p in paid) result[p.Key] = result.GetValueOrDefault(p.Key) - p.Sum;
+        // Az utólagos rezsitétel is tartozás (ld. TenantBalances).
+        foreach (var o in (await Billing.TenantBalances.OpenUtilitiesAsync(db, tenantId, ct)).Where(o => o.Late))
+            result[o.TenantId] = result.GetValueOrDefault(o.TenantId) + o.Entry.Amount;
         return result;
     }
 

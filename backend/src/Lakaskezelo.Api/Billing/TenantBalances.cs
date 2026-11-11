@@ -1,5 +1,6 @@
 using Lakaskezelo.Data;
 using Lakaskezelo.Domain.Entities;
+using Lakaskezelo.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.Billing;
@@ -8,9 +9,12 @@ namespace Lakaskezelo.Api.Billing;
 public static class TenantBalances
 {
     // A még bizonylatra nem került (nyitott) rezsitételek, az ingatlan jelenlegi bérlőjéhez rendelve — ő kapja a következő
-    // bizonylaton. Az egyenlegbe NEM számítanak bele (abba csak a kiállított bizonylat): ez csak tájékoztató összeg. Csak a következő bizonylatra kerülhetők számítanak: nem kizárt, legfeljebb 36 hónapos, van összege, és nem
-    // „tovább számlázandó” (azt a bérleti díj tartalmazza, nem a bérlő tartozása).
-    public static async Task<List<(Guid TenantId, UtilityCostEntry Entry)>> OpenUtilitiesAsync(LakaskezeloDbContext db, Guid? tenantId, CancellationToken ct)
+    // bizonylaton. Csak a következő bizonylatra kerülhetők számítanak: nem kizárt, legfeljebb 36 hónapos, van összege, és
+    // nem „tovább számlázandó” (azt a bérleti díj tartalmazza, nem a bérlő tartozása).
+    // Late (utólagos tétel): a tétel hónapjára az ingatlannak már van érvényes bizonylata, vagyis a tétel egy már
+    // kiszámlázott hónaphoz utólag került fel. Ez már tartozás: beleszámít az egyenlegbe. A többi nyitott tétel (a még
+    // ki nem számlázott hónapé, pl. az előre behúzott rezsi) nem — az csak tájékoztató összeg.
+    public static async Task<List<(Guid TenantId, UtilityCostEntry Entry, bool Late)>> OpenUtilitiesAsync(LakaskezeloDbContext db, Guid? tenantId, CancellationToken ct)
     {
         var now = BudapestClock.Now;
         var today = DateOnly.FromDateTime(now);
@@ -28,6 +32,17 @@ public static class TenantBalances
             .Where(u => propertyIds.Contains(u.PropertyId) && u.InvoiceId == null && !u.ExcludedFromBilling && u.Amount != 0 && !u.ForwardBilled
                 && u.Year * 12 + u.Month >= fromKey)
             .ToListAsync(ct);
-        return [.. entries.Select(u => (current[u.PropertyId], u))];
+        if (entries.Count == 0) return [];
+        var entryProperties = entries.Select(u => u.PropertyId).Distinct().ToList();
+        var invoiced = (await db.Invoices
+                .Where(i => entryProperties.Contains(i.PropertyId) && i.Status != InvoiceStatus.Failed && i.CancelledAt == null && i.CancelsInvoiceId == null)
+                .Select(i => new { i.PropertyId, i.PeriodYear, i.PeriodMonth })
+                .Distinct().ToListAsync(ct))
+            .Select(i => (i.PropertyId, i.PeriodYear, i.PeriodMonth)).ToHashSet();
+        return [.. entries.Select(u => (current[u.PropertyId], u, IsLate(u, invoiced)))];
     }
+
+    // Utólagos a tétel, ha a hónapjára az ingatlannak már van érvényes (nem sikertelen, nem sztornózott) bizonylata.
+    public static bool IsLate(UtilityCostEntry entry, IReadOnlySet<(Guid PropertyId, int Year, int Month)> invoicedMonths) =>
+        invoicedMonths.Contains((entry.PropertyId, entry.Year, entry.Month));
 }

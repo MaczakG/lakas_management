@@ -66,3 +66,27 @@ public class UtilityAutoPrepareTests
         Assert.False(UtilityPeriods.ShouldAutoPrepare(false, false, true, Window - 1, Next, Window));
     }
 }
+
+public class LateUtilityTests
+{
+    private static readonly Guid Property = Guid.NewGuid();
+
+    private static Lakaskezelo.Domain.Entities.UtilityCostEntry Entry(int year, int month, Guid? property = null) =>
+        new() { Id = Guid.NewGuid(), PropertyId = property ?? Property, Year = year, Month = month, Amount = 1000 };
+
+    [Fact]
+    public void An_entry_of_an_already_invoiced_month_is_late()
+    {
+        var invoiced = new HashSet<(Guid, int, int)> { (Property, 2026, 8) };
+        Assert.True(Lakaskezelo.Api.Billing.TenantBalances.IsLate(Entry(2026, 8), invoiced));
+    }
+
+    [Fact]
+    public void An_entry_of_a_month_without_invoice_is_not_late()
+    {
+        var invoiced = new HashSet<(Guid, int, int)> { (Property, 2026, 8) };
+        Assert.False(Lakaskezelo.Api.Billing.TenantBalances.IsLate(Entry(2026, 9), invoiced));
+        // másik ingatlan ugyanazon hónapjának bizonylata nem számít
+        Assert.False(Lakaskezelo.Api.Billing.TenantBalances.IsLate(Entry(2026, 8, Guid.NewGuid()), invoiced));
+    }
+}

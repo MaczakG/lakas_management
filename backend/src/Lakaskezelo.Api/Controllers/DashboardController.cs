@@ -121,6 +121,9 @@ public class DashboardController(LakaskezeloDbContext db, ICompanyContext compan
         var expectedBy = (await db.Invoices.Where(i => i.TenantId != null && i.Status != InvoiceStatus.Failed)
                 .GroupBy(i => i.PropertyId).Select(g => new { g.Key, Sum = g.Sum(i => i.AmountTotal) }).ToListAsync(ct))
             .ToDictionary(g => g.Key, g => g.Sum);
+        // Az utólagos rezsitétel (már kiszámlázott hónaphoz utólag felvett, még bizonylatra váró) is várt bevétel.
+        foreach (var o in (await TenantBalances.OpenUtilitiesAsync(db, null, ct)).Where(o => o.Late))
+            expectedBy[o.Entry.PropertyId] = expectedBy.GetValueOrDefault(o.Entry.PropertyId) + o.Entry.Amount;
         var payments = await db.TenantPayments
             .Select(p => new { p.Amount, PropertyId = p.InvoiceId != null ? (Guid?)p.Invoice!.PropertyId : p.Tenant!.PropertyId })
             .ToListAsync(ct);

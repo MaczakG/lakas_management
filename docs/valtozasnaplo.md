@@ -4,7 +4,16 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
-- **2026.11.11.10** — Árfolyamok: a követett deviza törölhető.
+- **2026.11.11.10** — Az utólagos rezsitétel beleszámít az egyenlegbe; az árfolyamoknál a követett deviza törölhető.
+  - Egyenleg: az utólagos tétel (már kiszámlázott hónaphoz utólag felvett, még bizonylatra váró rezsitétel)
+    tartozásnak számít, és beleszámít a bérlő egyenlegébe (bérlő adatlap, Bérlők lista, vezérlőpult). Az Egyenleg
+    fül listájában külön sorként látszik („Utólagos rezsi: …, a következő bizonylatra kerül”), az egyenleg-sávban
+    pedig „Utólagos rezsi” néven. Amint bizonylatra kerül, onnantól a bizonylat terhel (nincs dupla terhelés).
+  - A még ki nem számlázott hónap felvett vagy előre behúzott rezsije továbbra sem számít az egyenlegbe; a
+    „Rezsi, bizonylatra vár” jelző lekerült az egyenleg-sávról.
+  - Az egyenleg-sávról az „Utolsó befizetés” jelző is lekerült (a befizetések az Egyenleg fülön látszanak).
+  - Bérlő adatlap, Bérlet tábla: a „Lakbér fizetése” mező megszűnt (a lakbér mindig előre fizetendő). Csak annál a
+    bérlőnél látszik, akinél korábban „Utólag” volt beállítva; átállítás után ott is eltűnik.
   - A táblázat minden sorának végén kuka ikon áll; megerősítés után a deviza lekerül a listáról, és a bérlők
     deviza-választékából is. Később a „Deviza hozzáadása” gombbal újra felvehető.
   - Nem törölhető az a deviza, amelyik egy bérlő bérleti díjának devizája (a program megmondja, hány bérlőnél;
