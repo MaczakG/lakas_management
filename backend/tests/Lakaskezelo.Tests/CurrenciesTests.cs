@@ -20,6 +20,16 @@ public class CurrenciesTests
         Assert.Equal(expected, Currencies.IsSupported(code));
     }
 
+    [Theory]
+    [InlineData("EUR", true)]
+    [InlineData("USD", true)]
+    [InlineData("GBP", true)]
+    [InlineData("CHF", false)]
+    public void Only_the_base_currencies_are_default(string code, bool expected)
+    {
+        Assert.Equal(expected, Currencies.IsDefault(code));
+    }
+
     [Fact]
     public void Every_currency_has_a_name_and_the_stored_values_are_stable()
     {

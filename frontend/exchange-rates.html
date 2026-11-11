@@ -31,10 +31,10 @@
     <div class="card-table">
       <table>
         <thead>
-          <tr><th>Deviza</th><th>Megnevezés</th><th class="num">Árfolyam (Ft)</th><th>MNB árfolyam napja</th><th>Utoljára frissítve</th></tr>
+          <tr><th>Deviza</th><th>Megnevezés</th><th class="num">Árfolyam (Ft)</th><th>MNB árfolyam napja</th><th>Utoljára frissítve</th><th></th></tr>
         </thead>
         <tbody id="rates-tbody">
-          <tr class="empty-row"><td colspan="5">Betöltés...</td></tr>
+          <tr class="empty-row"><td colspan="6">Betöltés...</td></tr>
         </tbody>
       </table>
     </div>
@@ -62,6 +62,12 @@
 
 <style>
   .page-actions{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;}
+  .icon-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+  .icon-btn svg{width:14px;height:14px;}
+  .icon-btn:not(:disabled):hover{background:var(--surface-sunken);border-color:var(--line-strong);color:var(--ink);}
+  .icon-btn.danger:hover{background:var(--coral-bg);border-color:var(--coral-border);color:var(--coral);}
+  .icon-btn:disabled{opacity:.35;cursor:default;}
+  #rates-tbody td.row-actions{width:1%;}
   .cur-modal{max-width:640px;}
   .cur-search{max-width:none;margin-bottom:12px;}
   .cur-list{max-height:46vh;overflow-y:auto;}
@@ -72,13 +78,15 @@
 <script>
 requireAuth();
 
+const TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#trash"/></svg>';
+
 async function loadRates() {
   const res = await apiFetch('/api/exchange-rates');
   const rates = await res.json();
   const tbody = document.getElementById('rates-tbody');
 
   if (rates.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Még nincs lekért árfolyam. Kattints a „Frissítés most” gombra.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Még nincs lekért árfolyam. Kattints a „Frissítés most” gombra.</td></tr>`;
     return;
   }
 
@@ -89,6 +97,9 @@ async function loadRates() {
       <td class="num">${formatNumber(r.rateToHuf, 2)} Ft</td>
       <td>${formatDate(r.rateDate)}</td>
       <td class="cell-sub">${new Date(r.fetchedAt).toLocaleString('hu-HU')}</td>
+      <td class="row-actions">${r.isDefault
+        ? `<button class="icon-btn" type="button" disabled title="Alap deviza, nem törölhető" aria-label="Alap deviza, nem törölhető">${TRASH}</button>`
+        : `<button class="icon-btn danger" type="button" data-delete-currency="${escapeHtml(r.currencyCode)}" title="Deviza törlése" aria-label="${escapeHtml(r.currencyCode)} törlése">${TRASH}</button>`}</td>
     </tr>
   `).join('');
 }
@@ -120,6 +131,33 @@ document.getElementById('refresh-btn').addEventListener('click', async () => {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Frissítés most';
+  }
+});
+
+// ---------- Deviza törlése ----------
+document.getElementById('rates-tbody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-delete-currency]');
+  if (!btn) return;
+  const code = btn.dataset.deleteCurrency;
+  const errorEl = document.getElementById('fetch-error');
+  const successEl = document.getElementById('fetch-success');
+  errorEl.classList.remove('show');
+  successEl.classList.remove('show');
+  if (!(await uiConfirm(`Biztosan törlöd a(z) ${code} devizát a követett devizák közül? Később a „Deviza hozzáadása” gombbal újra felvehető.`, { title: 'Deviza törlése', confirmText: 'Törlés', danger: true }))) return;
+  btn.disabled = true;
+  try {
+    const res = await apiFetch(`/api/exchange-rates/${encodeURIComponent(code)}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(res.status === 403 ? 'Devizát csak a cég adminisztrátora törölhet.' : (data?.message || 'Nem sikerült törölni a devizát.'));
+    }
+    successEl.textContent = `A(z) ${code} deviza lekerült a listáról.`;
+    successEl.classList.add('show');
+    loadRates();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.add('show');
+    btn.disabled = false;
   }
 });
 

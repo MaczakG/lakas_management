@@ -21,6 +21,9 @@ public static class Currencies
         ["THB"] = "thai bát", ["TRY"] = "török líra", ["UAH"] = "ukrán hrivnya", ["ZAR"] = "dél-afrikai rand",
     };
 
+    // Az alap devizák mindig követettek (az óránkénti frissítés visszatenné őket), ezért nem törölhetők.
+    public static bool IsDefault(string code) => Default.Contains(code);
+
     public static string Name(string code) => Names.GetValueOrDefault(code, code);
 
     // Kezelhető-e a deviza bérleti díj devizájaként (a forint nem deviza).
