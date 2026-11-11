@@ -116,7 +116,7 @@ public class InvoiceGenerationService(
             await Report(new GenerationProgress(GenerationSteps.Data));
 
             // A bérleti díj sor összege a bérlőnél beállított devizanemtől függ (RentCurrency) — az
-            // Ingatlan RentAmount mezője HUF helyett EUR/USD is lehet, de a számlán mindig a
+            // Ingatlan RentAmount mezője HUF helyett EUR, USD vagy GBP is lehet, de a számlán mindig a
             // legfrissebb tárolt MNB árfolyamon átváltott HUF összeg jelenik meg. Ha nincs még
             // elérhető árfolyam a beállított devizához, a számla Failed státusszal jön létre, jól
             // olvasható hibaüzenettel.

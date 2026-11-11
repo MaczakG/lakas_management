@@ -25,7 +25,12 @@ const FIELDS = {
     { path: 'propertyId', label: 'Ingatlan', type: 'select', options: properties.map((p) => ({ value: p.id, label: p.name })) },
     { path: 'moveInDate', label: 'Beköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
     { path: 'moveOutDate', label: 'Kiköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
-    { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: [{ value: 'HUF', label: 'Forint (Ft)' }, { value: 'EUR', label: 'Euró (EUR), MNB-árfolyamon átszámítva' }] },
+    { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: [
+      { value: 'HUF', label: 'Forint (Ft)' },
+      { value: 'EUR', label: 'Euró (EUR), MNB-árfolyamon átszámítva' },
+      { value: 'USD', label: 'Amerikai dollár (USD), MNB-árfolyamon átszámítva' },
+      { value: 'GBP', label: 'Angol font (GBP), MNB-árfolyamon átszámítva' },
+    ] },
     // A lakbér előre fizetendő. Az „Utólag” csak annál a bérlőnél látszik, akinél korábban az volt beállítva
     // (hogy a meglévő adat ne jelenjen meg tévesen); átállítás után ott is eltűnik.
     { path: 'rentPaymentTiming', label: 'Lakbér fizetése', type: 'select', required: true, options: [

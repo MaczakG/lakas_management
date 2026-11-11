@@ -15,6 +15,9 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
     ceruza gombbal adható meg, módosítható vagy törölhető.
   - „Lakbér fizetése”: csak az „Előre (tárgyhó)” választható. Az „Utólag” csak annál a bérlőnél látszik, akinél
     korábban az volt beállítva.
+  - Árfolyamok: az angol font (GBP) is bekerült az EUR és az USD mellé. A program ugyanúgy az MNB
+    árfolyam-szolgáltatásából (API) kérdezi le, óránként és a „Frissítés most” gombbal. A bérlőnél a bérleti díj
+    devizája GBP is lehet (a bérlő adatlapján mostantól az USD is választható, ahogy az űrlapon eddig is).
   - Rezsi ablak: a „Rezsi tételek behúzása” sáv megszűnt (a tételek megnyitáskor maguktól bekerülnek). Ahol a
     megnyitás nem húzza be őket (már kiszámlázott hónap, bérlő nélküli hónap, későbbi hónap, vagy utólag felvett
     rezsi tétel), ott a tétel a „+ Sor hozzáadása” gombbal kézzel vehető fel.

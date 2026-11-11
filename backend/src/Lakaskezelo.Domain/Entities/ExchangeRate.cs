@@ -6,7 +6,7 @@ namespace Lakaskezelo.Domain.Entities;
 public class ExchangeRate
 {
     public Guid Id { get; set; }
-    public string CurrencyCode { get; set; } = string.Empty; // "EUR", "USD"
+    public string CurrencyCode { get; set; } = string.Empty; // "EUR", "USD", "GBP"
     public decimal RateToHuf { get; set; }
     public DateOnly RateDate { get; set; } // az MNB árfolyam érvényességi napja (hétvégén a legutóbbi banki nap)
     public DateTime FetchedAt { get; set; } // az utolsó sikeres lekérdezés ideje

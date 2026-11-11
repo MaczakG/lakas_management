@@ -1,6 +1,6 @@
 namespace Lakaskezelo.Api.ExchangeRates;
 
-// Óránként frissíti az MNB EUR/USD árfolyamát (ld. ExchangeRateUpdater) — devizánként egy sort ír
+// Óránként frissíti az MNB EUR, USD és GBP árfolyamát (ld. ExchangeRateUpdater) — devizánként egy sort ír
 // felül. Hétvégén/ünnepnapon az MNB nem ad ki új árfolyamot, ilyenkor a legutóbbi banki napi
 // érték marad, csak a lekérdezés ideje frissül.
 public class ExchangeRateFetchService(IServiceScopeFactory scopeFactory, ILogger<ExchangeRateFetchService> logger) : BackgroundService

@@ -174,7 +174,7 @@ function formatCurrency(amount) {
   return `${formatNumber(amount)} Ft`;
 }
 
-// Devizanem-érzékeny formázás — HUF-nál a megszokott "N Ft" (tizedesjegy nélkül), EUR/USD-nál
+// Devizanem-érzékeny formázás — HUF-nál a megszokott "N Ft" (tizedesjegy nélkül), EUR/USD/GBP-nél
 // "N,NN EUR/USD" (2 tizedesjeggyel, mivel ott gyakori a törtösszeg).
 function formatMoney(amount, currency) {
   if (!currency || currency === 'HUF') return formatCurrency(amount);

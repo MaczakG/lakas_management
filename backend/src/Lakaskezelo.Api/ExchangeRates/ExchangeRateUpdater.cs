@@ -4,12 +4,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.ExchangeRates;
 
-// Lekéri az MNB aktuális EUR/USD árfolyamát, és devizánként egyetlen sorban tárolja (ld.
+// Lekéri az MNB aktuális EUR, USD és GBP árfolyamát (az MNB árfolyam-webszolgáltatásán, API-n keresztül), és devizánként egyetlen sorban tárolja (ld.
 // ExchangeRateConfiguration egyedi indexe): a meglévő sort felülírja, ha még nincs, létrehozza.
 // Ezt hívja az óránkénti ExchangeRateFetchService és a "Frissítés most" gomb is.
 public class ExchangeRateUpdater(LakaskezeloDbContext db, MnbExchangeRateClient client, ILogger<ExchangeRateUpdater> logger)
 {
-    public static readonly string[] TrackedCurrencies = ["EUR", "USD"];
+    public static readonly string[] TrackedCurrencies = ["EUR", "USD", "GBP"];
 
     public async Task UpdateAsync(CancellationToken ct)
     {
