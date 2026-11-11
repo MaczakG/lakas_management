@@ -8,8 +8,8 @@ namespace Lakaskezelo.Api.Billing;
 //
 // Előkészítéskor minden rezsi tételből, amelynek a hónapban még nincs tétele, készül egy havi tétel: fix tételnél a
 // megadott összeggel, nem fixnél 0 összeggel („kitöltendő”). Fut gombnyomásra (force: a hiányzókat mindig pótolja),
-// a rezsi-határnapon és a bizonylat kiállításakor (automatikusan: hónaponként csak egyszer, hogy a kézzel törölt
-// tétel ne jöjjön vissza). Az utólag felvett egyedi tételek ettől függetlenül ugyanúgy bizonylatra kerülnek.
+// a rezsi ablak megnyitásakor (ha biztonságos, ld. ShouldAutoPrepare), a rezsi-határnapon és a bizonylat
+// kiállításakor (automatikusan: hónaponként csak egyszer, hogy a kézzel törölt tétel ne jöjjön vissza). Az utólag felvett egyedi tételek ettől függetlenül ugyanúgy bizonylatra kerülnek.
 public static class UtilityPeriods
 {
     public const string Ok = "Ok";           // minden rendben: nincs teendő a bizonylat előtt
@@ -54,6 +54,16 @@ public static class UtilityPeriods
         }
         return created;
     }
+
+    // A rezsi ablak megnyitásakor a hónap magától előkészül-e a rezsi tételekből (hogy a tételek „alapból ott
+    // legyenek”). Csak akkor, ha a megnyitás nem okozhat meglepetést:
+    //  - a hónapban még nincs egyetlen tétel sem (a kézzel felvitt tételek mellé nem tesz másikat);
+    //  - a hónapra még nincs érvényes bizonylat (különben a fix tétel utólagos tételként még egyszer számlázódna);
+    //  - a hónapban volt bérlője az ingatlannak (bérlő előtti hónap tételei nem terhelhetők a mostani bérlőre);
+    //  - a hónap nem későbbi a következő bizonylat hónapjánál, és belül van a visszamenőleges rögzítés ablakán.
+    // Az időszakok év × 12 + hónap alakban jönnek. Hogy a hónap már elő volt-e készítve, azt a PrepareAsync nézi.
+    public static bool ShouldAutoPrepare(bool hasEntries, bool hasActiveInvoice, bool tenantInMonth, int period, int nextBillingPeriod, int windowStart) =>
+        !hasEntries && !hasActiveInvoice && tenantInMonth && period <= nextBillingPeriod && period >= windowStart;
 
     // Egy hónap rezsi-állapota a bizonylat előtt.
     //  - Van tétele vagy már elő van készítve: kitöltendő tétel esetén Pending, különben Ok.

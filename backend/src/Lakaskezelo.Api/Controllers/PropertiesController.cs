@@ -194,6 +194,27 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         if (request.Month is < 1 or > 12 || request.Year is < 2000 or > 2100) return BadRequest(new { message = "Érvénytelen időszak." });
         var now = BudapestClock.Now;
         var (fromYear, fromMonth) = InvoiceGenerationService.BillingWindowStart(now.Year, now.Month);
+        if (request.Auto)
+        {
+            // A rezsi ablak megnyitásakor: csak akkor készít elő, ha az biztonságos; különben nem történik semmi.
+            var property = await db.Properties.Where(p => p.Id == id).Select(p => new { p.BillingDayOfMonth, p.BillingHour, p.BillingMinute }).SingleAsync(ct);
+            var next = BillingCalendar.NextBilling(now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute).Period;
+            var first = new DateOnly(request.Year, request.Month, 1);
+            var last = first.AddMonths(1).AddDays(-1);
+            var safe = UtilityPeriods.ShouldAutoPrepare(
+                hasEntries: await db.UtilityCostEntries.AnyAsync(u => u.PropertyId == id && u.Year == request.Year && u.Month == request.Month, ct),
+                hasActiveInvoice: await db.Invoices.AnyAsync(i => i.PropertyId == id && i.PeriodYear == request.Year && i.PeriodMonth == request.Month
+                    && i.Status != Domain.Enums.InvoiceStatus.Failed && i.CancelledAt == null && i.CancelsInvoiceId == null, ct),
+                tenantInMonth: await db.Tenants.AnyAsync(t => t.PropertyId == id
+                    && (t.MoveInDate == null || t.MoveInDate <= last) && (t.MoveOutDate == null || t.MoveOutDate >= first), ct),
+                period: request.Year * 12 + request.Month,
+                nextBillingPeriod: next.Year * 12 + next.Month,
+                windowStart: fromYear * 12 + fromMonth);
+            if (!safe) return Ok(new PrepareUtilityPeriodResponse(0));
+            var prepared = await UtilityPeriods.PrepareAsync(db, id, request.Year, request.Month, force: false, ct);
+            await db.SaveChangesAsync(ct);
+            return Ok(new PrepareUtilityPeriodResponse(prepared));
+        }
         if (request.Year * 12 + request.Month < fromYear * 12 + fromMonth)
         {
             return BadRequest(new { message = $"Legfeljebb {InvoiceGenerationService.LateUtilityMonths} hónapra visszamenőleg lehet rezsit rögzíteni." });
