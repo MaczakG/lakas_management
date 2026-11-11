@@ -4,6 +4,12 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.8** — Bérlő adatlap: az Összegzés négy csempe lett.
+  - Az „Összegzés” tábla helyett az egyenleg-sáv alatt négy csempe áll egy közös keretben: Bérlet kezdete (alatta,
+    mióta bérlő), Szerződés lejárata (alatta, hány nap múlva jár le, vagy a lejárat-jelzés), Kiállítva összesen és
+    Kiállítva az aktuális évben (alattuk a bizonylatok száma).
+  - A „Kiállítva 2026-ben” felirat helyett „Kiállítva az aktuális évben” áll. A „Bizonylatok” és az „Utolsó
+    bizonylat” sor megszűnt; a bizonylatok száma (és a sikertelenek jelzése) a csempék alatt látszik.
 - **2026.11.11.7** — Rezsi ablak: a rezsi tételek alapból ott vannak; nincs üres új sor.
   - A hónap megnyitásakor a rezsi tételek maguktól bekerülnek (a fixek összeggel, a nem fixek kitöltendőként),
     nem kell megnyomni a „Rezsi tételek behúzása” gombot. A gomb megmarad a később felvett rezsi tételek
