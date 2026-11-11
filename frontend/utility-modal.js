@@ -39,7 +39,7 @@
     .um-att{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:3px 4px 3px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);font-size:12px;font-weight:500;color:var(--ink-soft);}
     .um-att svg{width:13px;height:13px;flex-shrink:0;color:var(--muted);}
     .um-att a,.um-att .um-att-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit;text-decoration:none;}
-    .um-att a:hover{color:var(--accent);text-decoration:underline;}
+    .um-att a:hover{color:var(--accent-deep);text-decoration:underline;}
     .um-att .dim{flex-shrink:0;}
     .um-att button{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:4px;flex-shrink:0;}
     .um-att button:hover{color:var(--coral);background:var(--coral-bg);}

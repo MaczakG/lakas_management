@@ -4,6 +4,21 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.4** — Új arculat a megadott minta alapján (az egész felületen).
+  - Váz: világosszürke háttér; az oldalsáv a háttéren ül, a tartalom egy nagy fehér, lekerekített lapon.
+  - Oldalsáv: a márkajel és a felhasználó fehér kártyában; csupa nagybetűs, ritkított csoportcímek; az aktív
+    menüpont fehér kártya, narancs jelölővel a bal szélen.
+  - Színek: a fő gomb fekete, a többi gomb fehér, vékony szürke kerettel; a kiemelő szín narancs (jelölő, fókusz,
+    kijelölés, diagram-sávok). A zöld márkaszín megszűnt.
+  - Gombok és mezők: alacsonyabbak (36, illetve 38 px), 8 px lekerekítéssel, vékonyabb betűvel.
+  - Táblázatok: halványszürke fejléc, oszlopelválasztó hajszálvonalak; megnyitható sornál rámutatáskor narancs
+    árnyalat és jelölő a bal szélen.
+  - Állapotok: kis, pasztell hátterű címkék ikon nélkül (lila: rendben, sárga: figyelmeztetés, piros: hiba,
+    zöld: fizetve, szürke: inaktív).
+  - Vezérlőpult: a négy mutató egy közös keretben, függőleges vonalakkal elválasztva; a változás kis zöld/piros
+    címkében.
+  - Kisebb, egységes címsorok (oldalcím 20 px), fülek narancs aláhúzással, ablakok nagyobb lekerekítéssel.
+  - Csak megjelenés változott: működés, adat és migráció nincs. A betűtípus (Geist) maradt.
 - **2026.11.11.3** — Adózási kimutatás a vezérlőpulton (V1.1 / 12. pont).
   - Vezérlőpult: új „Adózási kimutatás” kártya két csempével — „Adó 10% költséghányaddal” és „Adó tételes
     költségelszámolással”. Mindkettő a kiválasztott évre és ingatlanra (vagy az összesre) mutatja a becsült

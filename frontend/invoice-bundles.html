@@ -116,7 +116,7 @@ async function loadBundles() {
         <td>${m.invoiceCount} db${m.failedCount > 0 ? `<div class="failed-note">+ ${m.failedCount} sikertelen</div>` : ''}${m.stornoCount > 0 ? `<div class="cell-sub">ebből ${m.stornoCount} sztornó</div>` : ''}</td>
         <td>${formatCurrency(m.totalAmount)}</td>
         <td class="row-actions">${m.invoiceCount > 0
-          ? `<button class="btn btn-primary btn-sm" type="button" onclick="event.stopPropagation(); exportBundle(this, ${m.year}, ${m.month}, '${fileName}')">Exportálás (ZIP)</button>`
+          ? `<button class="btn btn-secondary btn-sm" type="button" onclick="event.stopPropagation(); exportBundle(this, ${m.year}, ${m.month}, '${fileName}')">Exportálás (ZIP)</button>`
           : ''}</td>
       </tr>${expandable ? `
       <tr class="bundle-detail" data-key="${key}"><td colspan="4"><div class="bundle-slide"><div class="bundle-slide-inner">
