@@ -143,6 +143,6 @@
 
   // Melyik verzió fut éppen — nem hitelesített végpont, támogatáshoz/hibakereséshez hasznos.
   APP_INFO.then((v) => {
-    if (v.version) document.getElementById('version-tag').textContent = `v${v.version}`;
+    showVersionTag(v);
   });
 })();

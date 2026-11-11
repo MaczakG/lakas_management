@@ -4,6 +4,10 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.13** — A menü alján a kiadás neve látszik: V1.1.
+  - Az oldalsáv alján a dátum-alapú változatszám (pl. v2026.11.11.12) helyett „V1.1” áll. A pontos változat a
+    feliratra állva olvasható, és a tesztkörnyezet felső sávjában továbbra is látszik.
+  - Migráció nincs.
 - **2026.11.11.12** — Rezsi felvétel: az „Év” mezőben csak az aktuális és a következő év választható.
   - A Rezsi felvétel oldalon az „Év” szabadon írható szám helyett legördülő lista, két értékkel: az aktuális és a
     következő év (ezekre van a rezsi előre kitöltve). Alapból a következő bizonylat éve van kiválasztva.
