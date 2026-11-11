@@ -10,6 +10,7 @@ let properties = [];
 let invoices = [];
 let ledger = null;
 let company = null;
+let rates = [];   // a követett devizák (a bérleti díj devizájának választékához)
 
 const editor = createInlineEditor({ getRecord: () => tenant, save });
 
@@ -25,12 +26,8 @@ const FIELDS = {
     { path: 'propertyId', label: 'Ingatlan', type: 'select', options: properties.map((p) => ({ value: p.id, label: p.name })) },
     { path: 'moveInDate', label: 'Beköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
     { path: 'moveOutDate', label: 'Kiköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
-    { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: [
-      { value: 'HUF', label: 'Forint (Ft)' },
-      { value: 'EUR', label: 'Euró (EUR), MNB-árfolyamon átszámítva' },
-      { value: 'USD', label: 'Amerikai dollár (USD), MNB-árfolyamon átszámítva' },
-      { value: 'GBP', label: 'Angol font (GBP), MNB-árfolyamon átszámítva' },
-    ] },
+    // Minden követett deviza választható; újat az Árfolyamok oldalon lehet felvenni.
+    { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: rentCurrencyOptions(rates, tenant?.rentCurrency) },
     // A lakbér előre fizetendő. Az „Utólag” csak annál a bérlőnél látszik, akinél korábban az volt beállítva
     // (hogy a meglévő adat ne jelenjen meg tévesen); átállítás után ott is eltűnik.
     { path: 'rentPaymentTiming', label: 'Lakbér fizetése', type: 'select', required: true, options: [
@@ -158,17 +155,7 @@ function renderBalanceBand() {
   });
 }
 
-// Mennyi ideje tart a bérlet: „1 éve és 10 hónapja”, „3 hónapja”.
-function tenancyLength(fromIso, toDate = new Date()) {
-  const [y, m, d] = String(fromIso).split('-').map(Number);
-  const months = (toDate.getFullYear() - y) * 12 + (toDate.getMonth() + 1 - m) - (toDate.getDate() < d ? 1 : 0);
-  if (months < 0) return 'még nem költözött be';
-  const years = Math.floor(months / 12), rest = months % 12;
-  if (years) return `${years} éve${rest ? ` és ${rest} hónapja` : ''}`;
-  return rest ? `${rest} hónapja` : 'ebben a hónapban';
-}
-
-// Összegzés négy csempében: bérlet kezdete, szerződés lejárata, kiállítva összesen és az aktuális évben.
+// Összegzés három csempében: szerződés lejárata, kiállítva összesen és az aktuális évben.
 function renderSummary() {
   renderBalanceBand();
   const year = new Date().getFullYear();
@@ -191,8 +178,6 @@ function renderSummary() {
     leaseSub = movedOut ? '' : leaseEndTag(tenant.leaseEndDate, company?.leaseExpiryNoticeDays) || `${days} nap múlva`;
   }
   document.getElementById('summary').innerHTML = [
-    tile('Bérlet kezdete', tenant.moveInDate ? formatDate(tenant.moveInDate) : none,
-      !tenant.moveInDate ? 'nincs megadva' : tenant.moveOutDate && movedOut ? `kiköltözött: ${formatDate(tenant.moveOutDate)}` : escapeHtml(tenancyLength(tenant.moveInDate))),
     tile('Szerződés lejárata', tenant.leaseEndDate ? formatDate(tenant.leaseEndDate) : none, leaseSub, leaseEdit),
     tile('Kiállítva összesen', formatCurrency(total),
       `${issued.length} db bizonylat${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
@@ -337,9 +322,9 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
 });
 
 (async () => {
-  const [tRes, pRes, iRes, lRes, cRes] = await Promise.all([
+  const [tRes, pRes, iRes, lRes, cRes, rRes] = await Promise.all([
     apiFetch(`/api/tenants/${tenantId}`), apiFetch('/api/properties'), apiFetch(`/api/tenants/${tenantId}/invoices`),
-    apiFetch(`/api/tenants/${tenantId}/ledger`), apiFetch('/api/company'),
+    apiFetch(`/api/tenants/${tenantId}/ledger`), apiFetch('/api/company'), apiFetch('/api/exchange-rates'),
   ]);
   if (tRes.status === 404) { showError('A bérlő nem található.'); document.getElementById('p-name').textContent = 'Nem található'; return; }
   tenant = await readJson(tRes);
@@ -347,6 +332,7 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
   invoices = iRes.ok ? await readJson(iRes) : [];
   ledger = lRes.ok ? await readJson(lRes) : null;
   company = cRes.ok ? await readJson(cRes) : null;
+  rates = rRes.ok ? await readJson(rRes) : [];
   renderHeader();
   renderPanels();
   renderProperty();

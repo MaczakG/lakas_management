@@ -18,6 +18,14 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
   - Árfolyamok: az angol font (GBP) is bekerült az EUR és az USD mellé. A program ugyanúgy az MNB
     árfolyam-szolgáltatásából (API) kérdezi le, óránként és a „Frissítés most” gombbal. A bérlőnél a bérleti díj
     devizája GBP is lehet (a bérlő adatlapján mostantól az USD is választható, ahogy az űrlapon eddig is).
+  - Árfolyamok: új devizák vehetők fel. A „Deviza hozzáadása” gomb ablakában az MNB által közölt, még nem követett
+    devizák listája áll (kód, megnevezés, aktuális árfolyam; kódra és névre kereshető); a „Hozzáadás” gombbal a
+    deviza felkerül a listára, és onnantól óránként frissül. Devizát a cég adminisztrátora vehet fel. A táblázat
+    a megnevezést is mutatja.
+  - A bérlőnél a „Bérleti díj devizája” (adatlap és űrlap) a forint mellett minden követett devizát felkínál,
+    névvel és kóddal.
+  - Bérlő adatlap: a „Bérlet kezdete” csempe megszűnt; három csempe maradt (Szerződés lejárata, Kiállítva
+    összesen, Kiállítva az aktuális évben). A beköltözés dátuma a Bérlet táblában továbbra is látszik.
   - Rezsi ablak: a „Rezsi tételek behúzása” sáv megszűnt (a tételek megnyitáskor maguktól bekerülnek). Ahol a
     megnyitás nem húzza be őket (már kiszámlázott hónap, bérlő nélküli hónap, későbbi hónap, vagy utólag felvett
     rezsi tétel), ott a tétel a „+ Sor hozzáadása” gombbal kézzel vehető fel.

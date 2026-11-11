@@ -17,9 +17,12 @@
     <div class="page-header">
       <div>
         <h1>Árfolyamok</h1>
-        <p>Az MNB aktuális EUR, USD és GBP (angol font) középárfolyama; a program az MNB árfolyam-szolgáltatásából (API) kérdezi le, óránként automatikusan. Bizonylat kiállításakor mindig az itt látható árfolyam kerül felhasználásra.</p>
+        <p>A követett devizák aktuális MNB-középárfolyama; a program az MNB árfolyam-szolgáltatásából (API) kérdezi le, óránként automatikusan. Az itt szereplő devizák választhatók a bérlőknél a bérleti díj devizájának. Bizonylat kiállításakor mindig az itt látható árfolyam kerül felhasználásra.</p>
       </div>
-      <button class="btn btn-primary" id="refresh-btn">Frissítés most</button>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="add-currency-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#plus"/></svg>Deviza hozzáadása</button>
+        <button class="btn btn-primary" id="refresh-btn">Frissítés most</button>
+      </div>
     </div>
 
     <div class="form-error" id="fetch-error"></div>
@@ -28,15 +31,43 @@
     <div class="card-table">
       <table>
         <thead>
-          <tr><th>Deviza</th><th>Árfolyam (Ft)</th><th>MNB árfolyam napja</th><th>Utoljára frissítve</th></tr>
+          <tr><th>Deviza</th><th>Megnevezés</th><th class="num">Árfolyam (Ft)</th><th>MNB árfolyam napja</th><th>Utoljára frissítve</th></tr>
         </thead>
         <tbody id="rates-tbody">
-          <tr class="empty-row"><td colspan="4">Betöltés...</td></tr>
+          <tr class="empty-row"><td colspan="5">Betöltés...</td></tr>
         </tbody>
       </table>
     </div>
   </main>
 </div>
+
+<!-- Új deviza felvétele: az MNB által közölt, még nem követett devizák listájából -->
+<div class="modal-overlay" id="cur-overlay">
+  <div class="modal cur-modal" role="dialog" aria-modal="true" aria-labelledby="cur-title">
+    <div class="modal-head">
+      <div><h2 id="cur-title">Deviza hozzáadása</h2><p>Válaszd ki a listából a felvenni kívánt devizát. Az árfolyamát az MNB adja; felvétel után óránként frissül, és a bérlőknél is választható.</p></div>
+      <button aria-label="Bezárás" class="modal-close" id="cur-close" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-error" id="cur-error"></div>
+      <div class="search-box cur-search"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#search"/></svg><input type="text" id="cur-search" placeholder="Keresés kód vagy név alapján…" autocomplete="off"></div>
+      <div class="card-table cur-list"><table>
+        <thead><tr><th>Deviza</th><th>Megnevezés</th><th class="num">Árfolyam (Ft)</th><th></th></tr></thead>
+        <tbody id="cur-tbody"><tr class="empty-row"><td colspan="4">Betöltés...</td></tr></tbody>
+      </table></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="cur-cancel" type="button">Bezárás</button></div>
+  </div>
+</div>
+
+<style>
+  .page-actions{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;}
+  .cur-modal{max-width:640px;}
+  .cur-search{max-width:none;margin-bottom:12px;}
+  .cur-list{max-height:46vh;overflow-y:auto;}
+  .cur-list thead th{position:sticky;top:0;z-index:1;}
+  .cur-list .btn{height:30px;padding:0 10px;font-size:12.5px;}
+</style>
 
 <script>
 requireAuth();
@@ -47,15 +78,16 @@ async function loadRates() {
   const tbody = document.getElementById('rates-tbody');
 
   if (rates.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Még nincs lekért árfolyam. Kattints a „Frissítés most” gombra.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Még nincs lekért árfolyam. Kattints a „Frissítés most” gombra.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = rates.map((r) => `
     <tr>
       <td class="cell-main">${escapeHtml(r.currencyCode)}</td>
-      <td>${formatNumber(r.rateToHuf, 2)} Ft</td>
-      <td>${r.rateDate}</td>
+      <td>${escapeHtml(r.name || '')}</td>
+      <td class="num">${formatNumber(r.rateToHuf, 2)} Ft</td>
+      <td>${formatDate(r.rateDate)}</td>
       <td class="cell-sub">${new Date(r.fetchedAt).toLocaleString('hu-HU')}</td>
     </tr>
   `).join('');
@@ -88,6 +120,81 @@ document.getElementById('refresh-btn').addEventListener('click', async () => {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Frissítés most';
+  }
+});
+
+// ---------- Deviza hozzáadása ----------
+let availableCurrencies = [];
+const curOverlay = document.getElementById('cur-overlay');
+
+function renderAvailable() {
+  const term = document.getElementById('cur-search').value.trim().toLowerCase();
+  const rows = availableCurrencies.filter((c) => c.currencyCode.toLowerCase().includes(term) || (c.name || '').toLowerCase().includes(term));
+  const tbody = document.getElementById('cur-tbody');
+  if (!availableCurrencies.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Minden deviza szerepel már a listán, amelyre az MNB árfolyamot közöl.</td></tr>';
+    return;
+  }
+  if (!rows.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Nincs találat.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map((c) => `
+    <tr>
+      <td class="cell-main">${escapeHtml(c.currencyCode)}</td>
+      <td>${escapeHtml(c.name || '')}</td>
+      <td class="num">${formatNumber(c.rateToHuf, 2)} Ft</td>
+      <td class="row-actions"><button class="btn btn-secondary" type="button" data-add-currency="${escapeHtml(c.currencyCode)}">Hozzáadás</button></td>
+    </tr>`).join('');
+}
+
+async function openCurrencyPicker() {
+  const errorEl = document.getElementById('cur-error');
+  errorEl.classList.remove('show');
+  document.getElementById('cur-search').value = '';
+  document.getElementById('cur-tbody').innerHTML = '<tr class="empty-row"><td colspan="4">Betöltés...</td></tr>';
+  curOverlay.classList.add('open');
+  try {
+    const res = await apiFetch('/api/exchange-rates/available');
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.message || 'Nem sikerült lekérni a devizák listáját.');
+    availableCurrencies = data;
+    renderAvailable();
+    document.getElementById('cur-search').focus();
+  } catch (err) {
+    availableCurrencies = [];
+    document.getElementById('cur-tbody').innerHTML = '<tr class="empty-row"><td colspan="4">A lista most nem érhető el.</td></tr>';
+    errorEl.textContent = err.message;
+    errorEl.classList.add('show');
+  }
+}
+const closeCurrencyPicker = () => curOverlay.classList.remove('open');
+
+document.getElementById('add-currency-btn').addEventListener('click', openCurrencyPicker);
+document.getElementById('cur-close').addEventListener('click', closeCurrencyPicker);
+document.getElementById('cur-cancel').addEventListener('click', closeCurrencyPicker);
+curOverlay.addEventListener('click', (e) => { if (e.target === curOverlay) closeCurrencyPicker(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && curOverlay.classList.contains('open')) closeCurrencyPicker(); });
+document.getElementById('cur-search').addEventListener('input', renderAvailable);
+document.getElementById('cur-tbody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-add-currency]');
+  if (!btn) return;
+  const errorEl = document.getElementById('cur-error');
+  errorEl.classList.remove('show');
+  btn.disabled = true;
+  try {
+    const res = await apiFetch('/api/exchange-rates', { method: 'POST', body: JSON.stringify({ currencyCode: btn.dataset.addCurrency }) });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(res.status === 403 ? 'Devizát csak a cég adminisztrátora vehet fel.' : (data?.message || 'Nem sikerült felvenni a devizát.'));
+    closeCurrencyPicker();
+    const successEl = document.getElementById('fetch-success');
+    successEl.textContent = `A(z) ${btn.dataset.addCurrency} deviza felkerült a listára.`;
+    successEl.classList.add('show');
+    loadRates();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.add('show');
+    btn.disabled = false;
   }
 });
 

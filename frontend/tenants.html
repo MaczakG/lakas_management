@@ -65,12 +65,7 @@
             <select id="f-property"><option value="">Nincs hozzárendelve</option></select>
           </div>
           <div class="field"><label for="f-currency">Bérleti díj alapja</label>
-            <select id="f-currency">
-              <option value="HUF">Forint (Ft)</option>
-              <option value="EUR">EUR (MNB-árfolyamon átszámítva)</option>
-              <option value="USD">USD (MNB-árfolyamon átszámítva)</option>
-              <option value="GBP">GBP, angol font (MNB-árfolyamon átszámítva)</option>
-            </select>
+            <select id="f-currency"><option value="HUF">Forint (Ft)</option></select>
             <span class="hint">A bizonylaton mindig HUF összeg jelenik meg; ez csak azt dönti el, milyen devizában van megadva az ingatlan bérleti díja.</span>
           </div>
         </div>
@@ -97,10 +92,19 @@ requireAuth();
 let tenants = [];
 let properties = [];
 let editingId = null;
+let rates = [];   // a követett devizák (az Árfolyamok oldalról)
+// A deviza-választék: forint + a követett devizák; szerkesztésnél a bérlő mostani devizája mindig szerepel.
+function fillCurrencies(current) {
+  const select = document.getElementById('f-currency');
+  select.innerHTML = rentCurrencyOptions(rates, current).map((o) => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('');
+  select.value = current || 'HUF';
+}
 let leaseNoticeDays = 30;   // a Beállításokban megadott értesítési idő (a lejárat-jelzéshez)
 
 async function loadData() {
-  const [tenantsRes, propertiesRes, companyRes] = await Promise.all([apiFetch('/api/tenants'), apiFetch('/api/properties'), apiFetch('/api/company')]);
+  const [tenantsRes, propertiesRes, companyRes, ratesRes] = await Promise.all([apiFetch('/api/tenants'), apiFetch('/api/properties'), apiFetch('/api/company'), apiFetch('/api/exchange-rates')]);
+  rates = ratesRes.ok ? await ratesRes.json() : [];
+  fillCurrencies();
   tenants = await tenantsRes.json();
   properties = await propertiesRes.json();
   if (companyRes.ok) leaseNoticeDays = (await companyRes.json()).leaseExpiryNoticeDays || 30;
@@ -153,6 +157,7 @@ function openModal(title) {
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   document.getElementById('tenant-form').reset();
+  fillCurrencies();
   editingId = null;
 }
 
@@ -171,7 +176,7 @@ window.editTenant = (id) => {
   document.getElementById('f-address').value = t.address || '';
   document.getElementById('f-taxid').value = t.taxId || '';
   document.getElementById('f-property').value = t.propertyId || '';
-  document.getElementById('f-currency').value = t.rentCurrency || 'HUF';
+  fillCurrencies(t.rentCurrency || 'HUF');
   document.getElementById('f-move-in').value = t.moveInDate || '';
   document.getElementById('f-move-out').value = t.moveOutDate || '';
   document.getElementById('f-lease-end').value = t.leaseEndDate || '';
