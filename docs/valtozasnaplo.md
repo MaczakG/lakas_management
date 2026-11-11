@@ -4,6 +4,22 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.11** — A rezsi előre, 24 hónapra kitöltődik: az aktuális és a következő év minden hónapja.
+  - Az ingatlan rezsije a rezsi tételekből magától elkészül az aktuális és a következő év hónapjaira (a fix tételek
+    összeggel, a nem fixek kitöltendőként), nem csak a hónap megnyitásakor. Fut a rezsi megnyitásakor és naponta a
+    háttérben is, így évváltáskor az új következő év is kitöltődik.
+  - Egy hónap akkor töltődik ki, ha még nem volt előkészítve és nincs benne tétel (a kézzel törölt tétel nem jön
+    vissza), nincs rá érvényes bizonylat, és a hónapban van bérlője az ingatlannak.
+  - Visszafelé csak az ingatlan első bizonylatának hónapjáig tölt (ha még nincs bizonylata: a következő bizonylat
+    hónapjától), hogy a program bevezetése előtti, soha ki nem számlázott hónapok rezsije ne kerüljön magától a
+    következő bizonylatra. Ilyen hónap a megnyitásával továbbra is kitölthető.
+  - A rezsi tétel változása átvezetődik az előre kitöltött hónapokra, a következő bizonylat hónapjától: módosításkor
+    az érintetlen havi tételek az új megnevezést és összeget kapják, új tétel a már kitöltött hónapokba is bekerül,
+    törléskor az érintetlen havi tételek is törlődnek. A kézzel átírt, kitöltött, megjegyzéssel vagy csatolmánnyal
+    ellátott és a már bizonylatra került tétel változatlan marad.
+  - Vezérlőpult: a rezsi-kimutatás és az adóbecslés csak az aktuális hónapig számol, a jövőbeli hónapok előre
+    kitöltött rezsije nem számít bele. Bizonylatra továbbra is csak a bizonylat hónapjáig felvett tétel kerül.
+  - Migráció nincs.
 - **2026.11.11.10** — Az utólagos rezsitétel beleszámít az egyenlegbe; az árfolyamoknál a követett deviza törölhető.
   - Egyenleg: az utólagos tétel (már kiszámlázott hónaphoz utólag felvett, még bizonylatra váró rezsitétel)
     tartozásnak számít, és beleszámít a bérlő egyenlegébe (bérlő adatlap, Bérlők lista, vezérlőpult). Az Egyenleg

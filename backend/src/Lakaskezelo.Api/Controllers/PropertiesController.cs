@@ -106,6 +106,10 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
     [HttpGet("{id:guid}/utility-costs")]
     public async Task<ActionResult<List<UtilityCostEntryDto>>> ListUtilityCosts(Guid id, CancellationToken ct)
     {
+        // A lekérdezés előtt az aktuális és a következő év rezsije elkészül a rezsi tételekből (ld.
+        // UtilityPeriods.PrepareAheadAsync), hogy a táblázat mindig ki legyen töltve.
+        var property = await db.Properties.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (property is { IsActive: true }) await UtilityPeriods.PrepareAheadAndSaveAsync(db, property, BudapestClock.Now, ct);
         var entries = await db.UtilityCostEntries.Where(u => u.PropertyId == id)
             .Include(u => u.Invoice).Include(u => u.Attachments)
             .OrderByDescending(u => u.Year).ThenByDescending(u => u.Month).ThenBy(u => u.CreatedAt).ThenBy(u => u.Label)
@@ -256,28 +260,39 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         };
         Apply(item, request);
         db.UtilityItems.Add(item);
+        // Az új tétel a már előre kitöltött hónapokba is bekerül.
+        var property = await db.Properties.SingleAsync(p => p.Id == id, ct);
+        await UtilityPeriods.AddItemEntriesAsync(db, property, item, BudapestClock.Now, ct);
         await db.SaveChangesAsync(ct);
         return Ok(ToDto(item));
     }
 
-    // A módosítás a később előkészített hónapokra hat; a már elkészült havi tételek változatlanok maradnak.
+    // A módosítás a később előkészített hónapokra hat, és az előre kitöltött hónapok érintetlen tételeire is (a
+    // következő bizonylat hónapjától; ld. UtilityPeriods.IsUntouched). A kézzel átírt, kitöltött vagy már bizonylatra
+    // került havi tételek változatlanok maradnak.
     [HttpPut("{id:guid}/utility-items/{itemId:guid}")]
     public async Task<ActionResult<UtilityItemDto>> UpdateUtilityItem(Guid id, Guid itemId, UpsertUtilityItemRequest request, CancellationToken ct)
     {
         var item = await db.UtilityItems.FirstOrDefaultAsync(i => i.Id == itemId && i.PropertyId == id, ct);
         if (item is null) return NotFound();
         if (ValidateItem(request) is { } error) return BadRequest(new { message = error });
+        var (oldLabel, oldAmount, oldForwardBilled) = (item.Label, UtilityPeriods.ExpectedAmount(item.IsFixed, item.Amount), item.ForwardBilled);
         Apply(item, request);
+        var property = await db.Properties.SingleAsync(p => p.Id == id, ct);
+        await UtilityPeriods.ApplyItemChangeAsync(db, property, item, oldLabel, oldAmount, oldForwardBilled, BudapestClock.Now, ct);
         await db.SaveChangesAsync(ct);
         return Ok(ToDto(item));
     }
 
-    // Törléskor a már elkészült havi tételek megmaradnak (egyedi tételként élnek tovább).
+    // Törléskor az előre kitöltött hónapok érintetlen tételei is törlődnek (a következő bizonylat hónapjától); a
+    // többi, már elkészült havi tétel megmarad (egyedi tételként él tovább).
     [HttpDelete("{id:guid}/utility-items/{itemId:guid}")]
     public async Task<IActionResult> DeleteUtilityItem(Guid id, Guid itemId, CancellationToken ct)
     {
         var item = await db.UtilityItems.FirstOrDefaultAsync(i => i.Id == itemId && i.PropertyId == id, ct);
         if (item is null) return NotFound();
+        var property = await db.Properties.SingleAsync(p => p.Id == id, ct);
+        await UtilityPeriods.RemoveItemEntriesAsync(db, property, item, BudapestClock.Now, ct);
         db.UtilityItems.Remove(item);
         await db.SaveChangesAsync(ct);
         return NoContent();

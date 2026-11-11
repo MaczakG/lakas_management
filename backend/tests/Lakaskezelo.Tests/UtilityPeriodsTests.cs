@@ -90,3 +90,62 @@ public class LateUtilityTests
         Assert.False(Lakaskezelo.Api.Billing.TenantBalances.IsLate(Entry(2026, 8, Guid.NewGuid()), invoiced));
     }
 }
+
+public class UtilityPrepareAheadTests
+{
+    private const int Floor = 2026 * 12 + 4;    // az ingatlan első bizonylata: 2026. április
+    private const int Window = 2023 * 12 + 12;
+
+    [Fact]
+    public void An_untouched_month_with_tenant_from_the_floor_on_is_prepared()
+    {
+        Assert.True(UtilityPeriods.ShouldPrepareAhead(false, false, false, true, Floor, Floor, Window));
+        Assert.True(UtilityPeriods.ShouldPrepareAhead(false, false, false, true, 2027 * 12 + 12, Floor, Window));
+    }
+
+    [Fact]
+    public void Months_before_the_first_invoice_are_not_prepared()
+    {
+        Assert.False(UtilityPeriods.ShouldPrepareAhead(false, false, false, true, Floor - 1, Floor, Window));
+    }
+
+    [Theory]
+    [InlineData(true, false, false, true)]   // már elő volt készítve (a törölt tétel nem jön vissza)
+    [InlineData(false, true, false, true)]   // van benne tétel
+    [InlineData(false, false, true, true)]   // van rá érvényes bizonylat
+    [InlineData(false, false, false, false)] // nincs bérlő a hónapban
+    public void Unsafe_months_are_left_alone(bool prepared, bool hasEntries, bool hasInvoice, bool tenant)
+    {
+        Assert.False(UtilityPeriods.ShouldPrepareAhead(prepared, hasEntries, hasInvoice, tenant, Floor + 1, Floor, Window));
+    }
+
+    private static Lakaskezelo.Domain.Entities.UtilityCostEntry Entry(string label = "Közös költség", decimal amount = 15000, bool forward = false) =>
+        new() { Id = Guid.NewGuid(), Label = label, Amount = amount, ForwardBilled = forward };
+
+    [Fact]
+    public void An_entry_matching_the_item_is_untouched()
+    {
+        Assert.True(UtilityPeriods.IsUntouched(Entry(), false, "Közös költség", 15000, false));
+    }
+
+    [Fact]
+    public void An_edited_filled_or_billed_entry_is_not_untouched()
+    {
+        Assert.False(UtilityPeriods.IsUntouched(Entry(amount: 16000), false, "Közös költség", 15000, false));
+        Assert.False(UtilityPeriods.IsUntouched(Entry(label: "Közös ktg."), false, "Közös költség", 15000, false));
+        Assert.False(UtilityPeriods.IsUntouched(Entry(forward: true), false, "Közös költség", 15000, false));
+        Assert.False(UtilityPeriods.IsUntouched(Entry(), true, "Közös költség", 15000, false));   // van csatolmánya
+        var noted = Entry(); noted.Note = "egyeztetve";
+        Assert.False(UtilityPeriods.IsUntouched(noted, false, "Közös költség", 15000, false));
+        var billed = Entry(); billed.InvoiceId = Guid.NewGuid();
+        Assert.False(UtilityPeriods.IsUntouched(billed, false, "Közös költség", 15000, false));
+    }
+
+    [Fact]
+    public void Expected_amount_is_the_fixed_amount_or_zero()
+    {
+        Assert.Equal(15000, UtilityPeriods.ExpectedAmount(true, 15000));
+        Assert.Equal(0, UtilityPeriods.ExpectedAmount(false, 15000));
+        Assert.Equal(0, UtilityPeriods.ExpectedAmount(true, null));
+    }
+}
