@@ -217,9 +217,51 @@ window.VizCharts = (function () {
     }
   }
 
+  // ---------- körcikk (fánk) diagram ----------
+  // slices: [{ name, color, value }] (value > 0), tooltip(i) → { title, rows, foot }. A szeletek közt 2 px rés van
+  // (a felület színével körberajzolva); az értékek a buborékban és a mellette álló jelmagyarázatban is olvashatók.
+  function renderDonut(container, { slices, tooltip, emptyText, ariaLabel }) {
+    container.replaceChildren();
+    const size = 120, c = size / 2, rOuter = 58, rInner = 37;
+    const svg = svgEl('svg', { viewBox: `0 0 ${size} ${size}`, role: 'img', 'aria-label': ariaLabel || '' }, container);
+    const total = slices.reduce((sum, s) => sum + s.value, 0);
+    if (!(total > 0)) {
+      svgEl('circle', { cx: c, cy: c, r: (rOuter + rInner) / 2, fill: 'none', stroke: cssVar(container, '--viz-grid'), 'stroke-width': rOuter - rInner }, svg);
+      if (emptyText) {
+        const t = svgEl('text', { x: c, y: c + 4, 'text-anchor': 'middle', class: 'tick' }, svg);
+        t.textContent = emptyText;
+      }
+      return;
+    }
+    const surface = cssVar(container, '--surface') || '#fff';
+    const point = (r, a) => [c + r * Math.sin(a), c - r * Math.cos(a)];
+    let angle = 0;
+    slices.forEach((s, i) => {
+      const sweep = (s.value / total) * Math.PI * 2;
+      let d;
+      if (slices.length === 1 || sweep >= Math.PI * 2 - 1e-6) {
+        // teljes gyűrű: két félkörívből (egyetlen ív kezdő- és végpontja egybeesne)
+        d = `M${c},${c - rOuter} A${rOuter},${rOuter} 0 1 1 ${c},${c + rOuter} A${rOuter},${rOuter} 0 1 1 ${c},${c - rOuter} Z`
+          + ` M${c},${c - rInner} A${rInner},${rInner} 0 1 0 ${c},${c + rInner} A${rInner},${rInner} 0 1 0 ${c},${c - rInner} Z`;
+      } else {
+        const [x0, y0] = point(rOuter, angle), [x1, y1] = point(rOuter, angle + sweep);
+        const [x2, y2] = point(rInner, angle + sweep), [x3, y3] = point(rInner, angle);
+        const large = sweep > Math.PI ? 1 : 0;
+        d = `M${x0},${y0} A${rOuter},${rOuter} 0 ${large} 1 ${x1},${y1} L${x2},${y2} A${rInner},${rInner} 0 ${large} 0 ${x3},${y3} Z`;
+      }
+      const path = svgEl('path', { d, fill: s.color, 'fill-rule': 'evenodd', stroke: surface, 'stroke-width': 2, 'stroke-linejoin': 'round', class: 'slice', tabindex: 0 }, svg);
+      const show = (x, y) => showTip(tooltip(i), x, y);
+      path.addEventListener('mousemove', (e) => show(e.clientX, e.clientY));
+      path.addEventListener('mouseleave', hideTip);
+      path.addEventListener('focus', () => { const r = path.getBoundingClientRect(); show(r.left + r.width / 2, r.top); });
+      path.addEventListener('blur', hideTip);
+      angle += sweep;
+    });
+  }
+
   function legend(el, items) {
     el.innerHTML = items.map((it) => `<span class="key"><span class="sw" style="background:${it.color}"></span>${escapeHtml(it.name)}</span>`).join('');
   }
 
-  return { MONTH_SHORT, cssVar, categoryColor, compact, huf, inYear, showTip, hideTip, renderColumns, legend };
+  return { MONTH_SHORT, cssVar, categoryColor, compact, huf, inYear, showTip, hideTip, renderColumns, renderDonut, legend };
 })();

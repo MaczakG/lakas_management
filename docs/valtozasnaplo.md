@@ -4,6 +4,13 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.14** — Ingatlan adatlap: három csempe az idei számokkal.
+  - A fejléc alatt új csempesor áll: a rezsi megoszlása körcikk-diagramon (a legnagyobb öt tétel külön szelet, a
+    többi „Egyéb”; mellette a tételek összege és aránya, a szeletre állva buborék), a Bevétel (az idei időszakokra
+    kiállított bizonylatok összege és darabszáma) és a Kiadások (az idén az aktuális hónapig felvett rezsi).
+  - A jövőbeli hónapok előre kitöltött rezsije nem számít bele. A jóváírás (negatív összegű tétel) nem szelet: a
+    jelmagyarázatban külön sorban áll, a Kiadások összegét csökkenti.
+  - Migráció nincs.
 - **2026.11.11.13** — A menü alján a kiadás neve látszik: V1.1.
   - Az oldalsáv alján a dátum-alapú változatszám (pl. v2026.11.11.12) helyett „V1.1” áll. A pontos változat a
     feliratra állva olvasható, és a tesztkörnyezet felső sávjában továbbra is látszik.

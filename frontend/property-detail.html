@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="detail.css">
 <link rel="stylesheet" href="documents.css">
+<link rel="stylesheet" href="charts.css">
 </head>
 <body>
 
@@ -44,6 +45,9 @@
       </div>
 
       <div class="form-error" id="load-error"></div>
+
+      <!-- Idei számok: a rezsi megoszlása, a bevétel és a kiadások -->
+      <section class="stat-tiles has-chart viz-root" id="year-tiles"></section>
 
       <div class="masonry" id="masonry">
         <section class="panel">
@@ -182,6 +186,7 @@
   </div>
 </div>
 
+<script src="charts.js"></script>
 <script src="documents.js"></script>
 <script src="property-detail.js"></script>
 </body>
