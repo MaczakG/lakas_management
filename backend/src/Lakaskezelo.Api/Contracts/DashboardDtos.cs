@@ -19,7 +19,9 @@ public record DashboardDto(
     List<DashboardProperty> Properties, Guid? PropertyId = null, string? CurrentTenantName = null,
     // Egyenleg (teljes időszak, nem az évre szűrve): várt = kiállított bizonylatok + bizonylatra váró rezsi,
     // kifizetett = befizetések; az egyenleg a kettő különbsége. Ugyanaz a számítás, mint a bérlők egyenlegénél.
-    decimal BalanceExpected = 0, decimal BalancePaid = 0, List<PropertyBalance>? BalanceByProperty = null);
+    decimal BalanceExpected = 0, decimal BalancePaid = 0, List<PropertyBalance>? BalanceByProperty = null,
+    // Adózási kimutatás (ld. Billing.TaxEstimate); cégnél null, mert csak magánszemély bérbeadóra értelmezett.
+    Lakaskezelo.Api.Billing.TaxEstimate.Result? Tax = null);
 
 public record PropertyBalance(Guid PropertyId, string Name, decimal Expected, decimal Paid);
 
