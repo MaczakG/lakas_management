@@ -11,6 +11,7 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
   - Új elrendezés: fejléc a bizonylat adataival jobbra, a két fél egymás mellett, a tételek táblázata jobbra zárt
     összegekkel, a végösszeg kiemelve (egyetlen tételnél is látszik). A kelt a fejlécben is szerepel, a láblécben
     a bizonylat száma és az oldalszám áll. Sztornónál a „SZTORNÓ” piros felirattal a név fölött áll.
+  - A bizonylat színei visszafogottak: a felső sáv és a végösszeg kiemelése sötétszürke (sztornónál piros).
   - A már elkészült és eltárolt PDF-ek nem változnak; az új elrendezés az ezután készülő (és a tárolt PDF nélküli,
     megnyitáskor előállított) bizonylatokra érvényes. Számlázóból (Billingo, Számlázz.hu) jövő számlát nem érint.
   - Migráció nincs.

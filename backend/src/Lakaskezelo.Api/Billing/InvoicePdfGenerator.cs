@@ -17,12 +17,13 @@ public static class InvoicePdfGenerator
         ["január", "február", "március", "április", "május", "június",
          "július", "augusztus", "szeptember", "október", "november", "december"];
 
-    // Színek: sötét szöveg, egy halvány felület és vonal, egyetlen kiemelő szín (nyomtatva szürkében is olvasható).
+    // Színek: sötét szöveg, egy halvány felület és vonal; a kiemelés (felső sáv, a végösszeg széle) sötétszürke,
+    // sztornónál piros.
     private const string Ink = "#18181B";
     private const string Muted = "#6B7280";
     private const string Line = "#E4E4E7";
     private const string Surface = "#F4F4F5";
-    private const string Accent = "#F4511E";
+    private const string Accent = "#3F3F46";
     private const string Danger = "#B91C1C";
 
     // A tételeket külön paraméterként kapja, nem az invoice.Lines navigációból olvassa — az
