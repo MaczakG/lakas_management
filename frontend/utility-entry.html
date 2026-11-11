@@ -61,7 +61,7 @@
     <!-- 2. lépés: a kiválasztott ingatlan rezsije -->
     <div id="ue-entry" hidden>
     <div class="context-row">
-      <div class="field"><label for="ue-year">Év</label><input type="number" id="ue-year"></div>
+      <div class="field"><label for="ue-year">Év</label><select id="ue-year"></select></div>
     </div>
 
     <section class="section viz-root">
@@ -147,7 +147,11 @@ async function showEntry(property) {
   document.getElementById('ue-back').hidden = properties.length < 2;
   document.getElementById('ue-picker').hidden = true;
   document.getElementById('ue-entry').hidden = false;
-  yearInput.value = property.nextPeriodYear || new Date().getFullYear();
+  // Csak az aktuális és a következő év választható: ezekre van a rezsi előre kitöltve.
+  const thisYear = new Date().getFullYear();
+  const years = [thisYear, thisYear + 1];
+  yearInput.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
+  yearInput.value = String(years.includes(property.nextPeriodYear) ? property.nextPeriodYear : thisYear);
   await loadMonths();
 }
 

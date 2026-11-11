@@ -4,6 +4,10 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.12** — Rezsi felvétel: az „Év” mezőben csak az aktuális és a következő év választható.
+  - A Rezsi felvétel oldalon az „Év” szabadon írható szám helyett legördülő lista, két értékkel: az aktuális és a
+    következő év (ezekre van a rezsi előre kitöltve). Alapból a következő bizonylat éve van kiválasztva.
+  - Migráció nincs.
 - **2026.11.11.11** — A rezsi előre, 24 hónapra kitöltődik: az aktuális és a következő év minden hónapja.
   - Az ingatlan rezsije a rezsi tételekből magától elkészül az aktuális és a következő év hónapjaira (a fix tételek
     összeggel, a nem fixek kitöltendőként), nem csak a hónap megnyitásakor. Fut a rezsi megnyitásakor és naponta a
