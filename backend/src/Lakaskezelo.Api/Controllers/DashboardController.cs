@@ -14,7 +14,7 @@ namespace Lakaskezelo.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/dashboard")]
-public class DashboardController(LakaskezeloDbContext db) : ControllerBase
+public class DashboardController(LakaskezeloDbContext db, ICompanyContext companyContext) : ControllerBase
 {
     private const int UtilityCategoryLimit = 5;
     private const string OtherCategory = "Egyéb";
@@ -61,7 +61,7 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
         // Rezsi: a tételek megnevezése szabad szöveg, ezért kis-nagybetűtől függetlenül csoportosítjuk; a legnagyobb
         // öt kategória külön sávot kap, a többi „Egyéb”-be kerül (több szín már nem különböztethető meg biztosan).
         var utilityRows = await db.UtilityCostEntries.Where(u => u.Year == y && (propertyId == null || u.PropertyId == propertyId))
-            .Select(u => new { u.Month, u.Label, u.Amount })
+            .Select(u => new { u.Month, u.Label, u.Amount, u.ForwardBilled })
             .ToListAsync(ct);
         var normalized = utilityRows.Select(u => new { u.Month, Label = NormalizeLabel(u.Label), u.Amount }).ToList();
         var ranked = normalized.GroupBy(u => u.Label.ToLowerInvariant())
@@ -139,6 +139,24 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
         years.Add(now.Year);
         years.Add(y);
 
+        // Adózási kimutatás (csak magánszemély bérbeadónak): bevétel a kiállított bizonylatokból (a bérlő által levont
+        // SZJA sora nélkül), költség a nem „tovább számlázandó” rezsi tételekből.
+        TaxEstimate.Result? tax = null;
+        var isBusiness = await db.Companies.Where(c => c.Id == companyContext.CompanyId).Select(c => c.IsBusiness).SingleOrDefaultAsync(ct);
+        if (!isBusiness)
+        {
+            var withheld = (await db.InvoiceLines
+                    .Where(l => l.Label == InvoiceGenerationService.SzjaLabel && l.Invoice!.PeriodYear == y && l.Invoice.Status != InvoiceStatus.Failed
+                        && l.Invoice.CancelledAt == null && l.Invoice.CancelsInvoiceId == null
+                        && (propertyId == null || l.Invoice.PropertyId == propertyId))
+                    .GroupBy(l => l.Invoice!.PeriodMonth).Select(g => new { g.Key, Sum = g.Sum(l => l.Amount) }).ToListAsync(ct))
+                .ToDictionary(g => g.Key, g => -g.Sum);
+            tax = TaxEstimate.Calculate(
+                counted.GroupBy(i => i.PeriodMonth).ToDictionary(g => g.Key, g => g.Sum(i => i.AmountTotal) + withheld.GetValueOrDefault(g.Key)),
+                utilityRows.Where(u => !u.ForwardBilled && u.Amount != 0).GroupBy(u => u.Month).ToDictionary(g => g.Key, g => g.Sum(u => u.Amount)),
+                withheld);
+        }
+
         return Ok(new DashboardDto(
             y,
             years.Distinct().OrderByDescending(v => v).ToList(),
@@ -158,7 +176,7 @@ public class DashboardController(LakaskezeloDbContext db) : ControllerBase
             allProperties,
             propertyId,
             propertyId is null ? null : living.OrderByDescending(t => t.MoveInDate).FirstOrDefault()?.Name,
-            balanceExpected, balancePaid, balanceByProperty));
+            balanceExpected, balancePaid, balanceByProperty, tax));
     }
 
     private static string NormalizeLabel(string label)

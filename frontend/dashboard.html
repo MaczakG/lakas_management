@@ -58,6 +58,23 @@
         </div>
       </div>
 
+      <!-- Adózási kimutatás (csak magánszemély bérbeadónál) -->
+      <section class="viz-card tax-card" id="tax-card" hidden>
+        <div class="viz-head">
+          <div>
+            <h2 class="viz-title" id="tax-title">Adózási kimutatás</h2>
+            <p class="viz-sub" id="tax-sub"></p>
+          </div>
+        </div>
+        <div class="tax-tiles">
+          <div class="tax-tile" id="tax-flat"></div>
+          <div class="tax-tile" id="tax-itemized"></div>
+        </div>
+        <p class="tax-note" id="tax-withheld" hidden></p>
+        <p class="tax-warn"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons/icons.svg#triangle-alert"/></svg><span>Minden felvitt, nem „tovább számlázandó” rezsi tétel költségként számít a tételes elszámolásban; a „tovább számlázandó” tétel nem vonható le. Becslés a kiállított bizonylatokból és a felvett rezsi tételekből, nem adótanácsadás.</span></p>
+        <details class="viz-table"><summary>Havi bontás</summary><div id="tax-table"></div></details>
+      </section>
+
       <div class="viz-grid">
         <section class="viz-card span-2">
           <div class="viz-head">

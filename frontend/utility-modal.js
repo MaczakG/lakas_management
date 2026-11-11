@@ -58,6 +58,7 @@
     .um-prepare.show{display:flex;}
     .um-prepare .btn{height:34px;padding:0 12px;font-size:12.5px;flex-shrink:0;}
     .um-section-title{font-family:var(--font-display);font-weight:700;font-size:14.5px;margin:0 0 10px;color:var(--ink);}
+    .um-tax-hint{margin:-4px 0 10px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);font-weight:500;}
   `;
   document.head.appendChild(styleTag);
 
@@ -85,6 +86,7 @@
           <div class="um-existing-total" id="um-existing-total"></div>
 
           <h3 class="um-section-title" id="um-new-title">Új tételek</h3>
+          <p class="um-tax-hint" id="um-tax-hint" hidden>Minden itt felvitt tétel költségként számít a vezérlőpult adózási kimutatásában, kivéve a „tovább számlázandót”.</p>
           <div id="um-draft-rows"></div>
           <div class="um-total" id="um-draft-total"></div>
           <div class="form-error" id="um-form-error"></div>
@@ -168,6 +170,13 @@
     await refresh({ keepDrafts: true });
     if (typeof state.onSaved === 'function') state.onSaved();
   };
+
+  // A cég típusa (egyszer kérdezzük le): magánszemély bérbeadónál van adózási kimutatás a vezérlőpulton.
+  let companyPrivate = null;
+  function companyIsPrivate() {
+    companyPrivate ??= apiFetch('/api/company').then((r) => (r.ok ? r.json() : null)).then((c) => !!c && !c.isBusiness).catch(() => false);
+    return companyPrivate;
+  }
 
   function addDraftRow() {
     const row = document.createElement('div');
@@ -270,6 +279,8 @@
     for (const id of ['um-new-title', 'um-draft-rows', 'um-draft-total', 'um-add-row-btn', 'um-save-btn']) {
       document.getElementById(id).style.display = tooOld ? 'none' : '';
     }
+    // Az adózási kimutatás csak magánszemély bérbeadónál van: a figyelmeztetés is csak ott látszik.
+    companyIsPrivate().then((isPrivate) => { document.getElementById('um-tax-hint').hidden = !isPrivate || tooOld; });
 
     if (!keepDrafts) resetDraftRows();
   }

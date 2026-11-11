@@ -4,6 +4,23 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.3** — Adózási kimutatás a vezérlőpulton (V1.1 / 12. pont).
+  - Vezérlőpult: új „Adózási kimutatás” kártya két csempével — „Adó 10% költséghányaddal” és „Adó tételes
+    költségelszámolással”. Mindkettő a kiválasztott évre és ingatlanra (vagy az összesre) mutatja a becsült
+    SZJA-t (15%), alatta a bevételt, a levont költséget és a jövedelmet. A kedvezőbb csempe ki van emelve, és
+    kiírja, mennyivel kevesebb.
+  - Számítás: bevétel = a kiállított bizonylatok összege (bérleti díj és a bizonylatra került rezsi; a bérlő által
+    levont SZJA sora nélkül; a sikertelen és a sztornózott bizonylat kimarad). 10%: jövedelem = bevétel × 90%.
+    Tételes: jövedelem = bevétel − költség.
+  - Költség: minden felvitt, összeggel rendelkező rezsi tétel, amely nem „tovább számlázandó” (a rezsi tételekből
+    készültek és az egyedileg felvittek is). A „tovább számlázandó” tétel nem vonható le.
+  - Havi bontás (lenyitható táblázat): hónaponként a bevétel, a költség, és mindkét esetben a jövedelem és az adó.
+    Az éves tételes adó az éves jövedelemből számol, ezért veszteséges hónap mellett kisebb lehet a havi adók
+    összegénél.
+  - Ha a bérlő vonja le az SZJA-t, külön sor mutatja, mennyit vont már le a bizonylatokon.
+  - Figyelmeztetés a kártyán és a rezsi ablakban az új tételeknél: minden felvitt, nem „tovább számlázandó” tétel
+    költségként számít. A kimutatás becslés, nem adótanácsadás.
+  - Csak magánszemély bérbeadónál látszik (cégnél nem). Migráció nincs.
 - **2026.11.11.2** — Bérleti szerződés lejárata és értesítő (V1.1 / 11. pont).
   - Bérlő: új „Szerződés lejárata” dátum a bérlő adatlapján (Bérlet tábla) és a bérlő űrlapján. A lejárat nem
     lehet a beköltözés előtt.

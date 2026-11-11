@@ -226,9 +226,48 @@ requireAuth();
       : '<div class="panel-empty">Nincs adat.</div>';
   }
 
+  // Adózási kimutatás: SZJA 10% költséghányaddal és tételes költségelszámolással (ld. a szerveren: TaxEstimate).
+  function renderTax() {
+    const t = data.tax;
+    $('tax-card').hidden = !t;
+    if (!t) return;
+    $('tax-title').textContent = `Adózási kimutatás ${inYear(data.year)}`;
+    $('tax-sub').textContent = `Becsült SZJA (15%) a kiállított bizonylatok alapján. Bevétel: ${huf(t.income)}.`;
+    const diff = Math.abs(t.flatTax - t.itemizedTax);
+    const tile = (title, tax, better, rows) => `
+      <div class="tax-tile-head"><span class="kpi-label">${title}</span>${better ? `<span class="tax-better">Kedvezőbb: ${huf(diff)} kevesebb</span>` : ''}</div>
+      <div class="kpi-value">${huf(tax)}</div>
+      <dl class="tax-rows">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
+    $('tax-flat').className = `tax-tile${diff && t.flatTax < t.itemizedTax ? ' is-better' : ''}`;
+    $('tax-flat').innerHTML = tile('Adó 10% költséghányaddal', t.flatTax, diff > 0 && t.flatTax < t.itemizedTax, [
+      ['Bevétel', huf(t.income)],
+      ['Költséghányad (10%)', `− ${huf(t.income - t.flatProfit)}`],
+      ['Jövedelem', huf(t.flatProfit)],
+    ]);
+    $('tax-itemized').className = `tax-tile${diff && t.itemizedTax < t.flatTax ? ' is-better' : ''}`;
+    $('tax-itemized').innerHTML = tile('Adó tételes költségelszámolással', t.itemizedTax, diff > 0 && t.itemizedTax < t.flatTax, [
+      ['Bevétel', huf(t.income)],
+      ['Felvett költségek', `− ${huf(t.costs)}`],
+      ['Jövedelem', t.itemizedProfit < 0 ? `− ${huf(-t.itemizedProfit)} (veszteség)` : huf(t.itemizedProfit)],
+    ]);
+    $('tax-withheld').hidden = !(t.withheld > 0);
+    $('tax-withheld').textContent = t.withheld > 0 ? `Ebből a bérlő a bizonylatokon már levont és befizet: ${huf(t.withheld)} SZJA.` : '';
+    const signed = (n) => (n < 0 ? `− ${huf(-n)}` : huf(n));
+    // Veszteséges hónapnál az éves tételes adó kisebb a havi adók összegénél (az éves jövedelemből számol).
+    const lossMonth = t.months.some((m) => m.itemizedProfit < 0);
+    $('tax-table').innerHTML = `<table><thead>
+        <tr><th rowspan="2">Hónap</th><th class="num" rowspan="2">Bevétel</th><th class="num" rowspan="2">Költség</th><th class="num" colspan="2">10% költséghányad</th><th class="num" colspan="2">Tételes</th></tr>
+        <tr><th class="num">Jövedelem</th><th class="num">Adó</th><th class="num">Jövedelem</th><th class="num">Adó</th></tr>
+      </thead><tbody>
+      ${t.months.map((m, i) => `<tr><td>${MONTH_NAMES[i]}</td><td class="num">${huf(m.income)}</td><td class="num">${huf(m.costs)}</td><td class="num">${huf(m.flatProfit)}</td><td class="num">${huf(m.flatTax)}</td><td class="num">${signed(m.itemizedProfit)}</td><td class="num">${huf(m.itemizedTax)}</td></tr>`).join('')}
+      <tr><td class="cell-main">Összesen</td><td class="num cell-main">${huf(t.income)}</td><td class="num cell-main">${huf(t.costs)}</td><td class="num cell-main">${huf(t.flatProfit)}</td><td class="num cell-main">${huf(t.flatTax)}</td><td class="num cell-main">${signed(t.itemizedProfit)}</td><td class="num cell-main">${huf(t.itemizedTax)}</td></tr>
+    </tbody></table>${lossMonth ? '<p class="tax-table-note">A veszteséges hónap az éves jövedelmet csökkenti, ezért az éves tételes adó kisebb lehet a havi adók összegénél.</p>' : ''}`;
+  }
+
   function renderAll() {
     if (!data) return;
     renderKpis();
+    renderTax();
     renderBalance();
     renderMonthly();
     renderStatus();
