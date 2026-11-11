@@ -159,7 +159,7 @@ public class BillingoInvoiceProvider(HttpClient http, IConfiguration configurati
         {
             name = b.Name,
             address = new { country_code = "HU", post_code = b.PostCode, city = b.City, address = b.Street },
-            emails = string.IsNullOrWhiteSpace(b.Email) ? null : new[] { b.Email },
+            emails = Notifications.EmailAddresses.Split(b.Email) is { Count: > 0 } addresses ? addresses : null,
             taxcode = hasTax ? b.TaxNumber : null,
             tax_type = hasTax ? "HAS_TAX_NUMBER" : "NO_TAX_NUMBER",
         };

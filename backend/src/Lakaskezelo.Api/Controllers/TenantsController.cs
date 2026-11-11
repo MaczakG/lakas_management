@@ -1,5 +1,6 @@
 using Lakaskezelo.Api.Auth;
 using Lakaskezelo.Api.Contracts;
+using Lakaskezelo.Api.Notifications;
 using Lakaskezelo.Data;
 using Lakaskezelo.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -161,11 +162,13 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
         {
             return BadRequest(new { message = "A megadott ingatlan nem található." });
         }
+        var email = EmailAddresses.Normalize(request.Email, out var emailError);
+        if (emailError is not null) return BadRequest(new { message = emailError });
         var tenant = new Tenant
         {
             Id = Guid.NewGuid(),
             Name = request.Name.Trim(),
-            Email = request.Email,
+            Email = email,
             Phone = request.Phone,
             Address = request.Address,
             TaxId = request.TaxId,
@@ -196,8 +199,14 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
             return BadRequest(new { message = "A megadott ingatlan nem található." });
         }
 
+        // Csak a módosított címet ellenőrizzük: egy régebbi, szabálytalan érték ne akadályozza a többi mező mentését.
+        if (request.Email != tenant.Email)
+        {
+            var email = EmailAddresses.Normalize(request.Email, out var emailError);
+            if (emailError is not null) return BadRequest(new { message = emailError });
+            tenant.Email = email;
+        }
         tenant.Name = request.Name.Trim();
-        tenant.Email = request.Email;
         tenant.Phone = request.Phone;
         tenant.Address = request.Address;
         tenant.TaxId = request.TaxId;

@@ -4,6 +4,17 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11** — Több címzett a bérlő értesítőihez (V1.1 / 10. pont).
+  - A bérlő E-mail mezőjébe több cím is írható (legfeljebb 5), vesszővel, pontosvesszővel, szóközzel vagy új
+    sorral elválasztva. Az adatlapon a címek egymás alatt látszanak, a mező a tartalmához nő.
+  - A bérlőnek szóló levelek (bizonylat, sztornó bizonylat, beköltözési tudnivalók) minden megadott címre
+    kimennek: egy levél megy, amelynek minden cím a címzettje (a címzettek látják egymás címét).
+  - Hibás címnél a mentés megáll, és megnevezi a hibás címet (űrlapon, adatlapon és a szerveren is).
+  - Számlázó programok: a Billingo-partnerhez az összes cím bekerül, a Számlázz.hu számlára az első (az csak
+    egy címet fogad). A számlát mindkét esetben továbbra is a Lakáskezelő küldi ki.
+  - Teszt-környezet: a csak felhasználóknak küldő szűrés címenként érvényes — több cím közül azok kapják meg,
+    amelyek felhasználóhoz tartoznak.
+  - Migráció nincs.
 - **2026.11.10.10** — Rezsi értesítő a kitöltendő tételekről (V1.1 / 9. pont).
   - A rezsi-emlékeztető levél (a Beállításokban megadott rezsi kontaktnak, a rezsi-határnapon) mostantól
     ingatlanonként felsorolja a teendőket:

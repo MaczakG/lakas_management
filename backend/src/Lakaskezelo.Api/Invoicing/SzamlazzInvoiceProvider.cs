@@ -58,7 +58,8 @@ public class SzamlazzInvoiceProvider(HttpClient http, IConfiguration configurati
             new XElement(Ns + "irsz", r.Buyer.PostCode),
             new XElement(Ns + "telepules", r.Buyer.City),
             new XElement(Ns + "cim", r.Buyer.Street));
-        if (!string.IsNullOrWhiteSpace(r.Buyer.Email)) vevo.Add(new XElement(Ns + "email", r.Buyer.Email));
+        // A Számlázz.hu vevő-adata egyetlen címet fogad: több címzettnél az első kerül a számlára.
+        if (Notifications.EmailAddresses.First(r.Buyer.Email) is { } buyerEmail) vevo.Add(new XElement(Ns + "email", buyerEmail));
         // A levelet a Lakáskezelő küldi, a Számlázz.hu ne.
         vevo.Add(new XElement(Ns + "sendEmail", "false"));
         if (!string.IsNullOrWhiteSpace(r.Buyer.TaxNumber)) vevo.Add(new XElement(Ns + "adoszam", r.Buyer.TaxNumber));

@@ -268,7 +268,7 @@ function renderTenant() {
   const row = (label, value) => `<div class="prop"><dt>${label}</dt><dd>${value}</dd></div>`;
   body.innerHTML = [
     row('Név', `<a class="link" href="tenant-detail.html?id=${encodeURIComponent(t.id)}">${escapeHtml(t.name)}</a>`),
-    row('E-mail', t.email ? `<a class="link" href="mailto:${escapeHtml(t.email)}">${escapeHtml(t.email)}</a>` : '<span class="dim">–</span>'),
+    row('E-mail', t.email ? splitEmails(t.email).map((a) => `<a class="link" href="mailto:${escapeHtml(a)}">${escapeHtml(a)}</a>`).join('<br>') : '<span class="dim">–</span>'),
     row('Telefon', t.phone ? escapeHtml(t.phone) : '<span class="dim">–</span>'),
     row('Beköltözés', t.moveInDate ? formatDate(t.moveInDate) : '<span class="dim">–</span>'),
     row('Díj devizája', t.rentCurrency === 'HUF' ? 'Forint' : `${escapeHtml(t.rentCurrency)} <span class="dim">(MNB-árfolyamon átszámítva)</span>`),
