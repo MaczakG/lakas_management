@@ -210,8 +210,8 @@
   }
 
   function resetDraftRows() {
+    // Alapból nincs üres új sor: a „+ Sor hozzáadása” gomb nyit egyet.
     document.getElementById('um-draft-rows').innerHTML = '';
-    addDraftRow(); // alapból egy sor; többet a „+ Sor hozzáadása” gombbal
     updateDraftTotal();
   }
 
@@ -467,6 +467,13 @@
     document.getElementById('um-form-success').classList.remove('show');
     document.getElementById('um-prepare-text').textContent = 'Az ingatlan rezsi tételeiből elkészíthető a hónap rezsije.';
     document.getElementById('um-overlay').classList.add('open');
+    // A rezsi tételek alapból ott vannak: a hónap megnyitáskor elkészül belőlük (a szerver dönti el, hogy
+    // biztonságos-e — pl. már kiállított bizonylatú vagy bérlő előtti hónapnál nem készít semmit).
+    try {
+      const res = await apiFetch(`/api/properties/${propertyId}/utility-costs/prepare`, { method: 'POST', body: JSON.stringify({ year, month, auto: true }) });
+      const data = res.ok ? await res.json() : null;
+      if (data?.created > 0 && typeof state.onSaved === 'function') state.onSaved();
+    } catch { /* az ablak enélkül is használható: a „Rezsi tételek behúzása” gomb megmarad */ }
     await refresh();
   };
 })();

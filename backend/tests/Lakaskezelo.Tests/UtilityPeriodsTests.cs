@@ -26,3 +26,43 @@ public class UtilityPeriodsTests
         Assert.Equal(expected, UtilityPeriods.State(entries, pending, prepared, items, nonFixed));
     }
 }
+
+public class UtilityAutoPrepareTests
+{
+    // 2026. november a következő bizonylat hónapja; az ablak 36 hónappal korábban kezdődik.
+    private const int Next = 2026 * 12 + 11;
+    private const int Window = Next - 36;
+
+    [Fact]
+    public void An_empty_unbilled_month_with_a_tenant_is_prepared_when_opened()
+    {
+        Assert.True(UtilityPeriods.ShouldAutoPrepare(false, false, true, Next, Next, Window));
+        Assert.True(UtilityPeriods.ShouldAutoPrepare(false, false, true, Next - 1, Next, Window));
+    }
+
+    [Fact]
+    public void A_month_that_already_has_entries_is_left_alone()
+    {
+        Assert.False(UtilityPeriods.ShouldAutoPrepare(true, false, true, Next, Next, Window));
+    }
+
+    [Fact]
+    public void A_month_with_an_issued_invoice_is_left_alone()
+    {
+        Assert.False(UtilityPeriods.ShouldAutoPrepare(false, true, true, Next - 2, Next, Window));
+    }
+
+    [Fact]
+    public void A_month_without_a_tenant_is_left_alone()
+    {
+        Assert.False(UtilityPeriods.ShouldAutoPrepare(false, false, false, Next - 5, Next, Window));
+    }
+
+    [Fact]
+    public void Months_after_the_next_invoice_or_before_the_window_are_left_alone()
+    {
+        Assert.False(UtilityPeriods.ShouldAutoPrepare(false, false, true, Next + 1, Next, Window));
+        Assert.True(UtilityPeriods.ShouldAutoPrepare(false, false, true, Window, Next, Window));
+        Assert.False(UtilityPeriods.ShouldAutoPrepare(false, false, true, Window - 1, Next, Window));
+    }
+}

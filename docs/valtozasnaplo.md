@@ -4,6 +4,17 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.7** — Rezsi ablak: a rezsi tételek alapból ott vannak; nincs üres új sor.
+  - A hónap megnyitásakor a rezsi tételek maguktól bekerülnek (a fixek összeggel, a nem fixek kitöltendőként),
+    nem kell megnyomni a „Rezsi tételek behúzása” gombot. A gomb megmarad a később felvett rezsi tételek
+    pótlására.
+  - Biztonsági feltételek — a megnyitás csak akkor készíti el a hónapot, ha:
+    - a hónapban még nincs egyetlen tétel sem, és még nem volt előkészítve (a törölt tétel nem jön vissza);
+    - a hónapra még nincs érvényes bizonylat (különben a fix tétel utólagos tételként még egyszer számlázódna);
+    - a hónapban volt bérlője az ingatlannak;
+    - a hónap nem későbbi a következő bizonylat hónapjánál, és belül van a 36 hónapos ablakon.
+  - Az „Új tételek” alatt alapból nincs üres sor: a „+ Sor hozzáadása” gomb nyit egyet.
+  - Migráció nincs.
 - **2026.11.11.6** — A kiemelő szín újra narancs (#F4511E).
   - A kék próba után visszaállt a minta szerinti narancs: jelölő, fókusz, kijelölés, megnyitható sorok
     rámutatása, fülek aláhúzása, diagramok kiemelt sávjai. Más nem változott.

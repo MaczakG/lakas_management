@@ -53,7 +53,9 @@ public record UpdateUtilityCostEntryRequest(string Label, decimal Amount, string
 public record UtilityItemDto(Guid Id, string Label, bool IsFixed, decimal? Amount, bool ForwardBilled);
 public record UpsertUtilityItemRequest(string Label, bool IsFixed, decimal? Amount, bool ForwardBilled);
 
-public record PrepareUtilityPeriodRequest(int Year, int Month);
+// Auto: a rezsi ablak megnyitásakor küldi a felület — csak akkor készít elő, ha az biztonságos (ld.
+// UtilityPeriods.ShouldAutoPrepare), különben nem csinál semmit (hibát sem ad).
+public record PrepareUtilityPeriodRequest(int Year, int Month, bool Auto = false);
 public record PrepareUtilityPeriodResponse(int Created);
 
 // Beköltözési tudnivalók (az ingatlan adatlapjának „Beköltözés” füle).
