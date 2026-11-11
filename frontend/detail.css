@@ -12,8 +12,8 @@
 .crumbs a{color:var(--ink-soft);}
 .crumbs a:hover{color:var(--ink);text-decoration:underline;}
 .title-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;}
-.title-row h1{font-family:var(--font-display);font-weight:600;font-size:27px;letter-spacing:-0.025em;color:var(--ink);}
-.detail-sub{color:var(--ink-soft);font-size:13.5px;font-weight:500;margin-top:4px;}
+.title-row h1{font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-0.02em;color:var(--ink);}
+.detail-sub{color:var(--ink-soft);font-size:13px;font-weight:500;margin-top:4px;}
 .detail-hint{color:var(--muted);font-size:12.5px;font-weight:500;margin-top:6px;}
 .detail-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
 
@@ -30,9 +30,9 @@
 .record-tabbar{display:flex;align-items:flex-end;gap:12px;padding:6px 12px 0 8px;border-bottom:1px solid var(--line);}
 .record-tablist{display:flex;flex-wrap:wrap;gap:2px;flex:1;min-width:0;}
 .record-tab{display:inline-flex;align-items:center;gap:7px;padding:10px 12px 9px;border:none;border-bottom:2px solid transparent;background:none;
-  font-family:var(--font-body);font-size:13px;font-weight:600;color:var(--ink-soft);white-space:nowrap;cursor:pointer;}
+  font-family:var(--font-body);font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap;cursor:pointer;}
 .record-tab:hover{color:var(--ink);}
-.record-tab.active{color:var(--accent-deep);border-bottom-color:var(--accent);}
+.record-tab.active{color:var(--ink);font-weight:600;border-bottom-color:var(--accent);}
 .record-tab svg{width:15px;height:15px;flex-shrink:0;}
 .record-tab-actions{display:flex;align-items:center;gap:8px;padding-bottom:7px;flex-shrink:0;}
 .record-tab-actions .btn{height:32px;padding:0 12px;font-size:12.5px;}
@@ -42,13 +42,13 @@
 .record-tab-pane{min-height:100%;display:flex;flex-direction:column;}
 .record-tab-pane[hidden]{display:none;}
 .record-tab-pane > .panel-table{flex:1;}
-.record-tab-pane thead th{position:sticky;top:0;z-index:1;background:var(--surface);}
+.record-tab-pane thead th{position:sticky;top:0;z-index:1;background:var(--surface-2);}
 .record-tab-pane .panel-empty{flex:1;display:flex;align-items:center;justify-content:center;min-height:200px;}
 @media (max-width:760px){.record-tabbar{flex-direction:column;align-items:stretch;}.record-tablist{flex-wrap:nowrap;overflow-x:auto;}.record-tab-actions{padding:0 0 8px 4px;}}
 
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);min-width:0;}
 .panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:8px 12px 8px 16px;border-bottom:1px solid var(--line);}
-.panel-title{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:14.5px;font-weight:600;letter-spacing:-0.01em;color:var(--ink);}
+.panel-title{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:14px;font-weight:600;letter-spacing:-0.01em;color:var(--ink);}
 .panel-title svg{width:16px;height:16px;color:var(--muted);flex-shrink:0;}
 .panel-count:empty{display:none;}
 .panel-count{font-family:var(--font-body);font-size:12.5px;font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums;}
@@ -58,11 +58,11 @@
 .panel-empty{padding:20px 16px;color:var(--muted);font-size:13px;font-weight:500;text-align:center;}
 .panel-table{overflow-x:auto;}
 .panel-table table{width:100%;border-collapse:collapse;}
-.panel-table thead th{text-align:left;font-size:12.5px;font-weight:600;color:var(--muted);
-  padding:10px 12px 8px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface);}
+.panel-table thead th{text-align:left;font-size:12px;font-weight:500;color:var(--muted);
+  padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface-2);}
 .panel-table thead th:first-child,.panel-table tbody td:first-child{padding-left:16px;}
 .panel-table thead th:last-child,.panel-table tbody td:last-child{padding-right:12px;}
-.panel-table tbody td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink-soft);vertical-align:middle;}
+.panel-table tbody td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink);vertical-align:middle;}
 .panel-table tbody tr:last-child td{border-bottom:none;}
 .panel-table .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
 
@@ -74,12 +74,12 @@
 
 /* Címke–érték sorok. */
 .props{display:grid;margin:0;}
-.prop{display:grid;grid-template-columns:minmax(110px,40%) minmax(0,1fr);gap:12px;align-items:center;min-height:38px;padding:3px 0;border-top:1px solid var(--surface-2);}
+.prop{display:grid;grid-template-columns:minmax(110px,40%) minmax(0,1fr);gap:12px;align-items:center;min-height:38px;padding:3px 0;border-top:1px solid var(--line);}
 .prop:first-child{border-top:0;}
-.prop dt{color:var(--ink-soft);font-size:13px;font-weight:500;}
-.prop dd{margin:0;min-width:0;font-size:13.5px;font-weight:600;color:var(--ink);overflow-wrap:anywhere;}
+.prop dt{color:var(--muted);font-size:12.5px;font-weight:500;}
+.prop dd{margin:0;min-width:0;font-size:13px;font-weight:500;color:var(--ink);overflow-wrap:anywhere;}
 .prop dd .dim{color:var(--muted);font-weight:500;}
-.prop dd .status-tag{font-size:12.5px;}
+.prop dd .status-tag{font-size:11.5px;}
 .prop.wide{grid-template-columns:1fr;gap:4px;padding:8px 0;}
 /* A teljes szélességű mezőnél (megjegyzés) a panel címe már megnevezi — a címke csak a felolvasónak kell. */
 .prop.wide dt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
@@ -89,7 +89,7 @@
 .ifield{display:flex;align-items:center;gap:6px;min-width:0;}
 .ifield .ictl{flex:1;min-width:0;}
 .ifield .iinput{display:block;width:calc(100% + 9px);height:32px;margin-left:-9px;padding:0 8px;border:1px solid transparent;border-radius:var(--radius-sm);
-  background:transparent;font-family:var(--font-body);font-size:13.5px;font-weight:600;color:var(--ink);cursor:text;box-shadow:none;
+  background:transparent;font-family:var(--font-body);font-size:13px;font-weight:500;color:var(--ink);cursor:text;box-shadow:none;
   transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;}
 .ifield select.iinput{cursor:pointer;padding-right:28px;background-position:right 8px center;background-color:transparent;}
 .ifield textarea.iinput{height:auto;min-height:84px;padding:6px 8px;line-height:1.5;resize:vertical;}
@@ -122,9 +122,9 @@
 /* A módosított tábla fejléce (benne a Mentés / Mégsem gomb) görgetéskor a képernyő tetején marad, amíg a tábla
    látszik. A −32px a görgetett terület (.main) felső belső margóját ellensúlyozza, hogy a fejléc a tetejéig
    felcsússzon. Telefonon (ott az ablak görög) a menügomb és a tesztkörnyezet sávja alá kerül. */
-.panel.is-dirty > .panel-head{position:sticky;top:-32px;z-index:20;background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;box-shadow:0 8px 12px -10px rgba(36,48,44,.45);}
+.panel.is-dirty > .panel-head{position:sticky;top:-24px;z-index:20;background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;box-shadow:0 8px 12px -10px rgba(36,48,44,.45);}
 /* Ugyanígy a fülsáv, amíg a Beköltözés fül szövege mentetlen. */
-.record-tabbar:has(#mi-save:not([hidden])){position:sticky;top:-32px;z-index:20;background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;}
+.record-tabbar:has(#mi-save:not([hidden])){position:sticky;top:-24px;z-index:20;background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;}
 @media (max-width:768px){
   .panel.is-dirty > .panel-head,.record-tabbar:has(#mi-save:not([hidden])){top:62px;}
   .has-env-ribbon .panel.is-dirty > .panel-head,.has-env-ribbon .record-tabbar:has(#mi-save:not([hidden])){top:88px;}

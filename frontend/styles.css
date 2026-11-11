@@ -1,40 +1,45 @@
 /* ============================================================
    Lakáskezelő — közös dizájnrendszer
-   Paletta: mély erdőzöld (#1E5B47) a fő szín, grafitszürke (#24302C) szöveg, meleg-szürke felületek.
-   Betű: Geist + Geist Mono. Eszköz, nem marketingoldal: lapos felületek hajszálvonallal (árnyék csak a
-   lebegő elemeken: ablak, lenyíló lista), szerény lekerekítés, mondatkezdő (nem csupa nagybetűs)
-   feliratok, díszítő pöttyök és színátmenetek nélkül. A számok egymás alá igazodnak (tabular-nums).
+   Arculat: világosszürke háttér, rajta fehér, lekerekített felületek hajszálvonal-kerettel. Az oldalsáv a
+   háttéren ül (fehér kártya a márkajel és az aktív menüpont), a tartalom egy nagy fehér lapon. A fő gomb
+   fekete, a kiemelő szín narancs (aktív menüpont jelölője, kijelölés, fókusz), a többi vezérlő fehér,
+   vékony szürke kerettel. Betű: Geist + Geist Mono. Táblázat: halványszürke fejléc, oszlopelválasztó
+   vonalak; állapotok: kis, pasztell hátterű címkék. A számok egymás alá igazodnak (tabular-nums).
 
-   Kontraszt (WCAG AA): a zöld fehéren 7,9:1, a halványzöld kitöltésen 6,8:1 — gombnak (fehér felirattal)
-   és szövegnek is jó; a halvány szövegszín (#626D69) fehéren 5,4:1, a háttéren 4,95:1.
+   Kontraszt (WCAG AA): a szöveg (#18181B) fehéren 17:1, a halvány szöveg (#71717A) 4,8:1; a narancs
+   (#F4511E) kitöltésre és jelölésre való, szövegként a sötétebb --accent-deep (#C2410C, 5,2:1) használandó.
 
    Minden oldal ezt tölti be; az oldalak saját <style> blokkja csak elrendezést ad hozzá, és ezeket a
    tokeneket/osztályokat használja. Az adatlapok (property-detail.html) komponensei a detail.css-ben.
    ============================================================ */
 
 :root{
-  /* ---------- felületek (meleg-szürke) ---------- */
-  --bg:#F5F6F4;            /* az app háttere — erről emelkednek ki a fehér felületek */
+  /* ---------- felületek ---------- */
+  --bg:#F4F4F5;            /* az app háttere — ezen ül az oldalsáv és a fehér tartalom-lap */
   --surface:#FFFFFF;
-  --surface-2:#F5F6F4;     /* táblázatfej, besüllyesztett mezők */
-  --surface-sunken:#F5F6F4;
-  --line:#E4E7E3;          /* hajszálvonal a dolgok között */
-  --line-strong:#8C9692;   /* vezérlő (mező, másodlagos gomb) széle — 3:1 fehéren (WCAG 1.4.11) */
+  --surface-2:#FAFAFA;     /* táblázatfej, rámutatás */
+  --surface-sunken:#F4F4F5;
+  --line:#EAEAEC;          /* hajszálvonal a dolgok között */
+  --line-strong:#D9D9DE;   /* vezérlő (mező, másodlagos gomb) széle */
 
   /* ---------- szöveg ---------- */
-  --ink:#24302C;           /* grafitszürke, zöldes beütéssel — nem fekete */
-  --ink-soft:#4A5652;
-  --muted:#626D69;
+  --ink:#18181B;
+  --ink-soft:#3F3F46;
+  --muted:#71717A;
   --on-accent:#FFFFFF;
 
-  /* ---------- fő szín (erdőzöld) ---------- */
-  --accent:#1E5B47;
-  --accent-deep:#164536;   /* ráhúzás, szöveg a halványzöld kitöltésen */
-  --accent-bright:#2F7A5F; /* diagram-sáv, kitöltés */
-  --accent-bg:#E7F0EC;
-  --accent-border:#BFD5CB;
-  --accent-ring:rgba(30,91,71,0.22);
-  --grad-brand:var(--accent); /* a márkajel tömör zöld — színátmenet nélkül */
+  /* ---------- fő gomb (fekete) és kiemelő szín (narancs) ---------- */
+  --primary:#18181B;
+  --primary-hover:#000000;
+  --accent:#F4511E;        /* jelölő, kijelölés, kapcsoló, fókusz — kitöltésre */
+  --accent-deep:#C2410C;   /* narancs szövegként (fehéren 5,2:1) */
+  --accent-bright:#FB7A4B;
+  --accent-bg:#FFF3ED;
+  --accent-border:#FFD3C2;
+  --accent-ring:rgba(244,81,30,0.22);
+  --grad-brand:var(--ink); /* a márkajel tömör fekete */
+  --violet:#5B4FCF;        /* „rendben” állapotcímke */
+  --violet-bg:#EEECFE;
 
   /* ---------- szemantikus (állapotok) ---------- */
   --green:#067647;
@@ -50,18 +55,17 @@
   --coral-border:#FECDCA;
   --coral-solid:#D92D20;
 
-  /* ---------- lekerekítés ----------
-     A vezérlők (gomb, mező, fül, menüpont) szögletesebbek, a címkék (státusz, számláló) kapszulák:
-     ránézésre látszik, mire lehet kattintani és mi csak tényt közöl. */
-  --radius-sm:6px;
-  --radius-md:8px;
-  --radius-lg:8px;
+  /* ---------- lekerekítés ---------- */
+  --radius-sm:8px;         /* gomb, mező, menüpont */
+  --radius-md:10px;
+  --radius-lg:12px;        /* kártya, táblázat, panel */
+  --radius-xl:16px;        /* a tartalom-lap, ablak */
   --radius-pill:999px;
 
-  --shadow-xs:none;
+  --shadow-xs:0 1px 2px rgba(24,24,27,0.05);
   --shadow-sm:none;
-  --shadow-md:0 8px 20px -8px rgba(36,48,44,0.14),0 2px 5px -2px rgba(36,48,44,0.07);
-  --shadow-lg:0 24px 48px -16px rgba(36,48,44,0.24),0 6px 14px -6px rgba(36,48,44,0.12);
+  --shadow-md:0 8px 20px -8px rgba(24,24,27,0.14),0 2px 5px -2px rgba(24,24,27,0.07);
+  --shadow-lg:0 24px 48px -16px rgba(24,24,27,0.22),0 6px 14px -6px rgba(24,24,27,0.10);
 
   --font-display:'Geist','Segoe UI',system-ui,sans-serif;
   --font-body:'Geist','Segoe UI',system-ui,sans-serif;
@@ -82,47 +86,47 @@ table,.mono,.stat-value,input,select,textarea{font-variant-numeric:tabular-nums;
 .icon{width:16px;height:16px;flex-shrink:0;stroke-width:2;}
 
 /* ============================================================
-   Gombok — 44px magas, szögletes, 600-as vastagság.
+   Gombok — 36px magas, 8px lekerekítés, 500-as vastagság. A fő gomb fekete, a többi fehér, vékony kerettel.
    ============================================================ */
 .btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  height:44px;padding:0 20px;border-radius:var(--radius-sm);
-  font-size:14px;font-weight:600;font-family:var(--font-body);letter-spacing:-0.01em;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  height:36px;padding:0 14px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:500;font-family:var(--font-body);letter-spacing:-0.005em;
   cursor:pointer;border:1px solid transparent;white-space:nowrap;
-  transition:background .3s ease,border-color .3s ease,box-shadow .18s ease,color .3s ease,transform .15s ease;
+  transition:background .2s ease,border-color .2s ease,box-shadow .18s ease,color .2s ease,transform .15s ease;
 }
-.btn:active{transform:translateY(1px) scale(0.99);}
+.btn:active{transform:translateY(1px);}
 .btn:disabled,.btn[disabled]{opacity:0.5;cursor:not-allowed;pointer-events:none;}
-.btn svg{width:16px;height:16px;}
+.btn svg{width:15px;height:15px;}
 
-.btn-primary{background:var(--accent);color:#fff;box-shadow:var(--shadow-xs);}
-.btn-primary:hover{background:var(--accent-deep);box-shadow:var(--shadow-sm);}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:var(--shadow-xs);}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover);}
 
 .btn-secondary{background:#fff;color:var(--ink);border-color:var(--line-strong);box-shadow:var(--shadow-xs);}
-.btn-secondary:hover{border-color:var(--ink);background:var(--surface-2);}
+.btn-secondary:hover{background:var(--surface-2);border-color:#A1A1AA;}
 
-.btn-ghost{background:transparent;color:var(--ink);border-color:var(--line-strong);}
-.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-ghost{background:#fff;color:var(--ink);border-color:var(--line-strong);}
+.btn-ghost:hover{background:var(--surface-2);border-color:#A1A1AA;}
 
-.btn-danger{background:var(--coral-bg);color:var(--coral);border-color:var(--coral-border);}
-.btn-danger:hover{background:var(--coral);color:#fff;border-color:var(--coral);}
+.btn-danger{background:#fff;color:var(--coral);border-color:var(--coral-border);}
+.btn-danger:hover{background:var(--coral-bg);border-color:var(--coral);}
 
-.btn-sm{height:36px;padding:0 14px;font-size:13px;}
-.btn-block{width:100%;}
+.btn-sm{height:32px;padding:0 12px;font-size:12.5px;}
+.btn-block{width:100%;height:40px;}
 
-.link{color:var(--accent);font-weight:600;}
-.link:hover{text-decoration:underline;}
+.link{color:var(--ink);font-weight:600;}
+.link:hover{color:var(--accent-deep);text-decoration:underline;text-underline-offset:2px;}
 
 /* ============================================================
    Kártyák és szekciók — fehér, hajszálvonal-keret, minimális árnyék.
    ============================================================ */
-.card,.section{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow-sm);}
+.card,.section{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px 22px;box-shadow:var(--shadow-sm);}
 .section{margin-bottom:16px;}
 .section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;}
-.section-head h3,.card-head h3{font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:-0.02em;color:var(--ink);}
+.section-head h3,.card-head h3{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:-0.02em;color:var(--ink);}
 .section-head p{color:var(--ink-soft);font-size:12.5px;margin-top:4px;font-weight:500;}
 .card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;}
-.section-title{font-family:var(--font-display);font-weight:600;font-size:18px;margin:0 0 14px;letter-spacing:-0.02em;color:var(--ink);}
+.section-title{font-family:var(--font-display);font-weight:600;font-size:16px;margin:0 0 14px;letter-spacing:-0.02em;color:var(--ink);}
 
 /* Táblázat kártyában. overflow-x:auto (nem hidden): a széles táblázat görgethető marad. */
 .card-table{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);
@@ -130,28 +134,26 @@ table,.mono,.stat-value,input,select,textarea{font-variant-numeric:tabular-nums;
 .section .card-table,.modal .card-table{box-shadow:none;}
 
 /* ============================================================
-   Státusz-címkék: színes szöveg egy kis ikonnal, doboz és kapszula nélkül.
+   Státusz-címkék: kis, pasztell hátterű címke (ikon nélkül); a szín a jelentést erősíti, a felirat mondja ki.
    ============================================================ */
-.status-tag{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:0;background:none;border:0;
-  color:var(--ink-soft);white-space:nowrap;line-height:1.4;}
-.status-tag::before{content:"";width:14px;height:14px;flex-shrink:0;background:currentColor;-webkit-mask:var(--st-ico) center/contain no-repeat;mask:var(--st-ico) center/contain no-repeat;}
-.status-tag{--st-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z'/%3E%3C/svg%3E");}
-.status-tag.ok,.status-tag.Sent{color:var(--green);--st-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");}
-.status-tag.warn,.status-tag.Generated{color:var(--amber);--st-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M200,75.64V40a16,16,0,0,0-16-16H72A16,16,0,0,0,56,40V76a16.07,16.07,0,0,0,6.4,12.8L114.67,128,62.4,167.2A16.07,16.07,0,0,0,56,180v36a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V180.36a16.09,16.09,0,0,0-6.35-12.77L141.27,128l52.38-39.6A16.05,16.05,0,0,0,200,75.64ZM72,40H184V75.64L178.23,80H77.33L72,76Zm56,78L98.67,96h58.4Zm56,98H72V180l48-36v24a8,8,0,0,0,16,0V144.08l48,36.28Z'/%3E%3C/svg%3E");}
-.status-tag.missing,.status-tag.Failed{color:var(--coral);--st-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z'/%3E%3C/svg%3E");}
-.status-tag.inactive{color:var(--muted);}
-.status-tag.storno{color:var(--coral);--st-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-40-64a8,8,0,0,1-8,8H104a8,8,0,0,1,0-16h48A8,8,0,0,1,160,152Z'/%3E%3C/svg%3E");}
-.status-tag.cancelled{color:var(--muted);--st-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm88,104a87.56,87.56,0,0,1-20.41,56.28L71.72,60.4A88,88,0,0,1,216,128ZM40,128A87.56,87.56,0,0,1,60.41,71.72L184.28,195.6A88,88,0,0,1,40,128Z'/%3E%3C/svg%3E");}
+.status-tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;padding:2px 7px;border-radius:5px;border:0;
+  background:var(--surface-sunken);color:var(--ink-soft);white-space:nowrap;line-height:1.5;vertical-align:middle;}
+.status-tag.ok,.status-tag.Sent{background:var(--violet-bg);color:var(--violet);}
+.status-tag.warn,.status-tag.Generated{background:#FFF4D6;color:#8A5A00;}
+.status-tag.missing,.status-tag.Failed{background:#FDECEC;color:var(--coral);}
+.status-tag.inactive{background:var(--surface-sunken);color:var(--muted);}
+.status-tag.storno{background:#FDECEC;color:var(--coral);}
+.status-tag.cancelled{background:var(--surface-sunken);color:var(--muted);}
 
 /* ============================================================
    Fülek — egy oldal (vagy dialógus) nevesített részei.
    ============================================================ */
-.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px;border-bottom:1px solid var(--line);padding-bottom:14px;}
-.tab-btn{padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--line);background:#fff;
-  font-family:var(--font-body);font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:14px;}
+.tab-btn{padding:7px 13px;border-radius:var(--radius-sm);border:1px solid var(--line-strong);background:#fff;
+  font-family:var(--font-body);font-size:13px;font-weight:500;color:var(--ink-soft);cursor:pointer;white-space:nowrap;
   transition:background .3s ease,border-color .3s ease,color .3s ease;}
 .tab-btn:hover{background:var(--surface-2);color:var(--ink);border-color:var(--line-strong);}
-.tab-btn.active{background:var(--accent);color:#fff;border-color:transparent;}
+.tab-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
 .tab-btn:disabled{opacity:.5;cursor:default;}
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
@@ -159,18 +161,23 @@ table,.mono,.stat-value,input,select,textarea{font-variant-numeric:tabular-nums;
 /* ============================================================
    Táblázatok — sűrű, pontos, admin-jellegű.
    ============================================================ */
-table{width:100%;border-collapse:collapse;font-size:13.5px;}
-thead th{text-align:left;font-size:12.5px;color:var(--muted);
-  font-weight:600;padding:11px 14px;border-bottom:1px solid var(--line-strong);background:var(--surface-2);vertical-align:bottom;}
-tbody td{padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink);}
-thead th:first-child,tbody td:first-child{padding-left:20px;}
-thead th:last-child,tbody td:last-child{padding-right:20px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{text-align:left;font-size:12px;color:var(--muted);
+  font-weight:500;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);vertical-align:middle;}
+tbody td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink);}
+/* Oszlopelválasztó hajszálvonalak a fejlécben és a sorokban. */
+thead th + th,tbody td + td{border-left:1px solid var(--line);}
+thead th:first-child,tbody td:first-child{padding-left:16px;}
+thead th:last-child,tbody td:last-child{padding-right:16px;}
 tbody tr:last-child td{border-bottom:none;}
-tbody tr:hover{background:var(--accent-bg);}
+tbody tr:hover{background:var(--surface-2);}
 tbody tr.clickable{cursor:pointer;}
+/* Megnyitható sor: rámutatáskor narancs árnyalat és jelölő a bal szélen. */
+tbody tr.clickable:hover{background:var(--accent-bg);}
+tbody tr.clickable:hover td:first-child{box-shadow:inset 3px 0 0 var(--accent);}
 td.num,th.num{text-align:right;white-space:nowrap;}
 td.nowrap{white-space:nowrap;}
-.cell-main{font-weight:600;color:var(--ink);}
+.cell-main{font-weight:500;color:var(--ink);}
 /* Archivált számla: a sor halványabb, de olvasható marad. */
 tr.is-archived td{color:var(--muted);}
 tr.is-archived .link{color:var(--muted);}
@@ -194,42 +201,43 @@ div.row-actions{display:flex;gap:6px;justify-content:flex-end;align-items:center
 
 .pagination{display:flex;align-items:center;justify-content:center;gap:14px;padding:16px 20px;}
 .pagination button{background:#fff;border:1px solid var(--line-strong);border-radius:var(--radius-sm);
-  padding:7px 14px;font-size:12.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
-.pagination button:hover:not(:disabled){background:var(--surface-2);border-color:var(--accent);color:var(--ink);}
+  height:32px;padding:0 12px;font-size:12.5px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-family:var(--font-body);}
+.pagination button:hover:not(:disabled){background:var(--surface-2);border-color:#A1A1AA;color:var(--ink);}
+.pagination button.active,.pagination button[aria-current="page"]{background:var(--accent);border-color:var(--accent);color:#fff;}
 .pagination button:disabled{opacity:.45;cursor:default;}
-.pagination .page-info{font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap;}
+.pagination .page-info{font-size:12.5px;font-weight:500;color:var(--muted);white-space:nowrap;}
 
 /* ============================================================
    Űrlapmezők — a mező és a natív <select> ugyanazt a keretet kapja; a select saját nyilat.
    ============================================================ */
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
-.field label{font-size:12.5px;font-weight:600;color:var(--ink-soft);}
+.field label{font-size:12.5px;font-weight:500;color:var(--ink-soft);}
 .field .hint,.hint{font-size:12px;color:var(--muted);font-weight:500;}
 .field input,.field select,.field textarea,select,
 input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],input[type=tel]{
-  height:44px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:0 14px;
-  font-family:var(--font-body);font-size:14px;background:#fff;color:var(--ink);width:100%;min-width:0;
+  height:38px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:0 12px;
+  font-family:var(--font-body);font-size:13.5px;background:#fff;color:var(--ink);width:100%;min-width:0;
   transition:border-color .15s ease,box-shadow .15s ease;
 }
-textarea,.field textarea{height:auto;min-height:76px;padding:12px 14px;resize:vertical;border:1px solid var(--line-strong);border-radius:var(--radius-sm);
-  font-family:var(--font-body);font-size:14px;color:var(--ink);width:100%;}
+textarea,.field textarea{height:auto;min-height:76px;padding:10px 12px;resize:vertical;border:1px solid var(--line-strong);border-radius:var(--radius-sm);
+  font-family:var(--font-body);font-size:13.5px;color:var(--ink);width:100%;}
 input::placeholder,textarea::placeholder{color:var(--muted);}
 select{-webkit-appearance:none;appearance:none;color-scheme:light;cursor:pointer;padding-right:38px;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='%23626D69' d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 12px center;background-size:18px 18px;}
-select:hover{border-color:var(--ink-soft);}
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='%2371717A' d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;background-size:16px 16px;}
+select:hover{border-color:#A1A1AA;}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);}
 .field input:disabled,.field select:disabled{opacity:0.6;cursor:not-allowed;background:var(--surface-2);}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
-.checkbox-row{display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:500;font-size:13.5px;cursor:pointer;}
-.checkbox-row input{width:18px;height:18px;accent-color:var(--accent);}
+.checkbox-row{display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:500;font-size:13px;cursor:pointer;}
+.checkbox-row input{width:16px;height:16px;accent-color:var(--accent);}
 
 .form-error{display:none;background:var(--coral-bg);border:1px solid var(--coral-border);color:var(--coral);
-  font-size:13px;font-weight:600;padding:11px 14px;border-radius:var(--radius-sm);margin-bottom:16px;}
+  font-size:13px;font-weight:500;padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:16px;}
 .form-error.show{display:block;}
 .form-success{display:none;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);
-  font-size:13px;font-weight:600;padding:11px 14px;border-radius:var(--radius-sm);margin-bottom:16px;}
+  font-size:13px;font-weight:500;padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:16px;}
 .form-success.show{display:block;}
 
 .notice{display:flex;align-items:flex-start;gap:12px;background:var(--amber-bg);border:1px solid var(--amber-border);
@@ -238,84 +246,89 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 /* ============================================================
    Dialógus — minden hozzáadás/szerkesztés. A .modal-lg a nagyobb, füles dialógusokhoz.
    ============================================================ */
-.modal-overlay{position:fixed;inset:0;background:rgba(36,48,44,0.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;
+.modal-overlay{position:fixed;inset:0;background:rgba(24,24,27,0.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;
   padding:24px;z-index:250;opacity:0;pointer-events:none;transition:opacity .18s ease;}
 .modal-overlay.open{opacity:1;pointer-events:auto;}
-.modal{background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
+.modal{background:var(--surface);border-radius:var(--radius-xl);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
   transform:translateY(10px) scale(0.98);transition:transform .2s cubic-bezier(.2,.8,.2,1);box-shadow:var(--shadow-lg);border:1px solid var(--line);}
 .modal-overlay.open .modal{transform:translateY(0) scale(1);}
 /* Fix magasság: a fülváltás ne változtassa a dialógus méretét; a belső görgetést a törzs adja. */
 .modal-lg{max-width:min(960px,92vw);height:82vh;display:flex;flex-direction:column;}
 .modal-lg .modal-body{flex:1;min-height:0;overflow-y:auto;}
-.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:24px 24px 4px;}
-.modal-head h2{font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.02em;color:var(--ink);}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 4px;}
+.modal-head h2{font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.02em;color:var(--ink);}
 .modal-head p{color:var(--ink-soft);font-size:13px;margin-top:6px;font-weight:500;line-height:1.5;}
-.modal-close{width:30px;height:30px;border-radius:50%;border:none;background:var(--surface-2);
+.modal-close{width:30px;height:30px;border-radius:var(--radius-sm);border:1px solid var(--line-strong);background:#fff;
   display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-soft);flex-shrink:0;
   transition:background .15s ease,color .15s ease;}
 .modal-close svg{width:16px;height:16px;}
 .inline-ico{width:1.05em;height:1.05em;vertical-align:-0.17em;margin:0 .3em;flex-shrink:0;}
 .remove-owner-row svg{width:14px;height:14px;display:block;}
-.modal-close:hover{background:var(--ink);color:#fff;}
-.modal-body{padding:14px 24px 6px;color:var(--ink-soft);font-size:13.5px;line-height:1.6;}
-.modal-footer{display:flex;gap:10px;padding:20px 24px 24px;}
-.modal-footer .btn{flex:1;}
+.modal-close:hover{background:var(--surface-2);color:var(--ink);border-color:#A1A1AA;}
+.modal-body{padding:14px 22px 6px;color:var(--ink-soft);font-size:13.5px;line-height:1.6;}
+.modal-footer{display:flex;gap:8px;padding:18px 22px 20px;}
+.modal-footer .btn{flex:1;height:38px;}
 
 /* ============================================================
    Alkalmazás-váz — oldalsáv + tartalom
    ============================================================ */
 .app{display:flex;height:100vh;overflow:hidden;background:var(--bg);}
-.sidebar{width:260px;flex-shrink:0;height:100vh;overflow:hidden;background:var(--surface);color:var(--ink);
-  border-right:1px solid var(--line);display:flex;flex-direction:column;padding:22px 16px;}
-.brand{display:flex;align-items:center;gap:10px;padding:0 8px 20px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-shrink:0;}
-.brand-mark{width:30px;height:30px;border-radius:var(--radius-sm);background:var(--grad-brand);color:#fff;
+/* Az oldalsáv a háttéren ül (keret és saját háttér nélkül); a márkajel és az aktív menüpont fehér kártya. */
+.sidebar{width:256px;flex-shrink:0;height:100vh;overflow:hidden;background:var(--bg);color:var(--ink);
+  display:flex;flex-direction:column;padding:12px;}
+.brand{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;flex-shrink:0;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);}
+.brand-mark{width:32px;height:32px;border-radius:var(--radius-sm);background:var(--grad-brand);color:#fff;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .brand-mark svg{width:17px;height:17px;}
-.brand-name{font-family:var(--font-display);font-weight:700;font-size:16.5px;letter-spacing:-0.02em;color:var(--ink);line-height:1.1;}
-.brand-name small{display:block;font-size:11px;font-weight:600;letter-spacing:0;color:var(--muted);margin-top:2px;}
+.brand-name{font-family:var(--font-display);font-weight:600;font-size:13.5px;letter-spacing:-0.01em;color:var(--ink);line-height:1.15;}
+.brand-name small{display:block;font-size:11.5px;font-weight:500;letter-spacing:0;color:var(--muted);margin-top:2px;}
 /* Csak a menüpontok görögnek — a márkajel és a lábléc a helyén marad. */
-.nav-scroll{flex:1;min-height:0;overflow-y:auto;margin:0 -16px;padding:0 16px;}
-.nav-label{font-size:12px;color:var(--muted);padding:0 12px;margin:16px 0 6px;font-weight:700;}
-.nav-label:first-child{margin-top:0;}
-.nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:500;
-  color:var(--ink-soft);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--font-body);margin-bottom:1px;position:relative;
-  transition:background .3s ease,color .3s ease;}
+.nav-scroll{flex:1;min-height:0;overflow-y:auto;margin:0 -12px;padding:0 12px;}
+.nav-label{font-size:10.5px;color:var(--muted);padding:0 10px;margin:18px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;}
+.nav-label:first-child{margin-top:4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;
+  color:var(--ink-soft);cursor:pointer;border:1px solid transparent;background:none;width:100%;text-align:left;font-family:var(--font-body);margin-bottom:2px;position:relative;
+  transition:background .2s ease,color .2s ease;}
 .nav-item .ico{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-.nav-item .ico svg{width:17px;height:17px;}
-.nav-item:hover{background:var(--surface-2);color:var(--ink);}
-/* Halványkék kitöltés + kék vonal a bal szélen: "itt vagy", kiabálás nélkül. */
-.nav-item.active{background:var(--accent-bg);color:var(--accent-deep);font-weight:600;}
-.nav-item.active .ico{color:var(--accent);}
-.nav-item.active::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--accent);}
+.nav-item .ico svg{width:16px;height:16px;}
+.nav-item:hover{background:rgba(24,24,27,0.05);color:var(--ink);}
+/* Az aktív menüpont fehér kártya; a narancs jelölő az oldalsáv bal szélén ül. */
+.nav-item.active{background:var(--surface);border-color:var(--line);box-shadow:var(--shadow-xs);color:var(--ink);font-weight:600;}
+.nav-item.active .ico{color:var(--ink);}
+.nav-item.active::before{content:"";position:absolute;left:-13px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--accent);}
 .nav-item:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
 
-.sidebar-footer{flex-shrink:0;border-top:1px solid var(--line);padding-top:14px;display:flex;align-items:center;gap:10px;}
-.avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-bg);color:var(--accent-deep);display:flex;align-items:center;
-  justify-content:center;font-weight:700;font-size:12.5px;flex-shrink:0;}
+.sidebar-footer{flex-shrink:0;display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;
+  justify-content:center;font-weight:600;font-size:12px;flex-shrink:0;}
 .sidebar-footer .who{font-size:13px;line-height:1.25;font-weight:600;color:var(--ink);min-width:0;}
 .sidebar-footer .who span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sidebar-footer .who small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.logout-btn{flex-shrink:0;width:100%;justify-content:center;margin-top:12px;}
+.logout-btn{flex-shrink:0;width:100%;justify-content:center;margin-top:8px;}
 .logout-btn + .logout-btn{margin-top:6px;}
 /* A Platform admin felület oldalsávja grafit márkajellel — hogy ránézésre is elkülönüljön az alkalmazástól. */
-.platform-sidebar .brand-mark{background:var(--ink);}
+.platform-sidebar .brand-mark{background:var(--accent);}
 /* A hidden attribútum mindig rejtsen (a .btn, .nav-item stb. saját display-e ne írja felül). */
 [hidden]{display:none !important;}
 .sidebar-version{display:block;flex-shrink:0;text-align:center;font-size:11px;color:var(--muted);padding-top:8px;}
 .sidebar-version a{color:var(--muted);}
 .sidebar-version a:hover{color:var(--ink);text-decoration:underline;}
 
-.main{flex:1;min-width:0;height:100vh;overflow-y:auto;padding:32px 40px 56px;}
+/* A tartalom egy nagy fehér, lekerekített lapon ül a szürke háttéren. */
+.main{flex:1;min-width:0;height:calc(100vh - 16px);margin:8px 8px 8px 0;overflow-y:auto;padding:24px 28px 40px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-xl);}
 
 /* ============================================================
    Oldalfejléc — tájékoztat (melyik rész vagyok, mi a lista állapota), nem magyaráz.
    ============================================================ */
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px;}
-.page-header h1{font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.02em;color:var(--ink);}
-.page-header p{color:var(--ink-soft);font-size:13.5px;margin-top:5px;font-weight:500;max-width:70ch;}
+.page-header h1{font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.02em;color:var(--ink);}
+.page-header p{color:var(--muted);font-size:13px;margin-top:4px;font-weight:500;max-width:70ch;}
 .page-header > .btn,.page-header > div:last-child > .btn{flex-shrink:0;}
 /* Élő számlálók, amint megjön az adat, egy mondatként: "8 aktív, 2 hiányzó rezsi". Üresen nem foglal helyet. */
-.page-state{margin-top:8px;font-size:13.5px;font-weight:500;color:var(--ink-soft);}
+.page-state{margin-top:6px;font-size:13px;font-weight:500;color:var(--muted);}
 .page-state:empty{display:none;}
 .page-state .s{white-space:nowrap;}
 .page-state .s + .s::before{content:", ";}
@@ -327,7 +340,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .env-ribbon{position:fixed;top:0;left:0;right:0;z-index:400;height:26px;display:flex;align-items:center;justify-content:center;
   background:var(--amber-solid);color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.04em;}
 .has-env-ribbon body{padding-top:26px;}
-.has-env-ribbon .app,.has-env-ribbon .sidebar,.has-env-ribbon .main{height:calc(100vh - 26px);}
+.has-env-ribbon .app,.has-env-ribbon .sidebar{height:calc(100vh - 26px);}
+.has-env-ribbon .main{height:calc(100vh - 42px);}
 @media (max-width:768px){
   .has-env-ribbon .app,.has-env-ribbon .main{height:auto;}
   .has-env-ribbon .sidebar{top:26px;height:calc(100dvh - 26px);}
@@ -339,14 +353,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
   border-radius:var(--radius-sm);border:1px solid var(--line);background:#fff;color:var(--ink);
   align-items:center;justify-content:center;box-shadow:var(--shadow-sm);cursor:pointer;}
 .mobile-nav-toggle svg{width:18px;height:18px;}
-.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(36,48,44,0.5);z-index:190;opacity:0;
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(24,24,27,0.45);z-index:190;opacity:0;
   pointer-events:none;transition:opacity .2s ease;}
 .app.sidebar-open .sidebar-backdrop{opacity:1;pointer-events:auto;}
 
 /* ============================================================
    Bejelentkezés, elfelejtett/új jelszó — középre igazított kártya.
    ============================================================ */
-.login-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:32px 28px;}
+.login-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);padding:28px 26px;}
 .login-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:22px;}
 
 @media (max-width:768px){
@@ -354,9 +368,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
   .sidebar-backdrop{display:block;}
   .app{display:block;height:auto;min-height:100vh;overflow:visible;}
   .sidebar{position:fixed;top:0;left:0;height:100dvh;width:82vw;max-width:300px;z-index:200;
-    transform:translateX(-100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);box-shadow:var(--shadow-lg);}
+    transform:translateX(-100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);box-shadow:var(--shadow-lg);padding-top:64px;}
   .app.sidebar-open .sidebar{transform:translateX(0);}
-  .main{height:auto;min-height:100vh;overflow-y:visible;padding:64px 16px 40px;}
+  .main{height:auto;min-height:100vh;overflow-y:visible;padding:64px 16px 40px;margin:0;border:0;border-radius:0;}
+  .btn{height:40px;}
+  .btn-sm{height:36px;}
   .page-header{flex-direction:column;align-items:stretch;gap:12px;}
   .page-header h1{font-size:22px;}
   .page-header > div:last-child{display:flex;flex-direction:column;align-items:stretch;gap:8px;}
@@ -375,8 +391,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .auth-alt a:hover{text-decoration:underline;}
 
 /* ---------- Előfizetés figyelmeztető sáv ---------- */
-.sub-banner{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:var(--radius-md, 10px);border:1px solid var(--line);
-  background:var(--surface);font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:20px;box-shadow:var(--shadow-xs);}
+.sub-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-md, 10px);border:1px solid var(--line);
+  background:var(--surface);font-size:13px;font-weight:500;color:var(--ink);margin-bottom:20px;box-shadow:var(--shadow-xs);}
 .sub-banner svg{width:18px;height:18px;flex-shrink:0;}
 .sub-banner span{flex:1;}
 .sub-banner a{color:var(--accent-deep);white-space:nowrap;}
@@ -413,8 +429,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .ui-option{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border-radius:7px;cursor:pointer;
   font-size:13.5px;font-weight:500;color:var(--ink);line-height:1.35;user-select:none;}
 .ui-option span{overflow:hidden;text-overflow:ellipsis;}
-.ui-option.active{background:var(--accent-bg);}
-.ui-option.selected{color:var(--accent);font-weight:600;}
+.ui-option.active{background:var(--surface-sunken);}
+.ui-option.selected{color:var(--accent-deep);font-weight:600;}
 .ui-option.selected::after{content:"";width:14px;height:14px;flex-shrink:0;background:currentColor;
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E") center/contain no-repeat;}
 .ui-option.disabled{color:var(--muted);cursor:default;}
@@ -428,7 +444,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .ledger-totals span{font-size:12px;color:var(--muted);}
 .ledger-totals b{font-size:15px;font-weight:600;}
 .ledger-totals b b{font-size:inherit;}
-.status-tag.paid{color:var(--accent);font-weight:600;--st-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z'/%3E%3C/svg%3E");}
+.status-tag.paid{background:#E6F6EC;color:#15803D;}
 .ip-sum{display:flex;gap:28px;flex-wrap:wrap;margin:0 0 18px;padding:12px 14px;background:var(--surface-sunken);border-radius:var(--radius-md);}
 .ip-sum dt{font-size:12px;color:var(--muted);}
 .ip-sum dd{margin:2px 0 0;font-size:14.5px;}
@@ -439,10 +455,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
   border:1px solid var(--line);border-left:4px solid var(--line-strong);border-radius:var(--radius-lg);}
 .balance-band.is-due{border-left-color:var(--coral-solid);}
 .balance-band.is-over{border-left-color:var(--green-solid);}
-.balance-band.is-settled{border-left-color:var(--accent);}
+.balance-band.is-settled{border-left-color:var(--ink);}
 .bb-main{display:flex;flex-direction:column;min-width:170px;}
 .bb-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
-.bb-value{font-family:var(--font-display);font-size:28px;font-weight:600;letter-spacing:-0.02em;line-height:1.15;color:var(--ink);}
+.bb-value{font-family:var(--font-display);font-size:24px;font-weight:600;letter-spacing:-0.02em;line-height:1.15;color:var(--ink);}
 .bb-state{font-size:13px;font-weight:600;color:var(--muted);}
 .balance-band.is-due .bb-value,.balance-band.is-due .bb-state{color:var(--coral);}
 .balance-band.is-over .bb-value,.balance-band.is-over .bb-state{color:var(--green);}
