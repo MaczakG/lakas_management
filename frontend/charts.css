@@ -1,11 +1,11 @@
 /* Közös diagram-stílusok (charts.js). A diagram-színek szerepek szerint, egy helyen: a kategória-sorrend a
    színtévesztésre ellenőrzött sorrend (ne keverd), az állapotszínek fenntartottak (mindig ikonnal + felirattal). */
 .viz-root{
-  --viz-accent:#F4511E;        /* a kiemelt sorozat (idei év, ingatlanonkénti sávok) — a kiemelő narancs */
+  --viz-accent:var(--accent);  /* a kiemelt sorozat (idei év, ingatlanonkénti sávok) — a kiemelő szín */
   --viz-context:#D4D4D8;       /* háttér-sorozat (előző év) */
   --viz-grid:#EAEAEC;
   --viz-axis:#D4D4D8;
-  --viz-wash:rgba(244,81,30,0.06);
+  --viz-wash:var(--accent-wash);
   --series-1:#2a78d6; --series-2:#1baf7a; --series-3:#6250d6; --series-4:#e87ba4; --series-5:#008300;
   --series-other:#D4D4D8;
   --status-good:#0ca30c; --status-warning:#fab219; --status-critical:#d03b3b;
