@@ -8,7 +8,7 @@ namespace Lakaskezelo.Api.Billing;
 public static class TenantBalances
 {
     // A még bizonylatra nem került (nyitott) rezsitételek, az ingatlan jelenlegi bérlőjéhez rendelve — ő kapja a következő
-    // bizonylaton. Csak a következő bizonylatra kerülhetők számítanak: nem kizárt, legfeljebb 36 hónapos, van összege, és nem
+    // bizonylaton. Az egyenlegbe NEM számítanak bele (abba csak a kiállított bizonylat): ez csak tájékoztató összeg. Csak a következő bizonylatra kerülhetők számítanak: nem kizárt, legfeljebb 36 hónapos, van összege, és nem
     // „tovább számlázandó” (azt a bérleti díj tartalmazza, nem a bérlő tartozása).
     public static async Task<List<(Guid TenantId, UtilityCostEntry Entry)>> OpenUtilitiesAsync(LakaskezeloDbContext db, Guid? tenantId, CancellationToken ct)
     {

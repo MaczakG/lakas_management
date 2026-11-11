@@ -17,7 +17,7 @@ public record DashboardDto(
     List<UpcomingEvent> Upcoming,
     // Ingatlanválasztó: az összes ingatlan (aktívak elöl), a kiválasztott (null = mind), és egy ingatlannál a mai bérlő.
     List<DashboardProperty> Properties, Guid? PropertyId = null, string? CurrentTenantName = null,
-    // Egyenleg (teljes időszak, nem az évre szűrve): várt = kiállított bizonylatok + bizonylatra váró rezsi,
+    // Egyenleg (teljes időszak, nem az évre szűrve): várt = a kiállított bizonylatok (a még ki nem számlázott rezsi nem),
     // kifizetett = befizetések; az egyenleg a kettő különbsége. Ugyanaz a számítás, mint a bérlők egyenlegénél.
     decimal BalanceExpected = 0, decimal BalancePaid = 0, List<PropertyBalance>? BalanceByProperty = null,
     // Adózási kimutatás (ld. Billing.TaxEstimate); cégnél null, mert csak magánszemély bérbeadóra értelmezett.
