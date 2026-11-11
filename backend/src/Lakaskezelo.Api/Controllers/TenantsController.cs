@@ -164,6 +164,7 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
         }
         var email = EmailAddresses.Normalize(request.Email, out var emailError);
         if (emailError is not null) return BadRequest(new { message = emailError });
+        if (LeaseEndError(request) is { } leaseError) return BadRequest(new { message = leaseError });
         var tenant = new Tenant
         {
             Id = Guid.NewGuid(),
@@ -175,6 +176,7 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
             PropertyId = request.PropertyId,
             MoveInDate = request.MoveInDate,
             MoveOutDate = request.MoveOutDate,
+            LeaseEndDate = request.LeaseEndDate,
             Notes = request.Notes,
             RentCurrency = request.RentCurrency,
             RentPaymentTiming = request.RentPaymentTiming ?? Domain.Enums.RentPaymentTiming.Advance,
@@ -199,6 +201,7 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
             return BadRequest(new { message = "A megadott ingatlan nem található." });
         }
 
+        if (request.LeaseEndDate != tenant.LeaseEndDate && LeaseEndError(request) is { } leaseError) return BadRequest(new { message = leaseError });
         // Csak a módosított címet ellenőrizzük: egy régebbi, szabálytalan érték ne akadályozza a többi mező mentését.
         if (request.Email != tenant.Email)
         {
@@ -213,6 +216,7 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
         tenant.PropertyId = request.PropertyId;
         tenant.MoveInDate = request.MoveInDate;
         tenant.MoveOutDate = request.MoveOutDate;
+        tenant.LeaseEndDate = request.LeaseEndDate;
         tenant.Notes = request.Notes;
         tenant.RentCurrency = request.RentCurrency;
         if (request.RentPaymentTiming is { } timing) tenant.RentPaymentTiming = timing;
@@ -237,9 +241,13 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
         return NoContent();
     }
 
+    private static string? LeaseEndError(UpsertTenantRequest request) =>
+        request.LeaseEndDate is { } end && request.MoveInDate is { } moveIn && end < moveIn
+            ? "A szerződés lejárata nem lehet a beköltözés előtt." : null;
+
     private static TenantDto ToDto(Tenant tenant, decimal balance) => new(
         tenant.Id, tenant.Name, tenant.Email, tenant.Phone, tenant.Address, tenant.TaxId,
         tenant.PropertyId, tenant.Property?.Name,
         tenant.MoveInDate, tenant.MoveOutDate, tenant.Notes, tenant.RentCurrency,
-        tenant.RentPaymentTiming, tenant.TenantPaysSzja, balance, tenant.InvoiceAttachments);
+        tenant.RentPaymentTiming, tenant.TenantPaysSzja, balance, tenant.InvoiceAttachments, tenant.LeaseEndDate);
 }

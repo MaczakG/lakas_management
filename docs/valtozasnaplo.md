@@ -4,6 +4,21 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.2** — Bérleti szerződés lejárata és értesítő (V1.1 / 11. pont).
+  - Bérlő: új „Szerződés lejárata” dátum a bérlő adatlapján (Bérlet tábla) és a bérlő űrlapján. A lejárat nem
+    lehet a beköltözés előtt.
+  - Beállítások → „Bérleti szerződés lejárata”: értesítési e-mail címek (több is, legfeljebb 5, vesszővel
+    elválasztva) és hogy hány nappal a lejárat előtt szóljon (1–365, alapértelmezés 30). Címek nélkül nem megy
+    értesítő.
+  - Az értesítő naponta egyszer, reggel 9-kor megy: egy összesített levél („Lejáró bérleti szerződések”) a
+    megadott címekre azokról a bérlőkről, akiknek a szerződése a megadott napon belül lejár, vagy már lejárt.
+    Kiköltözött bérlőről nem szól.
+  - Egy lejáratról egyszer megy értesítő. Ha a dátumot átírják (hosszabbítás), az új dátumról megint szól, amikor
+    az is a megadott napon belülre kerül.
+  - Jelzés a felületen: a megadott napon belül „N nap múlva lejár”, utána „N napja lejárt” felirat a bérlő
+    adatlapján (Összegzés), a Bérlők listában és az ingatlan adatlapján a jelenlegi bérlőnél.
+  - Migráció: `LeaseExpiry` (Tenants: LeaseEndDate, LeaseExpiryNoticeFor; AppSettings: LeaseExpiryEmails,
+    LeaseExpiryNoticeDays).
 - **2026.11.11** — Több címzett a bérlő értesítőihez (V1.1 / 10. pont).
   - A bérlő E-mail mezőjébe több cím is írható (legfeljebb 5), vesszővel, pontosvesszővel, szóközzel vagy új
     sorral elválasztva. Az adatlapon a címek egymás alatt látszanak, a mező a tartalmához nő.

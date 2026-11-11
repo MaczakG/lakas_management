@@ -25,6 +25,8 @@ const FIELDS = {
     { path: 'propertyId', label: 'Ingatlan', type: 'select', options: properties.map((p) => ({ value: p.id, label: p.name })) },
     { path: 'moveInDate', label: 'Beköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
     { path: 'moveOutDate', label: 'Kiköltözés', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
+    // Előtte értesítő megy a Beállításokban megadott címekre.
+    { path: 'leaseEndDate', label: 'Szerződés lejárata', type: 'date', placeholder: 'ÉÉÉÉ. HH. NN.' },
     { path: 'rentCurrency', label: 'Bérleti díj devizája', type: 'select', required: true, options: [{ value: 'HUF', label: 'Forint (Ft)' }, { value: 'EUR', label: 'Euró (EUR), MNB-árfolyamon átszámítva' }] },
     { path: 'rentPaymentTiming', label: 'Lakbér fizetése', type: 'select', required: true, options: [
       { value: 'Advance', label: 'Előre (tárgyhó)' },
@@ -52,6 +54,7 @@ async function save(draft) {
   const payload = {
     name: draft.name, email: draft.email, phone: draft.phone, address: draft.address, taxId: draft.taxId,
     propertyId: draft.propertyId || null, moveInDate: draft.moveInDate, moveOutDate: draft.moveOutDate,
+    leaseEndDate: draft.leaseEndDate || null,
     notes: draft.notes, rentCurrency: draft.rentCurrency,
     rentPaymentTiming: draft.rentPaymentTiming,
     invoiceAttachments: draft.invoiceAttachments,
@@ -161,6 +164,9 @@ function renderSummary() {
   const failed = invoices.length - issued.length;
   document.getElementById('summary').innerHTML = [
     detailRow('Bérlet kezdete', tenant.moveInDate ? formatDate(tenant.moveInDate) : '<span class="dim">–</span>'),
+    detailRow('Szerződés lejárata', tenant.leaseEndDate
+      ? `${formatDate(tenant.leaseEndDate)} ${leaseEndTag(tenant.leaseEndDate, company?.leaseExpiryNoticeDays, !isCurrent() && !!tenant.propertyId)}`
+      : '<span class="dim">–</span>'),
     detailRow('Kiállítva összesen', formatCurrency(total)),
     detailRow(`Kiállítva ${year}-ben`, formatCurrency(thisYear)),
     detailRow('Bizonylatok', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),

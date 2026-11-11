@@ -271,6 +271,7 @@ function renderTenant() {
     row('E-mail', t.email ? splitEmails(t.email).map((a) => `<a class="link" href="mailto:${escapeHtml(a)}">${escapeHtml(a)}</a>`).join('<br>') : '<span class="dim">–</span>'),
     row('Telefon', t.phone ? escapeHtml(t.phone) : '<span class="dim">–</span>'),
     row('Beköltözés', t.moveInDate ? formatDate(t.moveInDate) : '<span class="dim">–</span>'),
+    ...(t.leaseEndDate ? [row('Szerződés lejárata', `${formatDate(t.leaseEndDate)} ${leaseEndTag(t.leaseEndDate, company?.leaseExpiryNoticeDays)}`)] : []),
     row('Díj devizája', t.rentCurrency === 'HUF' ? 'Forint' : `${escapeHtml(t.rentCurrency)} <span class="dim">(MNB-árfolyamon átszámítva)</span>`),
   ].join('');
 }

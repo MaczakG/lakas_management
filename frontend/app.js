@@ -459,6 +459,19 @@ function parseEmailList(text) {
   return { value: addresses.join(', ') };
 }
 
+// A bérleti szerződés lejáratának jelzése: a megadott napon belül „N nap múlva lejár”, utána „N napja lejárt”;
+// távolabbi lejáratnál (és kiköltözött bérlőnél) üres. noticeDays: a Beállításokban megadott értesítési idő.
+function leaseEndTag(leaseEndDate, noticeDays = 30, movedOut = false) {
+  if (!leaseEndDate || movedOut) return '';
+  const [y, m, d] = String(leaseEndDate).split('-').map(Number);
+  const now = new Date();
+  const days = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+  if (days > noticeDays) return '';
+  if (days > 0) return `<span class="status-tag warn">${days} nap múlva lejár</span>`;
+  if (days === 0) return '<span class="status-tag warn">Ma jár le</span>';
+  return `<span class="status-tag missing">${-days} napja lejárt</span>`;
+}
+
 // A következő bizonylat rezsijének állapota (PropertyDto.utilityState): Ok / Pending / Missing.
 function utilityStateTag(state, okLabel = 'Rendben') {
   if (state === 'Pending') return '<span class="status-tag warn" title="Van kitöltendő (nem fix) rezsi tétel">Kitöltendő</span>';
