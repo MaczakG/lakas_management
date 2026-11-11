@@ -334,7 +334,11 @@ function renderSummary() {
   // A következő kiküldés időszakának rezsije kerül a bizonylatra — ezt nézzük, nem az aktuális hónapot.
   // Ha a hónapnak már vannak tételei, azokból számolunk (a rezsi ablak bezárása után is friss); különben a
   // szerver állapota dönt (pl. csak fix rezsi tételek: maguktól bekerülnek).
-  const nextEntries = utilityEntries.filter((u) => u.year === property.nextPeriodYear && u.month === property.nextPeriodMonth);
+  // Egy hónap csúszással fizető bérlőnél a bizonylat az előző hónap rezsijét viszi (utilityPeriod…).
+  const utilityYear = property.utilityPeriodYear || property.nextPeriodYear;
+  const utilityMonth = property.utilityPeriodMonth || property.nextPeriodMonth;
+  const lagged = utilityYear !== property.nextPeriodYear || utilityMonth !== property.nextPeriodMonth;
+  const nextEntries = utilityEntries.filter((u) => u.year === utilityYear && u.month === utilityMonth);
   const utilityState = nextEntries.length ? (nextEntries.some((u) => u.isPending) ? 'Pending' : 'Ok') : property.utilityState;
   const nextLabel = `${MONTH_NAMES[property.nextPeriodMonth - 1].toLowerCase()}i bizonylathoz`;
   const row = (label, value) => `<div class="prop"><dt>${label}</dt><dd>${value}</dd></div>`;
@@ -342,7 +346,8 @@ function renderSummary() {
     row('Utolsó bizonylat', last ? `<span class="mono">${escapeHtml(last.number)}</span> <span class="dim">${formatDate(last.issuedAt)}</span>` : '<span class="dim">Még nincs</span>'),
     row(`Kiállítva ${year}-ben`, formatCurrency(thisYear)),
     row('Kiállított bizonylatok', `${issued.length} db${failed ? ` <span class="status-tag missing">${failed} sikertelen</span>` : ''}`),
-    row(`Rezsi a ${nextLabel}`, utilityStateTag(utilityState, nextEntries.length ? 'Rögzítve' : 'Automatikus')),
+    row(`Rezsi a ${nextLabel}`, utilityStateTag(utilityState, nextEntries.length ? 'Rögzítve' : 'Automatikus')
+      + (lagged ? ` <span class="dim">${MONTH_NAMES[utilityMonth - 1].toLowerCase()}i rezsi</span>` : '')),
     row('Kaució', property.sheet.deposit != null ? formatCurrency(property.sheet.deposit) : '<span class="dim">–</span>'),
   ].join('');
 }
@@ -686,9 +691,9 @@ function activateTab(name) {
   try { localStorage.setItem('propertyDetailTab', name); } catch { /* privát mód: nem baj */ }
 }
 document.querySelectorAll('.record-tab').forEach((b) => b.addEventListener('click', () => activateTab(b.dataset.tab)));
-// Új rezsi alapból a következő kiküldés időszakára (annak a bizonylatára kerül).
+// Új rezsi alapból a következő bizonylat rezsi-hónapjára (annak a bizonylatára kerül).
 document.getElementById('add-utility').addEventListener('click', () => {
-  window.openUtility(property.nextPeriodYear, property.nextPeriodMonth);
+  window.openUtility(property.utilityPeriodYear || property.nextPeriodYear, property.utilityPeriodMonth || property.nextPeriodMonth);
 });
 
 // ---------- masonry: a panelek a mindenkori legrövidebb oszlopba kerülnek ----------

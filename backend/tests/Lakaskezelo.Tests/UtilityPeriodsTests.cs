@@ -149,3 +149,39 @@ public class UtilityPrepareAheadTests
         Assert.Equal(0, UtilityPeriods.ExpectedAmount(true, null));
     }
 }
+
+public class UtilityBillingTimingTests
+{
+    private static readonly Guid Property = Guid.NewGuid();
+    private static Lakaskezelo.Domain.Entities.Tenant Tenant(Lakaskezelo.Domain.Enums.UtilityBillingTiming timing) => new() { Id = Guid.NewGuid(), Name = "T", UtilityBillingTiming = timing };
+
+    [Fact]
+    public void By_default_the_invoice_carries_its_own_months_utilities()
+    {
+        Assert.Equal((2026, 12), InvoiceGenerationService.UtilityPeriod(Tenant(Lakaskezelo.Domain.Enums.UtilityBillingTiming.SameMonth), 2026, 12));
+        Assert.Equal((2026, 12), InvoiceGenerationService.UtilityPeriod(null, 2026, 12));
+    }
+
+    [Fact]
+    public void With_one_month_lag_the_invoice_carries_the_previous_months_utilities()
+    {
+        var lagged = Tenant(Lakaskezelo.Domain.Enums.UtilityBillingTiming.PreviousMonth);
+        Assert.Equal((2026, 11), InvoiceGenerationService.UtilityPeriod(lagged, 2026, 12));
+        Assert.Equal((2025, 12), InvoiceGenerationService.UtilityPeriod(lagged, 2026, 1));
+        Assert.Equal((2025, 12), UtilityPeriods.UtilityPeriodOf(new DateOnly(2026, 1, 1), 1));
+        Assert.Equal((2026, 1), UtilityPeriods.UtilityPeriodOf(new DateOnly(2026, 1, 1), 0));
+    }
+
+    [Fact]
+    public void With_lag_this_months_utilities_are_late_only_once_next_months_invoice_exists()
+    {
+        var entry = new Lakaskezelo.Domain.Entities.UtilityCostEntry { Id = Guid.NewGuid(), PropertyId = Property, Year = 2026, Month = 11, Amount = 1000 };
+        var november = new HashSet<(Guid, int, int)> { (Property, 2026, 11) };
+        Assert.True(TenantBalances.IsLate(entry, november));          // alap: a novemberi bizonylat már megvan → utólagos
+        Assert.False(TenantBalances.IsLate(entry, november, lag: 1)); // csúszás: a decemberi bizonylat viszi → még nem az
+        var december = new HashSet<(Guid, int, int)> { (Property, 2026, 11), (Property, 2026, 12) };
+        Assert.True(TenantBalances.IsLate(entry, december, lag: 1));
+        var yearEnd = new Lakaskezelo.Domain.Entities.UtilityCostEntry { Id = Guid.NewGuid(), PropertyId = Property, Year = 2026, Month = 12, Amount = 1000 };
+        Assert.True(TenantBalances.IsLate(yearEnd, new HashSet<(Guid, int, int)> { (Property, 2027, 1) }, lag: 1));
+    }
+}

@@ -34,6 +34,12 @@ const FIELDS = {
       { value: 'Advance', label: 'Előre (tárgyhó)' },
       { value: 'Arrears', label: 'Utólag (előző hó)' },
     ] }] : []),
+    // Melyik hónap rezsije kerül a bizonylatra: a tárgyhavi (alap), vagy — az egy hónap csúszással fizető bérlőnél —
+    // az előző havi (pl. a decemberi bizonylaton a novemberi rezsi).
+    { path: 'utilityBillingTiming', label: 'Rezsi a bizonylaton', type: 'select', required: true, options: [
+      { value: 'SameMonth', label: 'Tárgyhavi (alap)' },
+      { value: 'PreviousMonth', label: 'Előző havi (egy hónap csúszással)' },
+    ] },
     // A rezsitételek csatolmányai (pl. szolgáltatói számlák) a bizonylat levelével: ha nincs beállítva, kézi
     // bizonylatkészítésnél a program rákérdez, az időzített küldés pedig mellékletek nélkül megy.
     { path: 'invoiceAttachments', label: 'Rezsi mellékletek', type: 'select', required: true, options: [
@@ -59,6 +65,7 @@ async function save(draft) {
     leaseEndDate: draft.leaseEndDate || null,
     notes: draft.notes, rentCurrency: draft.rentCurrency,
     rentPaymentTiming: draft.rentPaymentTiming,
+    utilityBillingTiming: draft.utilityBillingTiming,
     invoiceAttachments: draft.invoiceAttachments,
     tenantPaysSzja: draft.tenantPaysSzja === true || draft.tenantPaysSzja === 'true',
   };

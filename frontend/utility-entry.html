@@ -171,7 +171,9 @@ async function loadMonths() {
 
   // A következő kiküldés időszaka (annak a rezsije kerül a bizonylatra) — a táblázatban jelöljük.
   const property = current;
-  const isNext = (month) => property && property.isActive && property.nextPeriodYear === year && property.nextPeriodMonth === month;
+  // Egy hónap csúszással fizető bérlőnél ez az előző hónap (utilityPeriod…).
+  const isNext = (month) => property && property.isActive
+    && (property.utilityPeriodYear || property.nextPeriodYear) === year && (property.utilityPeriodMonth || property.nextPeriodMonth) === month;
 
   const tbody = document.getElementById('months-tbody');
   tbody.innerHTML = MONTH_NAMES.map((name, idx) => {

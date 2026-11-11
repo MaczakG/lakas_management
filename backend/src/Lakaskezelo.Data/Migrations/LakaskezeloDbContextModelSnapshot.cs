@@ -1228,6 +1228,9 @@ namespace Lakaskezelo.Data.Migrations
                     b.Property<bool>("TenantPaysSzja")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("UtilityBillingTiming")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyId");

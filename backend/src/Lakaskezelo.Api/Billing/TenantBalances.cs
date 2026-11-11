@@ -20,11 +20,11 @@ public static class TenantBalances
         var today = DateOnly.FromDateTime(now);
         var current = (await db.Tenants
                 .Where(t => t.PropertyId != null && (t.MoveOutDate == null || t.MoveOutDate >= today))
-                .Select(t => new { t.Id, PropertyId = t.PropertyId!.Value, t.MoveOutDate, t.MoveInDate })
+                .Select(t => new { t.Id, PropertyId = t.PropertyId!.Value, t.MoveOutDate, t.MoveInDate, t.UtilityBillingTiming })
                 .ToListAsync(ct))
             .GroupBy(t => t.PropertyId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.MoveOutDate == null).ThenByDescending(t => t.MoveInDate).First().Id);
-        var propertyIds = current.Where(kv => tenantId == null || kv.Value == tenantId).Select(kv => kv.Key).ToList();
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.MoveOutDate == null).ThenByDescending(t => t.MoveInDate).First());
+        var propertyIds = current.Where(kv => tenantId == null || kv.Value.Id == tenantId).Select(kv => kv.Key).ToList();
         if (propertyIds.Count == 0) return [];
         var (fromYear, fromMonth) = InvoiceGenerationService.BillingWindowStart(now.Year, now.Month);
         var fromKey = fromYear * 12 + fromMonth;
@@ -39,10 +39,16 @@ public static class TenantBalances
                 .Select(i => new { i.PropertyId, i.PeriodYear, i.PeriodMonth })
                 .Distinct().ToListAsync(ct))
             .Select(i => (i.PropertyId, i.PeriodYear, i.PeriodMonth)).ToHashSet();
-        return [.. entries.Select(u => (current[u.PropertyId], u, IsLate(u, invoiced)))];
+        return [.. entries.Select(u => (current[u.PropertyId].Id, u,
+            IsLate(u, invoiced, current[u.PropertyId].UtilityBillingTiming == UtilityBillingTiming.PreviousMonth ? 1 : 0)))];
     }
 
-    // Utólagos a tétel, ha a hónapjára az ingatlannak már van érvényes (nem sikertelen, nem sztornózott) bizonylata.
-    public static bool IsLate(UtilityCostEntry entry, IReadOnlySet<(Guid PropertyId, int Year, int Month)> invoicedMonths) =>
-        invoicedMonths.Contains((entry.PropertyId, entry.Year, entry.Month));
+    // Utólagos a tétel, ha már van érvényes (nem sikertelen, nem sztornózott) bizonylata annak a hónapnak, amelynek a
+    // bizonylata ezt a rezsit vinné: alapból a tétel hónapja, egy hónap csúszással fizető bérlőnél (lag = 1) a
+    // következő hónap. (A csúszással fizetőnél a tárgyhavi rezsi a következő bizonylatig nem tartozás.)
+    public static bool IsLate(UtilityCostEntry entry, IReadOnlySet<(Guid PropertyId, int Year, int Month)> invoicedMonths, int lag = 0)
+    {
+        var carrier = new DateOnly(entry.Year, entry.Month, 1).AddMonths(lag);
+        return invoicedMonths.Contains((entry.PropertyId, carrier.Year, carrier.Month));
+    }
 }

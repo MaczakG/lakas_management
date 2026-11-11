@@ -4,6 +4,17 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.11.16** — Bérlőnként választható, hogy a bizonylat a tárgyhavi vagy az előző havi rezsit vigye.
+  - Bérlő adatlap, Bérlet tábla: új „Rezsi a bizonylaton” mező. „Tárgyhavi (alap)”: a bizonylat a saját hónapja
+    rezsijét viszi, ahogy eddig. „Előző havi (egy hónap csúszással)”: a bizonylat a bérleti díj mellé az előző hónap
+    rezsijét viszi (pl. a decemberi bizonylaton „Áram (2026. november)”), a tárgyhavi rezsi a következő bizonylatra
+    marad.
+  - A csúszással fizető bérlőnél minden ehhez igazodik: a „Rezsi a … bizonylathoz” jelzés, a Rezsi felvétel
+    „következő bizonylat” jelölése és a rezsi-emlékeztető az előző hónapot nézi; a tárgyhavi rezsi a következő
+    bizonylatig nem számít tartozásnak (utólagos tételnek); az előre kitöltés a bizonylattal rendelkező hónapot is
+    kitölti, amíg a következő hónap bizonylata el nem készült.
+  - Az első bizonylatra nem kerül a bérlő beköltözése előtti hónap rezsije.
+  - Migráció: `TenantUtilityBillingTiming` (új oszlop a bérlőknél, alapértéke a tárgyhavi).
 - **2026.11.11.15** — A számviteli bizonylat (PDF) új, áttekinthetőbb elrendezést kapott.
   - Az adattartalom változatlan: a bizonylat neve, száma, időszaka, a kiállító (név, cím, bankszámlaszám), a bérbe
     vevő (név, cím, adószám), a gazdasági esemény megnevezése, a tételek, az árfolyam-megjegyzés, a bérleti díj

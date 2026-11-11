@@ -87,11 +87,13 @@ public class UtilityReminderService(IServiceScopeFactory scopeFactory, IConfigur
         }
 
         // Ingatlanonként a következő számla időszaka és kiküldése; csak azok, amelyeknél elérkezett a határidő.
+        // Utility: a bizonylat rezsi-hónapja — egy hónap csúszással fizető bérlőnél az előző hónap (annak kell meglennie).
+        var lags = await UtilityPeriods.LagByPropertyAsync(db, ct);
         var due = properties
             .Select(p =>
             {
                 var (period, at) = BillingCalendar.NextBilling(now, p.BillingDayOfMonth, p.BillingHour, p.BillingMinute);
-                return (Property: p, Period: period, At: at);
+                return (Property: p, Period: period, At: at, Utility: UtilityPeriods.UtilityPeriodOf(period, lags.GetValueOrDefault(p.Id)));
             })
             .Where(x => today >= BillingCalendar.ReminderDate(DateOnly.FromDateTime(x.At), settings.UtilityDeadlineDay))
             .ToList();
@@ -111,7 +113,7 @@ public class UtilityReminderService(IServiceScopeFactory scopeFactory, IConfigur
         var reminded = (await db.UtilityReminderLogs.Where(l => ids.Contains(l.PropertyId))
             .Select(l => new { l.PropertyId, l.Year, l.Month }).ToListAsync(ct))
             .Select(l => (l.PropertyId, l.Year, l.Month)).ToHashSet();
-        var states = await UtilityPeriods.StatesAsync(db, [.. due.Select(x => (x.Property.Id, x.Period.Year, x.Period.Month))], ct);
+        var states = await UtilityPeriods.StatesAsync(db, [.. due.Select(x => (x.Property.Id, x.Utility.Year, x.Utility.Month))], ct);
 
         // A kitöltendő (összeg nélküli, még bizonylatra nem került) tételek: a következő bizonylat hónapjáé és a
         // korábbi hónapokból megmaradtak (a 36 hónapos ablakon belül, amíg bizonylatra kerülhetnek).
@@ -130,10 +132,10 @@ public class UtilityReminderService(IServiceScopeFactory scopeFactory, IConfigur
             .Where(x => !reminded.Contains((x.Property.Id, x.Period.Year, x.Period.Month)))
             .Select(x =>
             {
-                var periodKey = x.Period.Year * 12 + x.Period.Month;
+                var periodKey = x.Utility.Year * 12 + x.Utility.Month;
                 var mine = pendingEntries.Where(p => p.PropertyId == x.Property.Id).ToList();
                 return (x.Property, x.Period, x.At, Item: new UtilityReminderContent.Item(
-                    x.Property.Name, x.Period, x.At, states[(x.Property.Id, x.Period.Year, x.Period.Month)],
+                    x.Property.Name, x.Period, x.At, states[(x.Property.Id, x.Utility.Year, x.Utility.Month)],
                     [.. mine.Where(p => p.Year * 12 + p.Month == periodKey).Select(p => p.Label)],
                     [.. mine.Where(p => p.Year * 12 + p.Month < periodKey).Select(p => (p.Label, p.Year, p.Month))]));
             })

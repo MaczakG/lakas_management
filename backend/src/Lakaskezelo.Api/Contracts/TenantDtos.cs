@@ -7,7 +7,8 @@ public record TenantDto(Guid Id, string Name, string? Email, string? Phone, stri
     DateOnly? MoveInDate, DateOnly? MoveOutDate, string? Notes, RentCurrency RentCurrency,
     RentPaymentTiming RentPaymentTiming, bool TenantPaysSzja, decimal Balance,
     InvoiceAttachmentPreference InvoiceAttachments = InvoiceAttachmentPreference.Ask,
-    DateOnly? LeaseEndDate = null);
+    DateOnly? LeaseEndDate = null,
+    UtilityBillingTiming UtilityBillingTiming = UtilityBillingTiming.SameMonth);
 
 // RentPaymentTiming / TenantPaysSzja elhagyható: ha nincs megadva, a meglévő érték marad (régebbi kliensekhez).
 public record UpsertTenantRequest(string Name, string? Email, string? Phone, string? Address, string? TaxId,
@@ -15,7 +16,9 @@ public record UpsertTenantRequest(string Name, string? Email, string? Phone, str
     RentPaymentTiming? RentPaymentTiming = null, bool? TenantPaysSzja = null,
     InvoiceAttachmentPreference? InvoiceAttachments = null,
     // A bérleti szerződés lejárata; üresen nincs megadva (a kliens mindig elküldi, az üres érték törli).
-    DateOnly? LeaseEndDate = null);
+    DateOnly? LeaseEndDate = null,
+    // A rezsi a bizonylaton (tárgyhavi / előző havi); ha nincs megadva, a meglévő érték marad.
+    UtilityBillingTiming? UtilityBillingTiming = null);
 
 // Egyenleg: a bérlőnek kiállított bizonylatok (a sztornó negatív) és a rögzített befizetések. Pozitív egyenleg = tartozás.
 // LateTotal: az utólagos rezsitételek (már kiszámlázott hónaphoz utólag felvett, még bizonylatra váró tételek) összege —
