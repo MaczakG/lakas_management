@@ -120,6 +120,9 @@
 .prop dd .status-tag{font-size:11.5px;}
 .prop.wide{grid-template-columns:1fr;gap:4px;padding:8px 0;}
 /* A teljes szélességű mezőnél (megjegyzés) a panel címe már megnevezi — a címke csak a felolvasónak kell. */
+/* A rejtett (csak képernyőolvasónak szóló) címke a saját sorához kötve: különben a görgethető panelen kívülre
+   pozicionálódna, és megnyújtaná az egész oldalt (második görgetősáv). */
+.prop.wide{position:relative;}
 .prop.wide dt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
 
 /* Helyben szerkeszthető érték. A mező 9px-szel balra lóg, hogy a szövege egy vonalba essen az

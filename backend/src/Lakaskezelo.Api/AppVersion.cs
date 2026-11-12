@@ -6,7 +6,7 @@ namespace Lakaskezelo.Api;
 // EC2-re tar-ral másolt forrásnak nincs .git előzménye a build kontextusban (ld. deploy/README.md).
 public static class AppVersion
 {
-    public const string Current = "2026.11.12.3";
+    public const string Current = "2026.11.12.4";
 
     // A kiadás neve (pl. „1.1”): ez látszik a menü alján „V1.1” alakban. A fenti, dátum-alapú jelző a pontos
     // változatot azonosítja (a menüben a kiadás fölé állva, és a tesztkörnyezet sávjában látszik).
