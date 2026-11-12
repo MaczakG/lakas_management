@@ -502,6 +502,8 @@ public class InvoiceGenerationService(
 
     public const string SzjaLabel = "SZJA levonás (15%)";
     public const decimal SzjaRate = 0.15m;
+    // Az SZJA alapja a bérleti díj 90%-a (10% költséghányad): a kifizető bérlő a bérleti díj 90%-ának 15%-át vonja le.
+    public const decimal SzjaBaseRatio = 0.9m;
     // Ennyi hónapra visszamenőleg lehet rezsitételt utólag felvenni (az időszak hónapjával együtt).
     public const int LateUtilityMonths = 36;
 
@@ -523,9 +525,10 @@ public class InvoiceGenerationService(
             : (year, month);
 
     // Csak magánszemély bérbeadónál (saját bizonylat): cégnél a társasági adózás miatt nincs ilyen levonás.
+    // A levonás a bérleti díj 90%-ának 15%-a (pl. 330 000 Ft → 44 550 Ft), forintra kerekítve.
     public static decimal SzjaDeduction(Company company, bool viaProvider, Tenant? tenant, decimal rentHuf) =>
         tenant is { TenantPaysSzja: true } && !company.IsBusiness && !viaProvider && rentHuf > 0
-            ? -Math.Round(rentHuf * SzjaRate, 0, MidpointRounding.AwayFromZero)
+            ? -Math.Round(rentHuf * SzjaBaseRatio * SzjaRate, 0, MidpointRounding.AwayFromZero)
             : 0;
 
     private static string MonthName(int month) =>

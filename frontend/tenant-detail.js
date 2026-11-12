@@ -47,10 +47,10 @@ const FIELDS = {
       { value: 'Send', label: 'Kapja a bizonylattal' },
       { value: 'DontSend', label: 'Nem kapja' },
     ] },
-    // Csak magánszemély bérbeadónál: ha a bérlő fizeti be az SZJA-t, a bizonylaton a lakbér 15%-a levonódik.
+    // Csak magánszemély bérbeadónál: ha a bérlő fizeti be az SZJA-t, a bizonylaton a lakbér 90%-ának 15%-a levonódik.
     ...(company && !company.isBusiness ? [{ path: 'tenantPaysSzja', label: 'SZJA-t fizeti', type: 'select', required: true, options: [
       { value: 'false', label: 'A bérbeadó' },
-      { value: 'true', label: 'A bérlő (−15%)' },
+      { value: 'true', label: 'A bérlő (a lakbér 90%-ának 15%-a)' },
     ] }] : []),
   ],
   notes: [

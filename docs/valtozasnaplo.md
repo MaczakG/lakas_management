@@ -4,6 +4,15 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.12.2** — Adatlapok: a táblák fejléce és a fülsáv halvány szürke.
+  - Az adatlapok tábláinak fejléce (pl. „Jelenlegi bérlő”, „Alapadatok”) és az alsó fülsáv (Bizonylatok, Rezsi, …)
+    halvány szürke hátteret kapott, hogy elváljon a fehér tartalomtól. Migráció nincs.
+- **2026.11.12.1** — SZJA-levonás: a bérleti díj 90%-ának 15%-a.
+  - Ha a bérlő (kifizető) fizeti be az SZJA-t, a bizonylaton a levonás mostantól a bérleti díj 90%-ának 15%-a
+    (10% költséghányad), nem a teljes bérleti díj 15%-a. Pl. 330 000 Ft lakbérnél 44 550 Ft (eddig 49 500 Ft).
+  - A már kiállított bizonylatok nem változnak; a szabály az ezután készülőkre érvényes. Számlázón át kiállított
+    számlánál és cég bérbeadónál továbbra sincs levonás.
+  - Migráció nincs.
 - **2026.11.11.16** — Bérlőnként választható, hogy a bizonylat a tárgyhavi vagy az előző havi rezsit vigye.
   - Bérlő adatlap, Bérlet tábla: új „Rezsi a bizonylaton” mező. „Tárgyhavi (alap)”: a bizonylat a saját hónapja
     rezsijét viszi, ahogy eddig. „Előző havi (egy hónap csúszással)”: a bizonylat a bérleti díj mellé az előző hónap

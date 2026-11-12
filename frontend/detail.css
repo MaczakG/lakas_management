@@ -27,7 +27,9 @@
 .detail-page{display:flex;flex-direction:column;min-height:100%;}
 .record-tabs{flex:1 1 0;min-height:420px;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);
   border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);min-width:0;}
-.record-tabbar{display:flex;align-items:flex-end;gap:12px;padding:6px 12px 0 8px;border-bottom:1px solid var(--line);}
+/* A fülsáv (és a táblák fejléce, ld. .panel-head) halvány szürke, hogy elváljon a fehér tartalomtól. */
+.record-tabbar{display:flex;align-items:flex-end;gap:12px;padding:6px 12px 0 8px;border-bottom:1px solid var(--line);
+  background:var(--surface-head);border-radius:calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;}
 .record-tablist{display:flex;flex-wrap:wrap;gap:2px;flex:1;min-width:0;}
 .record-tab{display:inline-flex;align-items:center;gap:7px;padding:10px 12px 9px;border:none;border-bottom:2px solid transparent;background:none;
   font-family:var(--font-body);font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap;cursor:pointer;}
@@ -82,7 +84,8 @@
 }
 
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);min-width:0;}
-.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:8px 12px 8px 16px;border-bottom:1px solid var(--line);}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:8px 12px 8px 16px;border-bottom:1px solid var(--line);
+  background:var(--surface-head);border-radius:calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;}
 .panel-title{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:14px;font-weight:600;letter-spacing:-0.01em;color:var(--ink);}
 .panel-title svg{width:16px;height:16px;color:var(--muted);flex-shrink:0;}
 .panel-count:empty{display:none;}
@@ -157,9 +160,9 @@
 /* A módosított tábla fejléce (benne a Mentés / Mégsem gomb) görgetéskor a képernyő tetején marad, amíg a tábla
    látszik. A −32px a görgetett terület (.main) felső belső margóját ellensúlyozza, hogy a fejléc a tetejéig
    felcsússzon. Telefonon (ott az ablak görög) a menügomb és a tesztkörnyezet sávja alá kerül. */
-.panel.is-dirty > .panel-head{position:sticky;top:-24px;z-index:20;background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;box-shadow:0 8px 12px -10px rgba(36,48,44,.45);}
+.panel.is-dirty > .panel-head{position:sticky;top:-24px;z-index:20;background:var(--surface-head);border-radius:var(--radius-lg) var(--radius-lg) 0 0;box-shadow:0 8px 12px -10px rgba(36,48,44,.45);}
 /* Ugyanígy a fülsáv, amíg a Beköltözés fül szövege mentetlen. */
-.record-tabbar:has(#mi-save:not([hidden])){position:sticky;top:-24px;z-index:20;background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;}
+.record-tabbar:has(#mi-save:not([hidden])){position:sticky;top:-24px;z-index:20;background:var(--surface-head);border-radius:var(--radius-lg) var(--radius-lg) 0 0;}
 @media (max-width:768px){
   .panel.is-dirty > .panel-head,.record-tabbar:has(#mi-save:not([hidden])){top:62px;}
   .has-env-ribbon .panel.is-dirty > .panel-head,.has-env-ribbon .record-tabbar:has(#mi-save:not([hidden])){top:88px;}
