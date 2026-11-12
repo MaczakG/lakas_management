@@ -4,8 +4,8 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
-- **2026.11.12.3** — Adatlapok: a fejlécek halvány barack színűek (szürke helyett).
-  - A táblák fejlécének és a fülsávnak a háttere a kiemelő narancs nagyon halvány árnyalata lett. Migráció nincs.
+- **2026.11.12.3** — Adatlapok: a fejlécek halvány kék színűek (szürke helyett).
+  - A táblák fejlécének és a fülsávnak a háttere halvány kék lett. Migráció nincs.
 - **2026.11.12.2** — Adatlapok: a táblák fejléce és a fülsáv halvány szürke.
   - Az adatlapok tábláinak fejléce (pl. „Jelenlegi bérlő”, „Alapadatok”) és az alsó fülsáv (Bizonylatok, Rezsi, …)
     halvány szürke hátteret kapott, hogy elváljon a fehér tartalomtól. Migráció nincs.
