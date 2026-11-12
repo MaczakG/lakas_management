@@ -19,7 +19,7 @@
   --bg:#F4F4F5;            /* az app háttere — ezen ül az oldalsáv és a fehér tartalom-lap */
   --surface:#FFFFFF;
   --surface-2:#FAFAFA;     /* táblázatfej, rámutatás */
-  --surface-sunken:#F4F4F5;--surface-head:#F5F5F6;
+  --surface-sunken:#F4F4F5;--surface-head:#FFF6F0;
   --line:#EAEAEC;          /* hajszálvonal a dolgok között */
   --line-strong:#D9D9DE;   /* vezérlő (mező, másodlagos gomb) széle */
 
