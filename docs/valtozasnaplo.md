@@ -4,6 +4,10 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.12.4** — Javítás: az ingatlan adatlapján nincs többé második görgetősáv.
+  - Az ingatlan adatlapján a tartalom panelje mellett az egész oldal is görgethető volt (két görgetősáv). Az ok egy
+    rejtett, képernyőolvasónak szánt címke volt a „Megjegyzés” táblában, amely kilógott a görgethető panelből.
+    A javítás minden adatlapra és oldalra érvényes. Migráció nincs.
 - **2026.11.12.3** — Adatlapok: a fejlécek halvány kék színűek (szürke helyett).
   - A táblák fejlécének és a fülsávnak a háttere halvány kék lett. Migráció nincs.
 - **2026.11.12.2** — Adatlapok: a táblák fejléce és a fülsáv halvány szürke.
