@@ -34,8 +34,11 @@ public class BalanceRulesTests
         var payer = new Tenant { TenantPaysSzja = true };
         var nonPayer = new Tenant { TenantPaysSzja = false };
 
-        Assert.Equal(-27_750m, InvoiceGenerationService.SzjaDeduction(privateLandlord, false, payer, 185_000m));
-        Assert.Equal(-15m, InvoiceGenerationService.SzjaDeduction(privateLandlord, false, payer, 100m));
+        // a bérleti díj 90%-ának 15%-a
+        Assert.Equal(-24_975m, InvoiceGenerationService.SzjaDeduction(privateLandlord, false, payer, 185_000m));
+        Assert.Equal(-44_550m, InvoiceGenerationService.SzjaDeduction(privateLandlord, false, payer, 330_000m));
+        Assert.Equal(-85_627m, InvoiceGenerationService.SzjaDeduction(privateLandlord, false, payer, 634_277m));
+        Assert.Equal(-14m, InvoiceGenerationService.SzjaDeduction(privateLandlord, false, payer, 100m));   // 13,5 → 14
         Assert.Equal(0m, InvoiceGenerationService.SzjaDeduction(privateLandlord, false, nonPayer, 185_000m));
         Assert.Equal(0m, InvoiceGenerationService.SzjaDeduction(business, false, payer, 185_000m));
         Assert.Equal(0m, InvoiceGenerationService.SzjaDeduction(privateLandlord, true, payer, 185_000m));
