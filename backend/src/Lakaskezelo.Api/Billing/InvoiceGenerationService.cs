@@ -72,14 +72,14 @@ public class InvoiceGenerationService(
         var tenant = await FindTenantAsync(property.Id, year, month, ct);
         // A hónap rezsije a rezsi tételekből, ha még nem készült el (kézi és időzített kiállításnál is): a fix tételek
         // összeggel, a nem fixek kitöltendőként jönnek létre.
-        await UtilityPeriods.PrepareAsync(db, property.Id, year, month, force: false, ct);
+        await UtilityPeriods.PrepareAsync(db, property.Id, year, month, ct);
         // Egy hónap csúszással fizető bérlőnél a bizonylat az előző hónap rezsijét viszi: az is elkészül, ha a bérlő
         // abban a hónapban már itt lakott (az első bizonylatára nem kerül a beköltözése előtti rezsi).
         var (utilityYear, utilityMonth) = UtilityPeriod(tenant, year, month);
         if ((utilityYear, utilityMonth) != (year, month)
             && (tenant?.MoveInDate is null || tenant.MoveInDate <= new DateOnly(utilityYear, utilityMonth, 1).AddMonths(1).AddDays(-1)))
         {
-            await UtilityPeriods.PrepareAsync(db, property.Id, utilityYear, utilityMonth, force: false, ct);
+            await UtilityPeriods.PrepareAsync(db, property.Id, utilityYear, utilityMonth, ct);
         }
         await db.SaveChangesAsync(ct);
 

@@ -8,8 +8,7 @@ namespace Lakaskezelo.Api.Billing;
 //
 // Előkészítéskor minden rezsi tételből, amelynek a hónapban még nincs tétele, készül egy havi tétel: fix tételnél a
 // megadott összeggel, nem fixnél 0 összeggel („kitöltendő”). Az aktuális és a következő év hónapjai előre, maguktól
-// elkészülnek (ld. PrepareAheadAsync). Ezen felül fut gombnyomásra (force: a hiányzókat mindig pótolja),
-// a rezsi ablak megnyitásakor (ha biztonságos, ld. ShouldAutoPrepare), a rezsi-határnapon és a bizonylat
+// elkészülnek (ld. PrepareAheadAsync). Ezen felül fut a rezsi ablak megnyitásakor (ha biztonságos, ld. ShouldAutoPrepare), a rezsi-határnapon és a bizonylat
 // kiállításakor (automatikusan: hónaponként csak egyszer, hogy a kézzel törölt tétel ne jöjjön vissza). Az utólag felvett egyedi tételek ettől függetlenül ugyanúgy bizonylatra kerülnek.
 public static class UtilityPeriods
 {
@@ -18,24 +17,21 @@ public static class UtilityPeriods
     public const string Missing = "Missing"; // nincs rezsi tétel és nincs rögzített tétel sem
 
     // A létrehozott tételek száma. A mentést (SaveChanges) a hívó végzi.
-    public static async Task<int> PrepareAsync(LakaskezeloDbContext db, Guid propertyId, int year, int month, bool force, CancellationToken ct)
+    public static async Task<int> PrepareAsync(LakaskezeloDbContext db, Guid propertyId, int year, int month, CancellationToken ct)
     {
         var items = await db.UtilityItems.Where(i => i.PropertyId == propertyId).OrderBy(i => i.SortOrder).ThenBy(i => i.CreatedAt).ToListAsync(ct);
         // Rezsi tételek nélkül nincs mit előkészíteni (és a hónap sem számít előkészítettnek: a rezsi kézzel megy).
         if (items.Count == 0) return 0;
 
         var period = await db.UtilityPeriods.FirstOrDefaultAsync(p => p.PropertyId == propertyId && p.Year == year && p.Month == month, ct);
-        if (period is not null && !force) return 0;
+        if (period is not null) return 0;
 
         var existing = await db.UtilityCostEntries
             .Where(u => u.PropertyId == propertyId && u.Year == year && u.Month == month && u.UtilityItemId != null)
             .Select(u => u.UtilityItemId!.Value).ToListAsync(ct);
         var now = DateTime.UtcNow;
         var created = AddEntries(db, propertyId, year, month, items.Where(i => !existing.Contains(i.Id)), now);
-        if (period is null)
-        {
-            db.UtilityPeriods.Add(new UtilityPeriod { Id = Guid.NewGuid(), PropertyId = propertyId, Year = year, Month = month, PreparedAt = now });
-        }
+        db.UtilityPeriods.Add(new UtilityPeriod { Id = Guid.NewGuid(), PropertyId = propertyId, Year = year, Month = month, PreparedAt = now });
         return created;
     }
 

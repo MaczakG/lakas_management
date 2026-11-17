@@ -37,15 +37,14 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
     // és befizetések, futó egyenleggel. Az egyenlegbe az számít, ami bizonylatra került, és az utólagos rezsitétel
     // (már kiszámlázott hónaphoz utólag felvett tétel: tartozás, a következő bizonylatra kerül — onnantól a bizonylat
     // terhel, nincs dupla terhelés). A még ki nem számlázott hónap felvett (vagy a rezsi tételekből előre behúzott)
-    // rezsije nem tartozás — az összege csak tájékoztatásul megy a válaszban (UnbilledTotal).
+    // rezsije nem tartozás, nem is jelenik meg.
     [HttpGet("{id:guid}/ledger")]
     public async Task<ActionResult<TenantLedgerDto>> Ledger(Guid id, CancellationToken ct)
     {
         if (!await db.Tenants.AnyAsync(t => t.Id == id, ct)) return NotFound();
         var invoices = await ChargedInvoices().Where(i => i.TenantId == id).ToListAsync(ct);
         var payments = await db.TenantPayments.Include(p => p.Invoice).Where(p => p.TenantId == id).ToListAsync(ct);
-        var openUtilities = await Billing.TenantBalances.OpenUtilitiesAsync(db, id, ct);
-        var lateUtilities = openUtilities.Where(o => o.Late).Select(o => o.Entry).ToList();
+        var lateUtilities = (await Billing.TenantBalances.LateUtilitiesAsync(db, id, ct)).Select(o => o.Entry).ToList();
 
         var rows = invoices.Select(i => new
             {
@@ -80,9 +79,8 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
         entries.Reverse(); // a legfrissebb elöl
         var charged = invoices.Sum(i => i.AmountTotal);
         var late = lateUtilities.Sum(u => u.Amount);
-        var unbilled = openUtilities.Where(o => !o.Late).Sum(o => o.Entry.Amount);
         var paid = payments.Sum(p => p.Amount);
-        return Ok(new TenantLedgerDto(charged + late - paid, charged, paid, entries, unbilled, late));
+        return Ok(new TenantLedgerDto(charged + late - paid, charged, paid, entries, late));
     }
 
     private static readonly string[] HuMonths = ["január", "február", "március", "április", "május", "június", "július", "augusztus", "szeptember", "október", "november", "december"];
@@ -146,7 +144,7 @@ public class TenantsController(LakaskezeloDbContext db, Lakaskezelo.Api.Document
         var result = charged.ToDictionary(c => c.Key, c => c.Sum);
         foreach (var p in paid) result[p.Key] = result.GetValueOrDefault(p.Key) - p.Sum;
         // Az utólagos rezsitétel is tartozás (ld. TenantBalances).
-        foreach (var o in (await Billing.TenantBalances.OpenUtilitiesAsync(db, tenantId, ct)).Where(o => o.Late))
+        foreach (var o in await Billing.TenantBalances.LateUtilitiesAsync(db, tenantId, ct))
             result[o.TenantId] = result.GetValueOrDefault(o.TenantId) + o.Entry.Amount;
         return result;
     }

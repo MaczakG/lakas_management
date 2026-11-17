@@ -192,50 +192,35 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
         return NoContent();
     }
 
-    // A hónap rezsijének előkészítése gombnyomásra: az ingatlan rezsi tételeiből pótolja a hónapból hiányzókat (a fix
-    // tételek összeggel, a nem fixek kitöltendőként jönnek létre). Ugyanez magától lefut a rezsi-határnapon és a
-    // bizonylat kiállításakor is.
+    // A rezsi ablak megnyitásakor: a hónap rezsijének előkészítése az ingatlan rezsi tételeiből, de csak akkor, ha az
+    // biztonságos (ld. UtilityPeriods.ShouldAutoPrepare); különben nem történik semmi. Ugyanez magától lefut a
+    // rezsi-határnapon és a bizonylat kiállításakor is.
     [HttpPost("{id:guid}/utility-costs/prepare")]
     public async Task<ActionResult<PrepareUtilityPeriodResponse>> PrepareUtilityPeriod(Guid id, PrepareUtilityPeriodRequest request, CancellationToken ct)
     {
-        if (!await db.Properties.AnyAsync(p => p.Id == id, ct)) return NotFound();
+        var property = await db.Properties.Where(p => p.Id == id).Select(p => new { p.BillingDayOfMonth, p.BillingHour, p.BillingMinute }).SingleOrDefaultAsync(ct);
+        if (property is null) return NotFound();
         if (request.Month is < 1 or > 12 || request.Year is < 2000 or > 2100) return BadRequest(new { message = "Érvénytelen időszak." });
         var now = BudapestClock.Now;
         var (fromYear, fromMonth) = InvoiceGenerationService.BillingWindowStart(now.Year, now.Month);
-        if (request.Auto)
-        {
-            // A rezsi ablak megnyitásakor: csak akkor készít elő, ha az biztonságos; különben nem történik semmi.
-            var property = await db.Properties.Where(p => p.Id == id).Select(p => new { p.BillingDayOfMonth, p.BillingHour, p.BillingMinute }).SingleAsync(ct);
-            var next = BillingCalendar.NextBilling(now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute).Period;
-            var first = new DateOnly(request.Year, request.Month, 1);
-            var last = first.AddMonths(1).AddDays(-1);
-            var carrier = first.AddMonths((await UtilityPeriods.LagByPropertyAsync(db, ct)).GetValueOrDefault(id));
-            var safe = UtilityPeriods.ShouldAutoPrepare(
-                hasEntries: await db.UtilityCostEntries.AnyAsync(u => u.PropertyId == id && u.Year == request.Year && u.Month == request.Month, ct),
-                // az a bizonylat számít, amelyik ennek a hónapnak a rezsijét viszi (egy hónap csúszásnál a következő hónapé)
-                hasActiveInvoice: await db.Invoices.AnyAsync(i => i.PropertyId == id && i.PeriodYear == carrier.Year && i.PeriodMonth == carrier.Month
-                    && i.Status != Domain.Enums.InvoiceStatus.Failed && i.CancelledAt == null && i.CancelsInvoiceId == null, ct),
-                tenantInMonth: await db.Tenants.AnyAsync(t => t.PropertyId == id
-                    && (t.MoveInDate == null || t.MoveInDate <= last) && (t.MoveOutDate == null || t.MoveOutDate >= first), ct),
-                period: request.Year * 12 + request.Month,
-                nextBillingPeriod: next.Year * 12 + next.Month,
-                windowStart: fromYear * 12 + fromMonth);
-            if (!safe) return Ok(new PrepareUtilityPeriodResponse(0));
-            var prepared = await UtilityPeriods.PrepareAsync(db, id, request.Year, request.Month, force: false, ct);
-            await db.SaveChangesAsync(ct);
-            return Ok(new PrepareUtilityPeriodResponse(prepared));
-        }
-        if (request.Year * 12 + request.Month < fromYear * 12 + fromMonth)
-        {
-            return BadRequest(new { message = $"Legfeljebb {InvoiceGenerationService.LateUtilityMonths} hónapra visszamenőleg lehet rezsit rögzíteni." });
-        }
-        if (!await db.UtilityItems.AnyAsync(i => i.PropertyId == id, ct))
-        {
-            return BadRequest(new { message = "Az ingatlannak még nincs rezsi tétele. Vedd fel őket a Rezsi tételek fülön." });
-        }
-        var created = await UtilityPeriods.PrepareAsync(db, id, request.Year, request.Month, force: true, ct);
+        var next = BillingCalendar.NextBilling(now, property.BillingDayOfMonth, property.BillingHour, property.BillingMinute).Period;
+        var first = new DateOnly(request.Year, request.Month, 1);
+        var last = first.AddMonths(1).AddDays(-1);
+        var carrier = first.AddMonths((await UtilityPeriods.LagByPropertyAsync(db, ct)).GetValueOrDefault(id));
+        var safe = UtilityPeriods.ShouldAutoPrepare(
+            hasEntries: await db.UtilityCostEntries.AnyAsync(u => u.PropertyId == id && u.Year == request.Year && u.Month == request.Month, ct),
+            // az a bizonylat számít, amelyik ennek a hónapnak a rezsijét viszi (egy hónap csúszásnál a következő hónapé)
+            hasActiveInvoice: await db.Invoices.AnyAsync(i => i.PropertyId == id && i.PeriodYear == carrier.Year && i.PeriodMonth == carrier.Month
+                && i.Status != Domain.Enums.InvoiceStatus.Failed && i.CancelledAt == null && i.CancelsInvoiceId == null, ct),
+            tenantInMonth: await db.Tenants.AnyAsync(t => t.PropertyId == id
+                && (t.MoveInDate == null || t.MoveInDate <= last) && (t.MoveOutDate == null || t.MoveOutDate >= first), ct),
+            period: request.Year * 12 + request.Month,
+            nextBillingPeriod: next.Year * 12 + next.Month,
+            windowStart: fromYear * 12 + fromMonth);
+        if (!safe) return Ok(new PrepareUtilityPeriodResponse(0));
+        var prepared = await UtilityPeriods.PrepareAsync(db, id, request.Year, request.Month, ct);
         await db.SaveChangesAsync(ct);
-        return Ok(new PrepareUtilityPeriodResponse(created));
+        return Ok(new PrepareUtilityPeriodResponse(prepared));
     }
 
     // ---------- Rezsi tételek (havonta ismétlődő rezsi) ----------
