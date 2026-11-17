@@ -444,7 +444,7 @@
     // A rezsi tételek alapból ott vannak: a hónap megnyitáskor elkészül belőlük (a szerver dönti el, hogy
     // biztonságos-e — pl. már kiállított bizonylatú vagy bérlő előtti hónapnál nem készít semmit).
     try {
-      const res = await apiFetch(`/api/properties/${propertyId}/utility-costs/prepare`, { method: 'POST', body: JSON.stringify({ year, month, auto: true }) });
+      const res = await apiFetch(`/api/properties/${propertyId}/utility-costs/prepare`, { method: 'POST', body: JSON.stringify({ year, month }) });
       const data = res.ok ? await res.json() : null;
       if (data?.created > 0 && typeof state.onSaved === 'function') state.onSaved();
     } catch { /* az ablak enélkül is használható: a tételek kézzel is felvehetők */ }

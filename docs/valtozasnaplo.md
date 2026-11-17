@@ -4,6 +4,14 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.17.1** — Kódátnézés: megbízhatóbb automatikus bizonylat-kiküldés, gyorsabb egyenleg.
+  - Automatikus kiküldés: eddig csak a beállított perc pontos egyezésekor indult; ha a szerver épp abban a percben
+    újraindult (pl. telepítés), aznap kimaradt. Most a beállított időpont utáni 30 percen belül is pótolja, és egy
+    ingatlant naponta egyszer próbál meg (hiba esetén nem küldi újra).
+  - Egyenleg (bérlők, folyószámla, vezérlőpult): az előre kitöltött 24 hónap rezsijét már nem tölti be feleslegesen,
+    csak a már kiszámlázott hónapokig — az eredmény ugyanaz (a valós adatokon ellenőrizve), kevesebb munkával.
+  - Kivezetve a felületről már nem hívott kódrészek (kényszerített rezsi-előkészítés, a nem mutatott
+    „ki nem számlázott rezsi” összeg). Migráció nincs.
 - **2026.11.12.4** — Javítás: az ingatlan adatlapján nincs többé második görgetősáv.
   - Az ingatlan adatlapján a tartalom panelje mellett az egész oldal is görgethető volt (két görgetősáv). Az ok egy
     rejtett, képernyőolvasónak szánt címke volt a „Megjegyzés” táblában, amely kilógott a görgethető panelből.

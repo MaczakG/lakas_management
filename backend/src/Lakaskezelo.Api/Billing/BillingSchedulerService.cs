@@ -3,8 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lakaskezelo.Api.Billing;
 
-// Percenként ellenőrzi az összes aktív ingatlant: ha a helyi idő (Europe/Budapest) órája/perce
-// egyezik az ingatlanhoz beállított számlázási időponttal, ma van az adott időszak tényleges
+// Percenként ellenőrzi az összes aktív ingatlant: ha az ingatlanhoz beállított számlázási időpont az elmúlt
+// CatchUp (30 perc) ablakba esik (helyi idő, Europe/Budapest — így egy újraindítás/telepítés alatt kimaradt perc
+// sem marad ki; egy folyamat egy ingatlant egy időszakra naponta csak egyszer próbál), ma van az adott időszak tényleges
 // kiküldési napja (a beállított nap, vagy ha az hétvége/munkaszüneti nap, az utána következő első
 // munkanap — ld. BillingCalendar), és arra az (év, hónap) időszakra még nincs számla, legenerálja
 // és kiküldi. Ingatlanonkénti try/catch — egy hiba nem
@@ -14,6 +15,12 @@ namespace Lakaskezelo.Api.Billing;
 public class BillingSchedulerService(IServiceScopeFactory scopeFactory, ILogger<BillingSchedulerService> logger) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
+    private const int CatchUpMinutes = 30;
+
+    // Ebben a folyamatban ma már megpróbált (ingatlan, időszak) párok: a 30 perces ablak miatt ugyanaz az ingatlan
+    // több percben is jelölt, de egy hibás (pl. a kiküldés után mentés nélkül elakadt) generálást nem ismétlünk.
+    private readonly HashSet<(Guid PropertyId, DateOnly Period)> attempted = [];
+    private DateOnly attemptedDay;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -40,11 +47,14 @@ public class BillingSchedulerService(IServiceScopeFactory scopeFactory, ILogger<
 
         var today = DateOnly.FromDateTime(now);
         if (!BillingCalendar.IsWorkday(today)) return;
+        if (attemptedDay != today) { attempted.Clear(); attemptedDay = today; }
+        var nowMinutes = now.Hour * 60 + now.Minute;
 
         // Minden előfizető cég ingatlana (IgnoreQueryFilters); a számlázás előtt a kérés az ingatlan
         // cégére áll, hogy a bérlő, rezsi, beállítások stb. annak a cégnek az adataiból jöjjenek.
         var candidates = await db.Properties.IgnoreQueryFilters()
-            .Where(p => p.IsActive && p.BillingHour == now.Hour && p.BillingMinute == now.Minute)
+            .Where(p => p.IsActive && p.BillingHour * 60 + p.BillingMinute <= nowMinutes
+                && p.BillingHour * 60 + p.BillingMinute > nowMinutes - CatchUpMinutes)
             .ToListAsync(ct);
         var companyContext = scope.ServiceProvider.GetRequiredService<ICompanyContext>();
 
@@ -53,7 +63,8 @@ public class BillingSchedulerService(IServiceScopeFactory scopeFactory, ILogger<
         var thisMonth = new DateOnly(now.Year, now.Month, 1);
         var due = candidates
             .SelectMany(p => new[] { thisMonth, thisMonth.AddMonths(-1) }, (p, period) => (Property: p, Period: period))
-            .Where(x => BillingCalendar.EffectiveBillingDate(x.Period.Year, x.Period.Month, x.Property.BillingDayOfMonth) == today)
+            .Where(x => BillingCalendar.EffectiveBillingDate(x.Period.Year, x.Period.Month, x.Property.BillingDayOfMonth) == today
+                && !attempted.Contains((x.Property.Id, x.Period)))
             .ToList();
 
         if (due.Count == 0) return;
@@ -64,6 +75,7 @@ public class BillingSchedulerService(IServiceScopeFactory scopeFactory, ILogger<
 
         foreach (var (property, period) in due)
         {
+            attempted.Add((property.Id, period));
             companyContext.Set(property.CompanyId);
             // Nem fizető (zárolt) cégnek nem küldünk ki bérlői számlát.
             if (await access.IsLockedAsync(property.CompanyId, ct))

@@ -103,7 +103,7 @@ public class UtilityReminderService(IServiceScopeFactory scopeFactory, IConfigur
         // fixek kitöltendőként. Így a bizonylat előtt még van idő kitölteni őket.
         foreach (var x in due)
         {
-            await UtilityPeriods.PrepareAsync(db, x.Property.Id, x.Period.Year, x.Period.Month, force: false, ct);
+            await UtilityPeriods.PrepareAsync(db, x.Property.Id, x.Period.Year, x.Period.Month, ct);
         }
         await db.SaveChangesAsync(ct);
 

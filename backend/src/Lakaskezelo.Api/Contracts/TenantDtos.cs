@@ -22,10 +22,9 @@ public record UpsertTenantRequest(string Name, string? Email, string? Phone, str
 
 // Egyenleg: a bérlőnek kiállított bizonylatok (a sztornó negatív) és a rögzített befizetések. Pozitív egyenleg = tartozás.
 // LateTotal: az utólagos rezsitételek (már kiszámlázott hónaphoz utólag felvett, még bizonylatra váró tételek) összege —
-// benne van a Balance-ben. UnbilledTotal: a még ki nem számlázott hónap felvett rezsije — csak tájékoztatás, a
-// Balance-ben nincs benne.
+// benne van a Balance-ben.
 public record TenantLedgerDto(decimal Balance, decimal ChargedTotal, decimal PaidTotal, List<TenantLedgerEntryDto> Entries,
-    decimal UnbilledTotal = 0, decimal LateTotal = 0);
+    decimal LateTotal = 0);
 
 // Kind: "invoice" | "payment" | "utility" (utólagos rezsitétel). Amount: a bizonylatnál a terhelés (sztornónál negatív), befizetésnél a befizetett összeg
 // negatívan — így a Balance a sorok futó összege.
