@@ -154,14 +154,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 // IgnoreQueryFilters: itt még nincs cég-kontextus — épp ebből a sorból tudjuk meg a felhasználó cégét.
                 var current = await db.Users.IgnoreQueryFilters().AsNoTracking()
                     .Where(u => u.Id == userId && u.IsActive && u.EmailVerifiedAt != null && u.SecurityStamp == stamp)
-                    .Select(u => new { u.CompanyId, u.Role })
+                    .Select(u => new { u.CompanyId, u.Role, u.FullName })
                     .FirstOrDefaultAsync(context.HttpContext.RequestAborted);
                 if (current is null)
                 {
                     context.Fail("Token has been revoked.");
                     return;
                 }
-                context.HttpContext.RequestServices.GetRequiredService<ICompanyContext>().Set(current.CompanyId);
+                var companyContext = context.HttpContext.RequestServices.GetRequiredService<ICompanyContext>();
+                companyContext.Set(current.CompanyId);
+                companyContext.SetUser(userId, current.FullName);
 
                 // A szerepkör nem a tokenből, hanem minden kérésnél az adatbázisból jön — így egy
                 // admin-jog elvétele azonnal érvényes, nem csak a token lejártakor ([Authorize(Roles=...)]).

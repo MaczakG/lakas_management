@@ -140,6 +140,9 @@ public static class UtilityPeriods
     public static async Task PrepareAheadAndSaveAsync(LakaskezeloDbContext db, Property property, DateTime nowLocal, CancellationToken ct)
     {
         await AheadLock.WaitAsync(ct);
+        // Automatikus kitöltés (az oldal megnyitásakor fut), nem a felhasználó művelete: nem kerül a naplóba.
+        var audit = db.AuditEnabled;
+        db.AuditEnabled = false;
         try
         {
             if (await PrepareAheadAsync(db, property, nowLocal, ct) > 0) await db.SaveChangesAsync(ct);
@@ -150,6 +153,7 @@ public static class UtilityPeriods
         }
         finally
         {
+            db.AuditEnabled = audit;
             AheadLock.Release();
         }
     }

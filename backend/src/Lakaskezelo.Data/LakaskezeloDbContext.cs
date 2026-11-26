@@ -24,6 +24,7 @@ public class LakaskezeloDbContext(DbContextOptions<LakaskezeloDbContext> options
     public DbSet<UtilityReminderLog> UtilityReminderLogs => Set<UtilityReminderLog>();
     public DbSet<UtilityItem> UtilityItems => Set<UtilityItem>();
     public DbSet<MoveInItem> MoveInItems => Set<MoveInItem>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<UtilityPeriod> UtilityPeriods => Set<UtilityPeriod>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
@@ -44,6 +45,10 @@ public class LakaskezeloDbContext(DbContextOptions<LakaskezeloDbContext> options
     // A szűrők ezt olvassák lekérdezésenként (nem a modell építésekor), így minden DbContext-példány a
     // saját kérése cégére szűr.
     public Guid? CurrentCompanyId => companyContext?.CompanyId;
+
+    // Hamisra állítva a mentések nem kerülnek a felhasználói naplóba (pl. a rezsi automatikus előre kitöltése, ami
+    // egy oldal megnyitásakor fut, nem a felhasználó művelete).
+    public bool AuditEnabled { get; set; } = true;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +71,7 @@ public class LakaskezeloDbContext(DbContextOptions<LakaskezeloDbContext> options
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        AddAuditEntries();
         StampCompany();
         ValidateReferencesAsync(sync: true, CancellationToken.None).GetAwaiter().GetResult();
         return base.SaveChanges(acceptAllChangesOnSuccess);
@@ -73,9 +79,23 @@ public class LakaskezeloDbContext(DbContextOptions<LakaskezeloDbContext> options
 
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        AddAuditEntries();
         StampCompany();
         await ValidateReferencesAsync(sync: false, cancellationToken);
         return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    // A napló sorai a mentés előtt készülnek (a régi értékek még elérhetők), és ugyanabban a mentésben kerülnek el.
+    // Az új cégadat CompanyId-ja ilyenkor még üres lehet: azt a kontextus cégével pótoljuk (ahogy a StampCompany is).
+    private void AddAuditEntries()
+    {
+        if (!AuditEnabled) return;
+        var entries = AuditTrail.Collect(ChangeTracker, companyContext?.UserId, companyContext?.UserName, DateTime.UtcNow);
+        foreach (var e in entries)
+        {
+            if (e.CompanyId == Guid.Empty) e.CompanyId = CurrentCompanyId ?? Guid.Empty;
+            if (e.CompanyId != Guid.Empty) AuditEntries.Add(e);
+        }
     }
 
     // Új cégadatnál a CompanyId a kontextusból jön; meglévőnél és kitöltöttnél egyeznie kell vele.

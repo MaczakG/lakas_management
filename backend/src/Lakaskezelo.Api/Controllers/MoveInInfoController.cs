@@ -42,11 +42,15 @@ public class MoveInInfoController(LakaskezeloDbContext db, IEmailSender emailSen
         var (items, error) = MoveInInfo.CleanItems(request.Items);
         if (error is not null) return BadRequest(new { message = error });
 
-        db.MoveInItems.RemoveRange(await db.MoveInItems.Where(i => i.PropertyId == id).ToListAsync(ct));
-        db.MoveInItems.AddRange(items.Select((i, n) => new MoveInItem
+        // Soronként (a sorrend szerint) frissít: a meglévő sorok megmaradnak, a többlet új, a hiány törlődik — így a
+        // naplóba csak a ténylegesen változott sorok kerülnek.
+        var existing = await db.MoveInItems.Where(i => i.PropertyId == id).OrderBy(i => i.SortOrder).ToListAsync(ct);
+        for (var n = 0; n < items.Count; n++)
         {
-            Id = Guid.NewGuid(), PropertyId = id, Label = i.Label, Note = i.Note, InChecklist = i.InChecklist, SortOrder = n,
-        }));
+            var row = n < existing.Count ? existing[n] : db.MoveInItems.Add(new MoveInItem { Id = Guid.NewGuid(), PropertyId = id }).Entity;
+            (row.Label, row.Note, row.InChecklist, row.SortOrder) = (items[n].Label, items[n].Note, items[n].InChecklist, n);
+        }
+        db.MoveInItems.RemoveRange(existing.Skip(items.Count));
         property.MoveInInfoSendable = request.Sendable;
         await db.SaveChangesAsync(ct);
         return Ok(await ToDtoAsync(property, ct));
