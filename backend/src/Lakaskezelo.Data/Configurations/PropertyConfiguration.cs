@@ -24,7 +24,18 @@ public class PropertyConfiguration : IEntityTypeConfiguration<Property>
         builder.Property(p => p.WaterMeter).HasMaxLength(50);
         builder.Property(p => p.Deposit).HasColumnType("numeric(12,2)");
         builder.Property(p => p.Notes).HasMaxLength(4000);
-        builder.Property(p => p.MoveInInfo).HasMaxLength(5000);
         builder.Property(p => p.MoveInInfoSendable).HasDefaultValue(true);
+    }
+}
+
+public class MoveInItemConfiguration : IEntityTypeConfiguration<MoveInItem>
+{
+    public void Configure(EntityTypeBuilder<MoveInItem> builder)
+    {
+        builder.HasKey(i => i.Id);
+        builder.Property(i => i.Label).IsRequired().HasMaxLength(200);
+        builder.Property(i => i.Note).HasMaxLength(1000);
+        builder.HasOne(i => i.Property).WithMany().HasForeignKey(i => i.PropertyId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(i => i.PropertyId);
     }
 }

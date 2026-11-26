@@ -1,3 +1,4 @@
+using Lakaskezelo.Api.Contracts;
 using Lakaskezelo.Api.Controllers;
 using Lakaskezelo.Domain.Entities;
 
@@ -8,11 +9,16 @@ public class MoveInInfoTests
     private static readonly DateOnly Today = new(2026, 11, 10);
 
     [Fact]
-    public void Clean_normalizes_line_endings_and_treats_blank_as_null()
+    public void CleanItems_trims_skips_empty_rows_and_requires_a_label()
     {
-        Assert.Equal("Kapukód: 1234\nWifi: otthon", MoveInInfo.Clean("  Kapukód: 1234\r\nWifi: otthon\r\n\r\n"));
-        Assert.Null(MoveInInfo.Clean("  \r\n "));
-        Assert.Null(MoveInInfo.Clean(null));
+        var (items, error) = MoveInInfo.CleanItems([
+            new(" Kapukód ", " 1234 ", true), new("  ", "  ", false), new("Wifi", "otthon\r\njelszó: kert", false), new("Kulcsok", " ", true)]);
+        Assert.Null(error);
+        Assert.Equal([new("Kapukód", "1234", true), new("Wifi", "otthon\njelszó: kert", false), new MoveInItemDto("Kulcsok", null, true)], items);
+
+        Assert.NotNull(MoveInInfo.CleanItems([new("", "csak megjegyzés", false)]).Error);
+        Assert.NotNull(MoveInInfo.CleanItems([new(new string('x', 201), null, false)]).Error);
+        Assert.Empty(MoveInInfo.CleanItems(null).Items);
     }
 
     [Fact]
@@ -30,16 +36,16 @@ public class MoveInInfoTests
     }
 
     [Fact]
-    public void Body_keeps_paragraphs_and_line_breaks_and_encodes_html()
+    public void Body_lists_rows_in_a_table_and_encodes_html()
     {
-        var (html, plain) = MoveInInfo.Body(" Kiss Anna ", "Tata, Kocsi u. 17.", "Kapukód: <1234>\nWifi: otthon & kert\n\nSzemétszállítás: kedd");
+        var (html, plain) = MoveInInfo.Body(" Kiss Anna ", "Tata, Kocsi u. 17.",
+            [new MoveInItem { Label = "Kapukód", Note = "<1234>" }, new MoveInItem { Label = "Wifi", Note = "otthon & kert\njelszó" }, new MoveInItem { Label = "Kulcsok" }]);
 
         Assert.Contains("Kedves Kiss Anna!", plain);
         Assert.Contains("tudnivalókat.\nIngatlan: Tata, Kocsi u. 17.\n\n", plain);
-        Assert.Contains("Kapukód: <1234>\nWifi: otthon & kert\n\nSzemétszállítás: kedd", plain);
-        // (Az ékezetes betűket a HtmlEncode számkóddal írja ki, ezért itt ékezet nélküli részekre nézünk.)
-        Assert.Contains("&lt;1234&gt;<br>Wifi: otthon &amp; kert</p>", html);
-        Assert.Contains(": kedd</p><p style=\"margin:0 0 12px;\">Ha k", html);
+        Assert.Contains("Kapukód: <1234>\nWifi: otthon & kert\njelszó\nKulcsok\n\n", plain);
+        Assert.Contains("&lt;1234&gt;</td>", html);
+        Assert.Contains("otthon &amp; kert<br>jelsz", html);
         Assert.DoesNotContain("<1234>", html);
     }
 }

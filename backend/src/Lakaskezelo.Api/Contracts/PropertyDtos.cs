@@ -62,12 +62,18 @@ public record UpsertUtilityItemRequest(string Label, bool IsFixed, decimal? Amou
 public record PrepareUtilityPeriodRequest(int Year, int Month);
 public record PrepareUtilityPeriodResponse(int Created);
 
-// Beköltözési tudnivalók (az ingatlan adatlapjának „Beköltözés” füle).
-public record MoveInInfoDto(string? Text, bool Sendable, bool EmailConfigured, List<MoveInRecipientDto> Recipients);
+// Beköltözési tudnivalók (az ingatlan adatlapjának „Beköltözés” füle): sorok megnevezéssel és megjegyzéssel; a
+// bepipált (InChecklist) sorok az átadás-átvételi jegyzőkönyvre is rákerülnek.
+public record MoveInInfoDto(List<MoveInItemDto> Items, bool Sendable, bool EmailConfigured, List<MoveInRecipientDto> Recipients);
+public record MoveInItemDto(string Label, string? Note, bool InChecklist);
 
 // Akinek kiküldhető: az ingatlan jelenlegi vagy még be nem költözött bérlője.
 public record MoveInRecipientDto(Guid TenantId, string Name, string? Email, DateOnly? MoveInDate, DateTime? SentAt);
 
-public record UpdateMoveInInfoRequest(string? Text, bool Sendable);
+public record UpdateMoveInInfoRequest(List<MoveInItemDto>? Items, bool Sendable);
 
+// Kiküldés e-mailben, illetve az átadás-átvételi jegyzőkönyv elkészítése a megadott bérlőnek.
 public record SendMoveInInfoRequest(Guid TenantId);
+
+// Az elkészült jegyzőkönyv a dokumentumok közé kerül; a felület az adatlapjára visz.
+public record HandoverProtocolResponse(Guid DocumentId);

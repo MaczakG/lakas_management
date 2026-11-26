@@ -232,7 +232,7 @@ public static class InvoicePdfGenerator
     // Egy szabadszöveges cím első ("irányítószám Város") tagjából próbálja kiolvasni a várost —
     // pl. "2083 Solymár, Budai Nagy Antal u. 14/b 2a" -> "Solymár". Ha nem illeszkedik a mintára,
     // a teljes első tagot adja vissza inkább, mint hogy semmit ne írjon ki.
-    private static string? ExtractCity(string? address)
+    internal static string? ExtractCity(string? address)
     {
         if (string.IsNullOrWhiteSpace(address)) return null;
         var firstSegment = address.Split(',')[0].Trim();

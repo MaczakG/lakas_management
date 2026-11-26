@@ -112,18 +112,24 @@
             <div class="panel-table" id="utilityitems-body"><div class="panel-empty">Betöltés…</div></div>
           </div>
           <div class="record-tab-pane" data-pane="tenants" role="tabpanel" hidden><div class="panel-table" id="tenants-body"><div class="panel-empty">Betöltés…</div></div></div>
-          <!-- Beköltözési tudnivalók: egy szabad szöveg, amit egy gombbal ki lehet küldeni a bérlőnek. -->
+          <!-- Beköltözési tudnivalók: sorok (megnevezés, megjegyzés), egy gombbal kiküldhetők a bérlőnek; a bepipált sorok
+               az átadás-átvételi jegyzőkönyvre is rákerülnek. -->
           <div class="record-tab-pane" data-pane="movein" role="tabpanel" hidden>
             <div class="movein">
               <div class="movein-main">
-                <label class="movein-label" for="mi-text">Beköltözési tudnivalók</label>
-                <textarea id="mi-text" maxlength="5000" placeholder="Pl. kapukód, wifi név és jelszó, mérőórák helye, szemétszállítás napja, hibabejelentés, házirend…"></textarea>
+                <span class="movein-label">Beköltözési tudnivalók</span>
+                <div class="movein-table">
+                  <table>
+                    <thead><tr><th class="mi-check-col" title="Kerüljön az átadás-átvételi jegyzőkönyvre">Jegyzőkönyv</th><th>Megnevezés</th><th>Megjegyzés</th><th class="mi-del-col" aria-label="Törlés"></th></tr></thead>
+                    <tbody id="mi-rows"></tbody>
+                  </table>
+                </div>
                 <div class="movein-foot">
+                  <button class="btn btn-secondary btn-sm" type="button" id="mi-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#plus"/></svg>Új sor</button>
                   <label class="checkbox-row"><input type="checkbox" id="mi-sendable">A bérlőnek kiküldhető</label>
                   <span class="movein-state" id="mi-state" role="status"></span>
-                  <span class="movein-count" id="mi-count"></span>
                 </div>
-                <p class="movein-hint">Ha a pipát kiveszed, a szöveg belső feljegyzés marad, és nem küldhető ki.</p>
+                <p class="movein-hint">Pl. kapukód, wifi név és jelszó, mérőórák helye, kulcsok. A „Jegyzőkönyv” oszlopban bepipált sorok az átadás-átvételi jegyzőkönyv ellenőrzőlistájára is rákerülnek. Ha a „kiküldhető” pipát kiveszed, a tudnivalók belső feljegyzések maradnak.</p>
               </div>
               <div class="movein-side">
                 <h3>Kiküldés e-mailben</h3>
@@ -134,6 +140,10 @@
                 <p class="movein-recipient" id="mi-recipient-info"></p>
                 <button class="btn btn-primary" type="button" id="mi-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#send"/></svg>Kiküldés a bérlőnek</button>
                 <p class="movein-hint" id="mi-send-hint"></p>
+                <h3 class="movein-side-gap">Átadás-átvételi jegyzőkönyv</h3>
+                <p class="movein-hint">A bepipált sorokból PDF készül a címzett bérlőre, a dokumentumok közé.</p>
+                <button class="btn btn-secondary" type="button" id="mi-protocol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#clipboard-list"/></svg>Jegyzőkönyv készítése</button>
+                <p class="movein-hint" id="mi-protocol-hint"></p>
               </div>
             </div>
           </div>

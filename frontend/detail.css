@@ -185,7 +185,18 @@
 .movein{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;padding:18px 20px 20px;align-items:start;}
 .movein-main{display:flex;flex-direction:column;gap:8px;min-width:0;}
 .movein-label{font-size:12.5px;font-weight:600;color:var(--ink-soft);}
-.movein textarea{width:100%;min-height:260px;line-height:1.55;font-size:14px;}
+.movein-table{border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+.movein-table table{width:100%;border-collapse:collapse;table-layout:fixed;}
+.movein-table th{text-align:left;font-size:12px;font-weight:500;color:var(--muted);padding:8px 8px;background:var(--surface-head);border-bottom:1px solid var(--line);}
+.movein-table td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top;}
+.movein-table tr:last-child td{border-bottom:none;}
+.movein-table .mi-check-col{width:92px;text-align:center;}
+.movein-table td.mi-check-col{padding-top:13px;}
+.movein-table .mi-del-col{width:46px;}
+.movein-table input[type=text],.movein-table textarea{width:100%;font-size:13.5px;}
+.movein-table textarea{min-height:36px;resize:vertical;line-height:1.45;}
+.movein-table .panel-empty{padding:18px 12px;}
+.movein-side-gap{margin-top:12px !important;padding-top:16px;border-top:1px solid var(--line);}
 .movein-foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
 .movein-state{font-size:12.5px;font-weight:600;color:var(--muted);}
 .movein-state.is-ok{color:var(--green);}
@@ -203,7 +214,14 @@
 @media (max-width:900px){
   .movein{grid-template-columns:minmax(0,1fr);gap:18px;padding:16px;}
   .movein-side{padding-left:0;border-left:none;padding-top:16px;border-top:1px solid var(--line);}
-  .movein textarea{min-height:200px;}
+  .movein-table thead{display:none;}
+  .movein-table tr{display:grid;grid-template-columns:28px minmax(0,1fr) 34px;grid-template-areas:"chk lbl del" "chk note del";gap:6px 8px;padding:10px;border-bottom:1px solid var(--line);}
+  .movein-table tr:last-child{border-bottom:none;}
+  .movein-table td{padding:0;border:none;}
+  .movein-table td.mi-check-col{grid-area:chk;width:auto;padding-top:10px;text-align:left;}
+  .movein-table td.mi-label-col{grid-area:lbl;}
+  .movein-table td.mi-note-col{grid-area:note;}
+  .movein-table td.mi-del-col{grid-area:del;width:auto;}
 }
 
 /* ---------- Rezsi tételek fül ---------- */

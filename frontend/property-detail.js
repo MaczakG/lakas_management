@@ -546,11 +546,11 @@ document.getElementById('ui-item-form').addEventListener('submit', async (e) => 
 
 // ---------- Beköltözés fül ----------
 
-// Egy szabad szöveg az ingatlanhoz (kapukód, wifi, mérőórák…), amit egy gombbal ki lehet küldeni a bérlőnek.
-// A szöveg és a „kiküldhető” pipa a fülsáv jobb oldalán megjelenő Mentés gombbal mentődik; a kiküldés mindig a
-// mentett szöveget viszi, ezért mentetlen módosítással nem indítható.
+// Sorok (megnevezés, megjegyzés) az ingatlanhoz (kapukód, wifi, mérőórák…), amiket egy gombbal ki lehet küldeni a
+// bérlőnek; a „Jegyzőkönyv” oszlopban bepipált sorokból átadás-átvételi jegyzőkönyv (PDF) készül a dokumentumok közé.
+// A táblázat és a „kiküldhető” pipa a fülsáv jobb oldalán megjelenő Mentés gombbal mentődik; a kiküldés és a
+// jegyzőkönyv mindig a mentett sorokat viszi, ezért mentetlen módosítással nem indítható.
 let moveIn = null;          // a szerver utolsó válasza
-const MOVEIN_MAX = 5000;
 const mi = (id) => document.getElementById(id);
 
 function moveInState(text, kind) {
@@ -563,11 +563,41 @@ function moveInRecipient() {
   return moveIn?.recipients.find((r) => r.tenantId === mi('mi-recipient').value) || moveIn?.recipients[0] || null;
 }
 
+// A szerverrel azonos tisztítás: levágott szövegek, üres megjegyzés = null, a teljesen üres sor kimarad.
+function cleanMoveInItems(items) {
+  return items
+    .map((i) => ({ label: (i.label || '').trim(), note: (i.note || '').replace(/\r\n?/g, '\n').trim() || null, inChecklist: !!i.inChecklist }))
+    .filter((i) => i.label || i.note);
+}
+
+function readMoveInRows() {
+  return [...mi('mi-rows').querySelectorAll('tr[data-row]')].map((tr) => ({
+    label: tr.querySelector('.mi-label').value,
+    note: tr.querySelector('.mi-note').value,
+    inChecklist: tr.querySelector('.mi-check').checked,
+  }));
+}
+
 function moveInDirty() {
   if (!moveIn) return false;
-  return (mi('mi-text').value.replace(/\r\n?/g, '\n').trim() || null) !== (moveIn.text || null) || mi('mi-sendable').checked !== moveIn.sendable;
+  return JSON.stringify(cleanMoveInItems(readMoveInRows())) !== JSON.stringify(cleanMoveInItems(moveIn.items))
+    || mi('mi-sendable').checked !== moveIn.sendable;
 }
 ChangeGuard.watch(moveInDirty);
+
+function moveInRowHtml(item) {
+  return `<tr data-row>
+    <td class="mi-check-col"><input type="checkbox" class="mi-check" aria-label="Kerüljön a jegyzőkönyvre"${item.inChecklist ? ' checked' : ''}></td>
+    <td class="mi-label-col"><input type="text" class="mi-label" aria-label="Megnevezés" maxlength="200" placeholder="pl. Kapukód, wifi, kulcsok" value="${escapeHtml(item.label || '')}"></td>
+    <td class="mi-note-col"><textarea class="mi-note" aria-label="Megjegyzés" maxlength="1000" rows="1">${escapeHtml(item.note || '')}</textarea></td>
+    <td class="mi-del-col"><button class="icon-btn danger mi-del" type="button" title="Sor törlése" aria-label="Sor törlése"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="assets/icons/icons.svg#trash"/></svg></button></td>
+  </tr>`;
+}
+
+function addMoveInRow(focus) {
+  mi('mi-rows').insertAdjacentHTML('beforeend', moveInRowHtml({}));
+  if (focus) mi('mi-rows').lastElementChild.querySelector('.mi-label').focus();
+}
 
 function renderMoveInSide() {
   const recipients = moveIn.recipients;
@@ -593,28 +623,43 @@ function renderMoveInSide() {
   mi('mi-save').hidden = !dirty;
   let reason = '';
   if (dirty) reason = 'Előbb mentsd el a módosítást.';
-  else if (!moveIn.text) reason = 'Előbb írd be és mentsd el a tudnivalókat.';
-  else if (!moveIn.sendable) reason = 'A szöveg belső feljegyzés: pipáld be, hogy kiküldhető.';
+  else if (!moveIn.items.length) reason = 'Előbb vedd fel és mentsd el a tudnivalókat.';
+  else if (!moveIn.sendable) reason = 'A tudnivalók belső feljegyzések: pipáld be, hogy kiküldhetők.';
   else if (!r) reason = 'Rendelj bérlőt az ingatlanhoz a Bérlők oldalon.';
   else if (!r.email) reason = 'Add meg a bérlő e-mail címét az adatlapján.';
   else if (!moveIn.emailConfigured) reason = 'Az e-mail küldés nincs beállítva.';
   mi('mi-send').disabled = !!reason;
-  mi('mi-send-hint').textContent = reason || (r.sentAt ? 'Újra is kiküldheted, például ha változott a szöveg.' : '');
+  mi('mi-send-hint').textContent = reason || (r.sentAt ? 'Újra is kiküldheted, például ha változtak a tudnivalók.' : '');
+
+  let protocolReason = '';
+  if (dirty) protocolReason = 'Előbb mentsd el a módosítást.';
+  else if (!moveIn.items.some((i) => i.inChecklist)) protocolReason = 'Pipálj be legalább egy sort a „Jegyzőkönyv” oszlopban.';
+  else if (!r) protocolReason = 'Rendelj bérlőt az ingatlanhoz a Bérlők oldalon.';
+  mi('mi-protocol').disabled = !!protocolReason;
+  mi('mi-protocol-hint').textContent = protocolReason;
 }
 
 function renderMoveIn() {
-  mi('mi-text').value = moveIn.text || '';
+  mi('mi-rows').innerHTML = moveIn.items.map(moveInRowHtml).join('');
+  if (!moveIn.items.length) addMoveInRow(false);
   mi('mi-sendable').checked = moveIn.sendable;
-  mi('mi-count').textContent = `${mi('mi-text').value.length} / ${MOVEIN_MAX}`;
   renderMoveInSide();
 }
 
 function moveInChanged() {
-  mi('mi-count').textContent = `${mi('mi-text').value.length} / ${MOVEIN_MAX}`;
   moveInState(moveInDirty() ? 'Nincs mentve' : '');
   renderMoveInSide();
 }
-mi('mi-text').addEventListener('input', moveInChanged);
+mi('mi-rows').addEventListener('input', moveInChanged);
+mi('mi-rows').addEventListener('change', moveInChanged);
+mi('mi-rows').addEventListener('click', (e) => {
+  const del = e.target.closest('.mi-del');
+  if (!del) return;
+  del.closest('tr').remove();
+  if (!mi('mi-rows').querySelector('tr[data-row]')) addMoveInRow(false);
+  moveInChanged();
+});
+mi('mi-add').addEventListener('click', () => addMoveInRow(true));
 mi('mi-sendable').addEventListener('change', moveInChanged);
 mi('mi-recipient').addEventListener('change', renderMoveInSide);
 
@@ -631,13 +676,14 @@ mi('mi-save-btn').addEventListener('click', async () => {
   try {
     const res = await apiFetch(`/api/properties/${propertyId}/move-in-info`, {
       method: 'PUT',
-      body: JSON.stringify({ text: mi('mi-text').value, sendable: mi('mi-sendable').checked }),
+      body: JSON.stringify({ items: cleanMoveInItems(readMoveInRows()), sendable: mi('mi-sendable').checked }),
     });
     if (!res.ok) {
       moveInState((await res.json().catch(() => null))?.message || 'A mentés nem sikerült.', 'error');
       return;
     }
     moveIn = await res.json();
+    renderMoveIn();
     moveInState('Mentve', 'ok');
   } catch {
     moveInState('A mentés nem sikerült.', 'error');
@@ -670,6 +716,31 @@ mi('mi-send').addEventListener('click', async () => {
   } catch {
     moveInState('');
     await uiAlert('Az e-mailt nem sikerült elküldeni. Ellenőrizd az internetkapcsolatot.', { title: 'Nem sikerült' });
+  } finally {
+    renderMoveInSide();
+  }
+});
+
+// A jegyzőkönyv a dokumentumok közé kerül; elkészülte után a dokumentum adatlapja nyílik meg (előnézet, letöltés).
+mi('mi-protocol').addEventListener('click', async () => {
+  if (moveInDirty()) return;
+  const r = moveInRecipient();
+  if (!r) return;
+  const btn = mi('mi-protocol');
+  btn.disabled = true;
+  moveInState('Jegyzőkönyv készítése…');
+  try {
+    const res = await apiFetch(`/api/properties/${propertyId}/move-in-info/protocol`, { method: 'POST', body: JSON.stringify({ tenantId: r.tenantId }) });
+    if (!res.ok) {
+      moveInState('');
+      await uiAlert((await res.json().catch(() => null))?.message || 'A jegyzőkönyvet nem sikerült elkészíteni.', { title: 'Nem sikerült' });
+      return;
+    }
+    const { documentId } = await res.json();
+    window.location.href = `document-detail.html?id=${encodeURIComponent(documentId)}&from=property:${encodeURIComponent(propertyId)}`;
+  } catch {
+    moveInState('');
+    await uiAlert('A jegyzőkönyvet nem sikerült elkészíteni. Ellenőrizd az internetkapcsolatot.', { title: 'Nem sikerült' });
   } finally {
     renderMoveInSide();
   }
