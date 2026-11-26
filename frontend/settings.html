@@ -25,6 +25,23 @@
   .sub-note{font-size:13px;color:var(--ink-soft);margin-top:14px;line-height:1.5;}
   .sub-actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;}
   @media (max-width: 560px){ .sub-grid{grid-template-columns:1fr;gap:2px 0;} .sub-grid dd{margin-bottom:8px;} }
+  .settings-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 22px;}
+  .settings-tabs button{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:9px 14px;font:inherit;font-size:14px;
+    font-weight:500;color:var(--muted);cursor:pointer;}
+  .settings-tabs button.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:600;}
+  .log-toolbar{align-items:flex-start;}
+  .log-toolbar .hint{margin:0;max-width:560px;}
+  .log-filters{display:flex;gap:8px;flex-wrap:wrap;}
+  .log-table td{vertical-align:top;}
+  .log-table .log-when{width:150px;}
+  .log-sub{display:block;font-size:12px;color:var(--muted);margin-top:2px;}
+  .log-changes{margin:0;padding:0;list-style:none;font-size:12.5px;line-height:1.55;}
+  .log-changes b{font-weight:600;color:var(--ink-soft);}
+  .log-changes .old{color:var(--muted);text-decoration:line-through;}
+  .log-changes li{overflow-wrap:anywhere;}
+  .log-changes details summary{cursor:pointer;color:var(--accent-deep);font-weight:500;}
+  .log-more{display:flex;justify-content:center;margin-top:14px;}
+  @media (max-width: 760px){ .log-filters .filter-select{min-width:0;flex:1 1 140px;} .log-table .log-when{width:auto;} }
 </style>
 </head>
 <body>
@@ -37,10 +54,35 @@
     <div class="page-header">
       <div>
         <h1>Beállítások</h1>
-        <p>Előfizetés, rezsi-emlékeztető, a bizonylatok kiállítója és a bérlőknek küldött bizonylat-levél szövege.</p>
+        <p>Előfizetés, rezsi-emlékeztető, a bizonylatok kiállítója, a bérlőknek küldött bizonylat-levél szövege és a felhasználói napló.</p>
       </div>
     </div>
 
+    <div class="settings-tabs" role="tablist">
+      <button type="button" role="tab" class="active" data-stab="settings" aria-selected="true">Beállítások</button>
+      <button type="button" role="tab" data-stab="log" aria-selected="false">Napló</button>
+    </div>
+
+    <!-- Felhasználói napló: ki, mikor, mit csinált (audit-log.js). -->
+    <div data-spane="log" hidden>
+      <div class="toolbar log-toolbar">
+        <p class="hint">Minden módosítás (létrehozás, módosítás, törlés) mezőnként a régi és az új értékkel, és a bejelentkezések. A titkos adatok (jelszó, API-kulcs) értéke nem kerül a naplóba.</p>
+        <div class="log-filters">
+          <select id="log-user" class="filter-select" aria-label="Felhasználó"><option value="">Minden felhasználó</option></select>
+          <select id="log-type" class="filter-select" aria-label="Típus"><option value="">Minden típus</option></select>
+          <select id="log-property" class="filter-select" aria-label="Ingatlan"><option value="">Minden ingatlan</option></select>
+        </div>
+      </div>
+      <div class="card-table">
+        <table class="log-table">
+          <thead><tr><th class="log-when">Időpont</th><th>Felhasználó</th><th>Művelet</th><th>Elem</th><th>Változások</th></tr></thead>
+          <tbody id="log-tbody"><tr class="empty-row"><td colspan="5">Betöltés...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="log-more"><button class="btn btn-secondary" type="button" id="log-more" hidden>Továbbiak betöltése</button></div>
+    </div>
+
+    <div data-spane="settings">
     <div class="sub-wrap">
       <section class="section" id="subscription-section">
         <div class="section-head">
@@ -161,6 +203,7 @@
         <span class="save-note" id="save-note">Mentve.</span>
       </div>
     </form>
+    </div>
   </main>
 </div>
 
@@ -341,5 +384,6 @@ async function loadSubscription() {
 loadSettings();
 loadSubscription();
 </script>
+<script src="audit-log.js"></script>
 </body>
 </html>

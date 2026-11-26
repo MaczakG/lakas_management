@@ -4,6 +4,16 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.26.2** — Felhasználói napló a Beállításokban (F-15).
+  - Beállítások → „Napló” fül: ki, mikor, mit csinált, a legfrissebb elöl (100-asával, „Továbbiak betöltése”).
+    Szűrhető felhasználóra (a „Rendszer” az automatikus műveleteké), típusra és ingatlanra; a `#naplo` címmel közvetlenül nyitható.
+  - Minden létrehozás, módosítás és törlés bekerül (ingatlan, bérlő, tulajdonos, havi rezsi, rezsi tétel, beköltözési
+    tudnivaló, bizonylat, befizetés, dokumentum, dokumentumtípus, beállítások, felhasználó), mezőnként a régi és az új
+    értékkel, magyar mezőnevekkel; a hivatkozások (ingatlan, bérlő, bizonylat…) névvel. A bejelentkezések is.
+  - A titkos adatok (jelszó, API-kulcs) értéke nem kerül a naplóba, csak a változás ténye. Az automatikus műveletek
+    közül csak a bizonylat (ütemezett kiállítás) kerül be; a rezsi előre kitöltése nem.
+  - A beköltözési tudnivalók mentése mostantól soronként frissít, így a naplóba csak a valóban változott sor kerül.
+  - Migráció: új AuditEntries tábla (a napló az élesítéstől kezdve gyűlik, visszamenőleg nincs adat).
 - **2026.11.26.1** — Beköltözés: tudnivalók táblázatban, átadás-átvételi jegyzőkönyv (F-04).
   - Az ingatlan „Beköltözés” fülén a szabad szöveg helyett táblázat van: Jegyzőkönyv (pipa), Megnevezés, Megjegyzés.
     Sor felvehető és törölhető; a táblázat a fülsáv Mentés gombjával mentődik.

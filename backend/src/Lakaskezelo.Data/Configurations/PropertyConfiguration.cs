@@ -39,3 +39,16 @@ public class MoveInItemConfiguration : IEntityTypeConfiguration<MoveInItem>
         builder.HasIndex(i => i.PropertyId);
     }
 }
+
+public class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEntry>
+{
+    public void Configure(EntityTypeBuilder<AuditEntry> builder)
+    {
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.UserName).HasMaxLength(200);
+        builder.Property(a => a.Action).IsRequired().HasMaxLength(20);
+        builder.Property(a => a.EntityType).IsRequired().HasMaxLength(50);
+        builder.Property(a => a.EntityLabel).HasMaxLength(320);
+        builder.HasIndex(a => new { a.CompanyId, a.At });
+    }
+}

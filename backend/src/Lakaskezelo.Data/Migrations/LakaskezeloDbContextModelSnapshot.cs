@@ -164,6 +164,57 @@ namespace Lakaskezelo.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.AuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Changes")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EntityLabel")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("CompanyId", "At");
+
+                    b.ToTable("AuditEntries");
+                });
+
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Company", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1568,6 +1619,15 @@ namespace Lakaskezelo.Data.Migrations
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.AppSettings", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.AuditEntry", b =>
                 {
                     b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
                         .WithMany()

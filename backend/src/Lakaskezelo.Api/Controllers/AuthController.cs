@@ -113,6 +113,7 @@ public class AuthController(
         if (!TwoFactorEnabled)
         {
             ResetFailedAttempts(user);
+            LogLogin(user);
             await db.SaveChangesAsync(ct);
             var (token, expiresAt) = tokenService.CreateAccessToken(user);
             return Ok(new AuthResponse(token, expiresAt, ToDto(user), await CompanyNameAsync(user.CompanyId, ct)));
@@ -183,6 +184,7 @@ public class AuthController(
 
         challenge.UsedAt = DateTime.UtcNow;
         ResetFailedAttempts(user);
+        LogLogin(user);
         await db.SaveChangesAsync(ct);
 
         var (token, expiresAt) = tokenService.CreateAccessToken(user);
@@ -462,6 +464,13 @@ public class AuthController(
             await SendLockoutNoticeAsync(user, ct);
         }
     }
+
+    // A sikeres bejelentkezés a felhasználói naplóba (Beállítások → Napló).
+    private void LogLogin(User user) => db.AuditEntries.Add(new AuditEntry
+    {
+        Id = Guid.NewGuid(), CompanyId = user.CompanyId, At = DateTime.UtcNow, UserId = user.Id, UserName = user.FullName,
+        Action = AuditActions.Login, EntityType = nameof(User), EntityId = user.Id, EntityLabel = user.FullName,
+    });
 
     private static void ResetFailedAttempts(User user)
     {

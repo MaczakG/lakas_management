@@ -219,6 +219,7 @@ public class PropertiesController(LakaskezeloDbContext db, Lakaskezelo.Api.Docum
             windowStart: fromYear * 12 + fromMonth);
         if (!safe) return Ok(new PrepareUtilityPeriodResponse(0));
         var prepared = await UtilityPeriods.PrepareAsync(db, id, request.Year, request.Month, ct);
+        db.AuditEnabled = false; // automatikus előkészítés (a rezsi ablak megnyitásakor), nem a felhasználó művelete
         await db.SaveChangesAsync(ct);
         return Ok(new PrepareUtilityPeriodResponse(prepared));
     }
