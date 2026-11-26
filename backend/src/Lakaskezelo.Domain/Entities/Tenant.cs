@@ -35,7 +35,7 @@ public class Tenant : ICompanyOwned
     // Megkapja-e a bizonylat e-mailjével a rezsitételek csatolmányait.
     public InvoiceAttachmentPreference InvoiceAttachments { get; set; } = InvoiceAttachmentPreference.Ask;
     public DateTime CreatedAt { get; set; }
-    // Mikor kapta meg utoljára e-mailben az ingatlan beköltözési tudnivalóit (ld. Property.MoveInInfo).
+    // Mikor kapta meg utoljára e-mailben az ingatlan beköltözési tudnivalóit (ld. MoveInItem).
     public DateTime? MoveInInfoSentAt { get; set; }
 
     // Milyen devizanemben van megadva az ingatlan bérleti díja ennél a bérlőnél — a számlán

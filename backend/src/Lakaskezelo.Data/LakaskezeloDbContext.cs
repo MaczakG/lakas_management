@@ -23,6 +23,7 @@ public class LakaskezeloDbContext(DbContextOptions<LakaskezeloDbContext> options
     public DbSet<UtilityCostEntry> UtilityCostEntries => Set<UtilityCostEntry>();
     public DbSet<UtilityReminderLog> UtilityReminderLogs => Set<UtilityReminderLog>();
     public DbSet<UtilityItem> UtilityItems => Set<UtilityItem>();
+    public DbSet<MoveInItem> MoveInItems => Set<MoveInItem>();
     public DbSet<UtilityPeriod> UtilityPeriods => Set<UtilityPeriod>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();

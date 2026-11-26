@@ -567,6 +567,42 @@ namespace Lakaskezelo.Data.Migrations
                     b.ToTable("InvoiceLines");
                 });
 
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.MoveInItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("InChecklist")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.ToTable("MoveInItems");
+                });
+
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Owner", b =>
                 {
                     b.Property<Guid>("Id")
@@ -892,10 +928,6 @@ namespace Lakaskezelo.Data.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("MoveInInfo")
-                        .HasMaxLength(5000)
-                        .HasColumnType("character varying(5000)");
 
                     b.Property<bool>("MoveInInfoSendable")
                         .ValueGeneratedOnAdd()
@@ -1711,6 +1743,23 @@ namespace Lakaskezelo.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Invoice");
+                });
+
+            modelBuilder.Entity("Lakaskezelo.Domain.Entities.MoveInItem", b =>
+                {
+                    b.HasOne("Lakaskezelo.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lakaskezelo.Domain.Entities.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Property");
                 });
 
             modelBuilder.Entity("Lakaskezelo.Domain.Entities.Owner", b =>

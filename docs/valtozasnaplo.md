@@ -4,6 +4,15 @@ A verziószám dátum alapú (`ÉÉÉÉ.HH.NN`), ld. `deploy/README.md` „Ágak
 
 ## Csak a teszten (staging) — még nincs élesben
 
+- **2026.11.26.1** — Beköltözés: tudnivalók táblázatban, átadás-átvételi jegyzőkönyv (F-04).
+  - Az ingatlan „Beköltözés” fülén a szabad szöveg helyett táblázat van: Jegyzőkönyv (pipa), Megnevezés, Megjegyzés.
+    Sor felvehető és törölhető; a táblázat a fülsáv Mentés gombjával mentődik.
+  - A kiküldött e-mailben a tudnivalók táblázatként szerepelnek (megnevezés – megjegyzés).
+  - „Jegyzőkönyv készítése”: a bepipált sorokból átadás-átvételi jegyzőkönyv (PDF) készül a kiválasztott bérlőre
+    (átadó, átvevő, az ingatlan címe, ellenőrzőlista üres négyzetekkel, hely az észrevételeknek, kelt, két aláírás).
+    A PDF a dokumentumok közé kerül „Jegyzőkönyv” típussal, az ingatlanhoz és a bérlőhöz kötve, és megnyílik az adatlapja.
+  - Migráció: a meglévő szöveg soronként egy-egy sor lett; a „Megnevezés: megjegyzés” alakú sor a kettőspontnál
+    kettéválik. Jegyzőkönyvre egyik sor sincs bepipálva.
 - **2026.11.17.1** — Kódátnézés: megbízhatóbb automatikus bizonylat-kiküldés, gyorsabb egyenleg.
   - Automatikus kiküldés: eddig csak a beállított perc pontos egyezésekor indult; ha a szerver épp abban a percben
     újraindult (pl. telepítés), aznap kimaradt. Most a beállított időpont utáni 30 percen belül is pótolja, és egy
